@@ -13,6 +13,7 @@ const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
+  { id: "usuarios", label: "Usuários", icon: Users },
 ];
 
 const PIE_COLORS = [

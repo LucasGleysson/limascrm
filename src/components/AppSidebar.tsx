@@ -1,4 +1,4 @@
-import { Car, Users, CalendarDays, LogOut } from "lucide-react";
+import { Car, LogOut } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { UNIDADES } from "@/data/mockData";
 
@@ -10,6 +10,8 @@ interface AppSidebarProps {
 
 export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) => {
   const { currentUser, logout } = useRole();
+
+  if (!currentUser) return null;
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar flex flex-col border-r border-sidebar-border shrink-0">
