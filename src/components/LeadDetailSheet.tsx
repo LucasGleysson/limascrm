@@ -137,6 +137,22 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const isAgendado = lead.etapa === "agendado";
   const isDispensado = lead.etapa === "dispensado";
   const canEditSchedule = isAgendado || isDispensado;
+  const canDisqualify = ["novo", "agendado"].includes(lead.etapa);
+
+  const handleDisqualify = () => {
+    if (!disqualifyMotivo.trim()) return;
+    updateLead(lead.id, { etapa: "desqualificado" });
+    addInteracao({
+      id: `i${Date.now()}`,
+      id_lead: lead.id,
+      tipo: "mudanca_etapa",
+      descricao: `Lead desqualificado: ${disqualifyMotivo.trim()}`,
+      data: new Date().toISOString(),
+      id_usuario: currentUser.id,
+    });
+    setDisqualifyMotivo("");
+    setDisqualifyOpen(false);
+  };
 
   return (
     <>
