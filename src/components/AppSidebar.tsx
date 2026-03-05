@@ -22,10 +22,7 @@ export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) =>
           <p className="text-sm font-bold text-sidebar-foreground">AutoCRM</p>
           <p className="text-xs text-sidebar-foreground/60">
             {currentUser.unidade_padrao
-              ? (() => {
-                  const { UNIDADES } = require("@/data/mockData");
-                  return UNIDADES.find((u: any) => u.id === currentUser.unidade_padrao)?.nome || "";
-                })()
+              ? UNIDADES.find((u) => u.id === currentUser.unidade_padrao)?.nome || ""
               : ""}
           </p>
         </div>
