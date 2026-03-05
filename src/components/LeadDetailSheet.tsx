@@ -316,7 +316,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                       <CalendarCheck className="h-4 w-4" /> Concluir Agendamento
                     </Button>
                   )}
-                </div>
+                  {canDisqualify && (
+                    <Button variant="destructive" size="sm" className="gap-2" onClick={() => setDisqualifyOpen(true)}>
+                      <Ban className="h-4 w-4" /> Desqualificar
+                    </Button>
+                  )}
 
                 <div>
                   <h4 className="font-semibold mb-3">Timeline</h4>
