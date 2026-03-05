@@ -199,7 +199,7 @@ export const UserManagement = () => {
       ) : (
         <div className="space-y-2">
           {profiles.map((profile) => {
-            const unidade = UNIDADES.find((u) => u.id === profile.unidade_padrao);
+            const unidade = unidades.find((u) => u.id === profile.unidade_padrao);
             return (
               <div
                 key={profile.id}
