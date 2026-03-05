@@ -410,6 +410,9 @@ export const ManagerDashboard = () => {
             )}
           </>
         )}
+
+        {/* ═══════ USUARIOS TAB ═══════ */}
+        {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>
   );
