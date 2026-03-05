@@ -6,7 +6,7 @@ interface StatsCardProps {
   subtitle?: string;
   icon: LucideIcon;
   trend?: { value: number; positive: boolean };
-  variant?: "default" | "primary" | "success" | "warning" | "info";
+  variant?: "default" | "primary" | "success" | "warning" | "info" | "destructive";
 }
 
 const variantStyles = {
@@ -15,6 +15,7 @@ const variantStyles = {
   success: "bg-card border-success/20",
   warning: "bg-card border-warning/20",
   info: "bg-card border-info/20",
+  destructive: "bg-card border-destructive/20",
 };
 
 const iconVariantStyles = {
@@ -23,6 +24,7 @@ const iconVariantStyles = {
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
   info: "bg-info/10 text-info",
+  destructive: "bg-destructive/10 text-destructive",
 };
 
 export const StatsCard = ({ title, value, subtitle, icon: Icon, trend, variant = "default" }: StatsCardProps) => (

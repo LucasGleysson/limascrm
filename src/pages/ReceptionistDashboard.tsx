@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogIn, LogOut, UserPlus, CalendarCheck, Users, LayoutDashboard, Search, UsersRound, AlertTriangle } from "lucide-react";
+import { LogIn, LogOut, UserPlus, CalendarCheck, Users, Search, UsersRound, AlertTriangle, Wrench, XCircle } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 
 const SIDEBAR_TABS = [
@@ -37,6 +38,11 @@ export const ReceptionistDashboard = () => {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // Dispensar dialog
+  const [dispensarOpen, setDispensarOpen] = useState(false);
+  const [dispensarLead, setDispensarLead] = useState<Lead | null>(null);
+  const [dispensarMotivo, setDispensarMotivo] = useState("");
+
   // Client search state
   const [clientSearch, setClientSearch] = useState("");
   const [clientDateFilter, setClientDateFilter] = useState("");
@@ -44,21 +50,21 @@ export const ReceptionistDashboard = () => {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // All leads for this unit
-  const unitLeads = useMemo(() => {
-    return leads.filter((l) => l.id_unidade === unidadeId);
-  }, [leads, unidadeId]);
+  const unitLeads = useMemo(() => leads.filter((l) => l.id_unidade === unidadeId), [leads, unidadeId]);
 
-  // Today + past pending agendados
-  const agendados = useMemo(() => {
-    return unitLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today);
-  }, [unitLeads, today]);
-
+  // Agendados (today + past pending)
+  const agendados = useMemo(() => unitLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
   const agendadosAtrasados = agendados.filter((l) => l.data_agendamento! < today);
 
-  const presentes = unitLeads.filter((l) => l.etapa === "na_loja" && l.checkin?.startsWith(today));
+  // Confirmados (checked in, waiting for "Em Serviço" or "Dispensado")
+  const confirmados = unitLeads.filter((l) => l.etapa === "confirmado");
+
+  // Na loja (em serviço)
+  const presentes = unitLeads.filter((l) => l.etapa === "na_loja");
+
   const concluidos = unitLeads.filter((l) => l.etapa === "concluido" && l.checkout?.startsWith(today));
+  const dispensados = unitLeads.filter((l) => l.etapa === "dispensado");
 
   // Clients tab filtered
   const filteredClients = useMemo(() => {
@@ -66,9 +72,7 @@ export const ReceptionistDashboard = () => {
     if (clientSearch) {
       const q = clientSearch.toLowerCase();
       filtered = filtered.filter((l) =>
-        l.nome.toLowerCase().includes(q) ||
-        l.telefone.includes(q) ||
-        (l.numero_os && l.numero_os.toLowerCase().includes(q))
+        l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (l.numero_os && l.numero_os.toLowerCase().includes(q))
       );
     }
     if (clientDateFilter) {
@@ -82,15 +86,40 @@ export const ReceptionistDashboard = () => {
 
   const handleCheckin = (lead: Lead) => {
     const now = new Date().toISOString();
-    updateLead(lead.id, { etapa: "na_loja", checkin: now });
+    updateLead(lead.id, { etapa: "confirmado", checkin: now });
     addInteracao({
-      id: `i${Date.now()}`,
-      id_lead: lead.id,
-      tipo: "checkin",
-      descricao: `Check-in na unidade ${unidadeNome}`,
-      data: now,
-      id_usuario: currentUser.id,
+      id: `i${Date.now()}`, id_lead: lead.id, tipo: "checkin",
+      descricao: `Check-in na unidade ${unidadeNome} — Confirmado`,
+      data: now, id_usuario: currentUser.id,
     });
+  };
+
+  const handleEmServico = (lead: Lead) => {
+    const now = new Date().toISOString();
+    updateLead(lead.id, { etapa: "na_loja" });
+    addInteracao({
+      id: `i${Date.now()}`, id_lead: lead.id, tipo: "mudanca_etapa",
+      descricao: `Em Serviço na unidade ${unidadeNome}`,
+      data: now, id_usuario: currentUser.id,
+    });
+  };
+
+  const handleDispensarOpen = (lead: Lead) => {
+    setDispensarLead(lead);
+    setDispensarMotivo("");
+    setDispensarOpen(true);
+  };
+
+  const handleDispensarSubmit = () => {
+    if (!dispensarLead || !dispensarMotivo.trim()) return;
+    const now = new Date().toISOString();
+    updateLead(dispensarLead.id, { etapa: "dispensado" });
+    addInteracao({
+      id: `i${Date.now()}`, id_lead: dispensarLead.id, tipo: "mudanca_etapa",
+      descricao: `Dispensado — Motivo: ${dispensarMotivo.trim()}`,
+      data: now, id_usuario: currentUser.id,
+    });
+    setDispensarOpen(false);
   };
 
   const handleCheckoutSubmit = () => {
@@ -98,19 +127,15 @@ export const ReceptionistDashboard = () => {
     if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
     const now = new Date().toISOString();
     updateLead(checkoutLead.id, {
-      etapa: checkoutStatus,
-      checkout: now,
+      etapa: checkoutStatus, checkout: now,
       tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
     });
     const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
     const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
     addInteracao({
-      id: `i${Date.now()}`,
-      id_lead: checkoutLead.id,
-      tipo: "checkout",
+      id: `i${Date.now()}`, id_lead: checkoutLead.id, tipo: "checkout",
       descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
-      data: now,
-      id_usuario: currentUser.id,
+      data: now, id_usuario: currentUser.id,
     });
     setCheckoutOpen(false);
     setTags([]);
@@ -121,13 +146,20 @@ export const ReceptionistDashboard = () => {
   const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
   const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
 
-  const toggleTag = (tag: string) => {
-    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  };
+  const toggleTag = (tag: string) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
-  const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    novo: "secondary", agendado: "default", na_loja: "default", concluido: "default",
-    dispensado: "destructive", perdido: "destructive", desqualificado: "destructive",
+  const getStatusBadgeClass = (etapa: string) => {
+    const map: Record<string, string> = {
+      novo: "bg-info/15 text-info border-info/30",
+      agendado: "bg-purple/15 text-purple border-purple/30",
+      confirmado: "bg-info/15 text-info border-info/30",
+      na_loja: "bg-warning/15 text-warning border-warning/30",
+      concluido: "bg-success/15 text-success border-success/30",
+      dispensado: "bg-destructive/15 text-destructive border-destructive/30",
+      perdido: "bg-destructive/15 text-destructive border-destructive/30",
+      desqualificado: "bg-muted text-muted-foreground border-muted",
+    };
+    return map[etapa] || "";
   };
 
   return (
@@ -147,10 +179,12 @@ export const ReceptionistDashboard = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatsCard title="Agendados Hoje" value={agendadosHoje.length} icon={CalendarCheck} variant="info" />
-              <StatsCard title="Presentes" value={presentes.length} icon={Users} variant="warning" />
+              <StatsCard title="Confirmados" value={confirmados.length} icon={LogIn} variant="info" />
+              <StatsCard title="Em Serviço" value={presentes.length} icon={Wrench} variant="warning" />
               <StatsCard title="Concluídos" value={concluidos.length} icon={LogOut} variant="success" />
+              <StatsCard title="Dispensados" value={dispensados.length} icon={XCircle} variant="destructive" />
             </div>
 
             {/* Past pending */}
@@ -205,15 +239,45 @@ export const ReceptionistDashboard = () => {
               )}
             </div>
 
-            {/* Presentes */}
+            {/* Confirmados — waiting for Em Serviço or Dispensado */}
+            {confirmados.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3">Confirmados — Aguardando Serviço</h2>
+                <div className="space-y-2">
+                  {confirmados.map((lead) => (
+                    <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-info/20">
+                      <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{lead.nome}</span>
+                          <Badge variant="outline" className="bg-info/15 text-info border-info/30 text-xs">
+                            <span className="mr-1">●</span> Confirmado
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => handleEmServico(lead)} className="gap-2" size="lg">
+                          <Wrench className="h-4 w-4" /> Em Serviço
+                        </Button>
+                        <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
+                          <XCircle className="h-4 w-4" /> Dispensado
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Em Serviço (na_loja) */}
             <div>
-              <h2 className="text-lg font-semibold mb-3">Em Atendimento</h2>
+              <h2 className="text-lg font-semibold mb-3">Em Serviço</h2>
               {presentes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Ninguém em atendimento.</p>
+                <p className="text-sm text-muted-foreground">Ninguém em serviço.</p>
               ) : (
                 <div className="space-y-2">
                   {presentes.map((lead) => (
-                    <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-success/20">
+                    <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-warning/20">
                       <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">{lead.nome}</span>
@@ -248,28 +312,19 @@ export const ReceptionistDashboard = () => {
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, telefone ou OS..."
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Input placeholder="Buscar por nome, telefone ou OS..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} className="pl-10" />
                 </div>
               </div>
-              <div>
-                <Input type="date" value={clientDateFilter} onChange={(e) => setClientDateFilter(e.target.value)} className="w-[160px]" />
-              </div>
-              <div>
-                <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
-                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {ETAPAS_FUNIL.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input type="date" value={clientDateFilter} onChange={(e) => setClientDateFilter(e.target.value)} className="w-[160px]" />
+              <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {ETAPAS_FUNIL.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="rounded-xl border bg-card">
@@ -285,9 +340,7 @@ export const ReceptionistDashboard = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredClients.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell></TableRow>
                   ) : (
                     filteredClients.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
@@ -297,7 +350,9 @@ export const ReceptionistDashboard = () => {
                           <TableCell>{formatPhone(lead.telefone)}</TableCell>
                           <TableCell>{lead.numero_os || "—"}</TableCell>
                           <TableCell>
-                            <Badge variant={etapaBadgeVariant[lead.etapa] || "secondary"} className="text-xs">{etapa?.label}</Badge>
+                            <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>
+                              <span className="mr-1">●</span> {etapa?.label}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{lead.data_agendamento || lead.data_entrada}</TableCell>
                         </TableRow>
@@ -312,6 +367,33 @@ export const ReceptionistDashboard = () => {
 
         <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isPorta isReceptionist unidadeId={unidadeId} />
         <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+
+        {/* Dispensar Modal */}
+        <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-destructive" />
+                Dispensar: {dispensarLead?.nome}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Motivo da dispensa <span className="text-destructive">*</span></Label>
+                <Textarea
+                  value={dispensarMotivo}
+                  onChange={(e) => setDispensarMotivo(e.target.value)}
+                  placeholder="Descreva o motivo..."
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim()}>Confirmar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Checkout Modal */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
@@ -337,24 +419,14 @@ export const ReceptionistDashboard = () => {
               {checkoutNeedsMotivo && (
                 <div>
                   <Label>Motivo <span className="text-destructive">*</span></Label>
-                  <Input
-                    value={checkoutMotivo}
-                    onChange={(e) => setCheckoutMotivo(e.target.value)}
-                    placeholder="Descreva o motivo..."
-                    className="mt-1"
-                  />
+                  <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
                 </div>
               )}
               <div>
                 <Label>Tags de Serviço</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {SERVICOS_TAGS.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={tags.includes(tag) ? "default" : "outline"}
-                      className="cursor-pointer text-sm py-1 px-3"
-                      onClick={() => toggleTag(tag)}
-                    >
+                    <Badge key={tag} variant={tags.includes(tag) ? "default" : "outline"} className="cursor-pointer text-sm py-1 px-3" onClick={() => toggleTag(tag)}>
                       {tag}
                     </Badge>
                   ))}

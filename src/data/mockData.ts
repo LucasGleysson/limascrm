@@ -11,7 +11,8 @@ export const ORIGENS = ["WhatsApp", "Instagram", "Facebook", "Google Ads", "Indi
 
 export const ETAPAS_FUNIL = [
   { id: "novo", label: "Novo Lead", color: "info" },
-  { id: "agendado", label: "Agendado", color: "info" },
+  { id: "agendado", label: "Agendado", color: "purple" },
+  { id: "confirmado", label: "Confirmado", color: "info" },
   { id: "na_loja", label: "Na Loja", color: "warning" },
   { id: "concluido", label: "Serviço Concluído", color: "success" },
   { id: "dispensado", label: "Dispensado", color: "destructive" },

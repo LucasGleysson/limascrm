@@ -16,6 +16,7 @@ import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   novo: "secondary",
   agendado: "default",
+  confirmado: "default",
   na_loja: "default",
   concluido: "default",
   dispensado: "destructive",
@@ -102,13 +103,21 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
     if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
 
+    // Rescue dispensado back to agendado
+    if (lead.etapa === "dispensado") {
+      updates.etapa = "agendado";
+    }
+
     if (Object.keys(updates).length > 0) {
       updateLead(lead.id, updates);
+      const desc = lead.etapa === "dispensado"
+        ? "Reagendado (resgatado de dispensado)"
+        : "Informações de agendamento editadas";
       addInteracao({
         id: `i${Date.now()}`,
         id_lead: lead.id,
-        tipo: "nota",
-        descricao: "Informações de agendamento editadas",
+        tipo: lead.etapa === "dispensado" ? "mudanca_etapa" : "nota",
+        descricao: desc,
         data: new Date().toISOString(),
         id_usuario: currentUser.id,
       });
@@ -122,6 +131,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const canSchedule = lead.etapa === "novo";
   const isAgendado = lead.etapa === "agendado";
+  const isDispensado = lead.etapa === "dispensado";
+  const canEditSchedule = isAgendado || isDispensado;
 
   return (
     <>
@@ -275,7 +286,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
                     <Pencil className="h-4 w-4" /> Editar Ficha
                   </Button>
-                  {isAgendado && (
+                  {canEditSchedule && (
                     <Button variant="outline" size="sm" className="gap-2" onClick={startEditSchedule}>
                       <Calendar className="h-4 w-4" /> Editar Agendamento
                     </Button>
