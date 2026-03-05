@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lead, UNIDADES, ETAPAS_FUNIL, MOCK_USUARIOS, ORIGENS } from "@/data/mockData";
+import { Lead, UNIDADES, ETAPAS_FUNIL, MOCK_USUARIOS, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { LeadTimeline } from "./LeadTimeline";
@@ -33,6 +33,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const { updateLead, addInteracao } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   // Edit form state
@@ -40,18 +41,26 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editTelefone, setEditTelefone] = useState("");
   const [editOrigem, setEditOrigem] = useState("");
   const [editUnidade, setEditUnidade] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+
+  // Schedule edit state
+  const [editDataAgendamento, setEditDataAgendamento] = useState("");
+  const [editNumeroOs, setEditNumeroOs] = useState("");
+  const [editUnidadeAgendamento, setEditUnidadeAgendamento] = useState("");
 
   if (!lead) return null;
 
   const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
   const unidade = UNIDADES.find((u) => u.id === lead.id_unidade);
   const agente = MOCK_USUARIOS.find((u) => u.id === lead.id_agente);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const startEdit = () => {
     setEditNome(lead.nome);
     setEditTelefone(lead.telefone);
     setEditOrigem(lead.origem);
     setEditUnidade(lead.id_unidade || "");
+    setEditTags(lead.tags_servico || []);
     setEditing(true);
   };
 
@@ -63,6 +72,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editTelefone !== lead.telefone) updates.telefone = formatPhone(editTelefone);
     if (editOrigem !== lead.origem) updates.origem = editOrigem;
     if (editUnidade !== (lead.id_unidade || "")) updates.id_unidade = editUnidade || undefined;
+    const currentTags = lead.tags_servico || [];
+    if (JSON.stringify(editTags.sort()) !== JSON.stringify([...currentTags].sort())) updates.tags_servico = editTags;
 
     if (Object.keys(updates).length > 0) {
       updateLead(lead.id, updates);
@@ -78,33 +89,50 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEditing(false);
   };
 
+  const startEditSchedule = () => {
+    setEditDataAgendamento(lead.data_agendamento || "");
+    setEditNumeroOs(lead.numero_os || "");
+    setEditUnidadeAgendamento(lead.id_unidade || "");
+    setEditingSchedule(true);
+  };
+
+  const saveScheduleEdit = () => {
+    const updates: Partial<Lead> = {};
+    if (editDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editDataAgendamento;
+    if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
+    if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
+
+    if (Object.keys(updates).length > 0) {
+      updateLead(lead.id, updates);
+      addInteracao({
+        id: `i${Date.now()}`,
+        id_lead: lead.id,
+        tipo: "nota",
+        descricao: "Informações de agendamento editadas",
+        data: new Date().toISOString(),
+        id_usuario: currentUser.id,
+      });
+    }
+    setEditingSchedule(false);
+  };
+
+  const toggleTag = (tag: string) => {
+    setEditTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
   const canSchedule = lead.etapa === "novo";
+  const isAgendado = lead.etapa === "agendado";
 
   return (
     <>
-      <Sheet open={open} onOpenChange={(v) => { if (!v) setEditing(false); onOpenChange(v); }}>
+      <Sheet open={open} onOpenChange={(v) => { if (!v) { setEditing(false); setEditingSchedule(false); } onOpenChange(v); }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="text-xl">{editing ? "Editar Ficha" : lead.nome}</SheetTitle>
+            <SheetTitle className="text-xl">{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : lead.nome}</SheetTitle>
           </SheetHeader>
 
           <div className="mt-4 space-y-6">
-            {/* Action buttons */}
-            {!editing && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
-                  <Pencil className="h-4 w-4" /> Editar Ficha
-                </Button>
-                {canSchedule && (
-                  <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={() => setScheduleOpen(true)}>
-                    <CalendarCheck className="h-4 w-4" /> Concluir Agendamento
-                  </Button>
-                )}
-              </div>
-            )}
-
             {editing ? (
-              /* Edit form */
               <div className="space-y-4">
                 <div>
                   <Label>Nome</Label>
@@ -141,7 +169,21 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     </SelectContent>
                   </Select>
                 </div>
-
+                <div>
+                  <Label>Tags de Serviço</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {SERVICOS_TAGS.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant={editTags.includes(tag) ? "default" : "outline"}
+                        className="cursor-pointer text-xs py-1 px-3"
+                        onClick={() => toggleTag(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" size="sm" onClick={cancelEdit} className="gap-2">
                     <X className="h-4 w-4" /> Cancelar
@@ -151,9 +193,45 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </Button>
                 </div>
               </div>
+            ) : editingSchedule ? (
+              <div className="space-y-4">
+                <div>
+                  <Label>Unidade / Cidade</Label>
+                  <Select value={editUnidadeAgendamento} onValueChange={setEditUnidadeAgendamento}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {UNIDADES.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Data do Agendamento</Label>
+                  <Input
+                    type="date"
+                    value={editDataAgendamento}
+                    onChange={(e) => setEditDataAgendamento(e.target.value)}
+                    min={todayStr}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Número da OS</Label>
+                  <Input value={editNumeroOs} onChange={(e) => setEditNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingSchedule(false)} className="gap-2">
+                    <X className="h-4 w-4" /> Cancelar
+                  </Button>
+                  <Button size="sm" onClick={saveScheduleEdit} disabled={!editDataAgendamento || !editNumeroOs || !editUnidadeAgendamento} className="gap-2">
+                    <Check className="h-4 w-4" /> Salvar
+                  </Button>
+                </div>
+              </div>
             ) : (
-              /* View mode */
               <>
+                {/* View mode: Info first, then buttons */}
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={etapaBadgeVariant[lead.etapa] || "secondary"}>{etapa?.label}</Badge>
                   {lead.is_porta && <Badge variant="outline">Porta</Badge>}
@@ -189,6 +267,23 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                         <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                {/* Action buttons AFTER info */}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
+                    <Pencil className="h-4 w-4" /> Editar Ficha
+                  </Button>
+                  {isAgendado && (
+                    <Button variant="outline" size="sm" className="gap-2" onClick={startEditSchedule}>
+                      <Calendar className="h-4 w-4" /> Editar Agendamento
+                    </Button>
+                  )}
+                  {canSchedule && (
+                    <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={() => setScheduleOpen(true)}>
+                      <CalendarCheck className="h-4 w-4" /> Concluir Agendamento
+                    </Button>
                   )}
                 </div>
 

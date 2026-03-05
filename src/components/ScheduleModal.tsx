@@ -23,6 +23,8 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
 
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const handleSubmit = () => {
     if (!unidade || !data || !os) return;
     const now = new Date().toISOString();
@@ -67,7 +69,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
           </div>
           <div>
             <Label>Data do Agendamento</Label>
-            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="mt-1" />
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} className="mt-1" />
           </div>
           <div>
             <Label>Número da OS</Label>
