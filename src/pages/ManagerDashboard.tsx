@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
 import { UNIDADES, ORIGENS, MOCK_USUARIOS, ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
