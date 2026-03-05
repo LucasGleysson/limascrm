@@ -321,6 +321,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                       <Ban className="h-4 w-4" /> Desqualificar
                     </Button>
                   )}
+                </div>
 
                 <div>
                   <h4 className="font-semibold mb-3">Timeline</h4>
@@ -340,6 +341,31 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
           leadNome={lead.nome}
         />
       )}
+
+      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) setDisqualifyMotivo(""); setDisqualifyOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
+            </p>
+            <Textarea
+              value={disqualifyMotivo}
+              onChange={(e) => setDisqualifyMotivo(e.target.value)}
+              placeholder="Motivo da desqualificação..."
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOpen(false); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
