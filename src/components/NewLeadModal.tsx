@@ -8,6 +8,7 @@ import { ORIGENS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { UserPlus } from "lucide-react";
+import { maskPhoneInput, formatPhone } from "@/lib/phoneUtils";
 
 interface Props {
   open: boolean;
@@ -30,9 +31,9 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId }: Props) 
     addLead({
       id,
       nome,
-      telefone,
+      telefone: formatPhone(telefone),
       origem: isPorta ? "Porta" : origem,
-      etapa: isPorta ? "compareceu" : "novo",
+      etapa: isPorta ? "na_loja" : "novo",
       data_entrada: now.split("T")[0],
       id_agente: currentUser.id,
       id_unidade: unidadeId,
@@ -69,7 +70,12 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId }: Props) 
           </div>
           <div>
             <Label>Telefone</Label>
-            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" className="mt-1" />
+            <Input
+              value={telefone}
+              onChange={(e) => setTelefone(maskPhoneInput(e.target.value))}
+              placeholder="(00) 99999-9999"
+              className="mt-1"
+            />
           </div>
           {!isPorta && (
             <div>
