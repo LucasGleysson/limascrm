@@ -123,6 +123,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const canSchedule = lead.etapa === "novo";
   const isAgendado = lead.etapa === "agendado";
+  const isDispensado = lead.etapa === "dispensado";
+  const canEditSchedule = isAgendado || isDispensado;
 
   return (
     <>
