@@ -18,6 +18,7 @@ export const SupervisorDashboard = () => {
   const { leads, eventos } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
+  const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
 
   const agentes = MOCK_USUARIOS.filter((u) => u.cargo === "agente");
   const today = new Date().toISOString().split("T")[0];
