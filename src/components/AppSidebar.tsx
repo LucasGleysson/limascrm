@@ -1,5 +1,6 @@
 import { Car, Users, CalendarDays, LogOut } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
+import { UNIDADES } from "@/data/mockData";
 
 interface AppSidebarProps {
   activeTab: string;
