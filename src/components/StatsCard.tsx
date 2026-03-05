@@ -15,6 +15,7 @@ const variantStyles = {
   success: "bg-card border-success/20",
   warning: "bg-card border-warning/20",
   info: "bg-card border-info/20",
+  destructive: "bg-card border-destructive/20",
 };
 
 const iconVariantStyles = {
