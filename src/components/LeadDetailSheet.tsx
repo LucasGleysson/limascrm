@@ -103,13 +103,21 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
     if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
 
+    // Rescue dispensado back to agendado
+    if (lead.etapa === "dispensado") {
+      updates.etapa = "agendado";
+    }
+
     if (Object.keys(updates).length > 0) {
       updateLead(lead.id, updates);
+      const desc = lead.etapa === "dispensado"
+        ? "Reagendado (resgatado de dispensado)"
+        : "Informações de agendamento editadas";
       addInteracao({
         id: `i${Date.now()}`,
         id_lead: lead.id,
-        tipo: "nota",
-        descricao: "Informações de agendamento editadas",
+        tipo: lead.etapa === "dispensado" ? "mudanca_etapa" : "nota",
+        descricao: desc,
         data: new Date().toISOString(),
         id_usuario: currentUser.id,
       });
