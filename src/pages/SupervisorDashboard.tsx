@@ -2,17 +2,22 @@ import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { MOCK_USUARIOS, UNIDADES, ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
-import { LeadDetailSheet } from "@/components/LeadDetailSheet";
+import { AppSidebar } from "@/components/AppSidebar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, TrendingUp, XCircle, ChevronRight, Download, BarChart3 } from "lucide-react";
+import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin } from "lucide-react";
 import { Lead } from "@/data/mockData";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+
+const SIDEBAR_TABS = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "agentes", label: "Agentes", icon: Users },
+  { id: "unidades", label: "Unidades", icon: MapPin },
+];
 
 export const SupervisorDashboard = () => {
-  const { leads, interacoes } = useLeads();
+  const { leads, eventos } = useLeads();
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
-  const [detailLead, setDetailLead] = useState<Lead | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
 
   const agentes = MOCK_USUARIOS.filter((u) => u.cargo === "agente");
   const today = new Date().toISOString().split("T")[0];
@@ -20,154 +25,237 @@ export const SupervisorDashboard = () => {
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
       const agenteLeads = leads.filter((l) => l.id_agente === agente.id);
-      const agendados = agenteLeads.filter((l) => ["agendado", "compareceu", "concluido"].includes(l.etapa)).length;
-      const concluidos = agenteLeads.filter((l) => l.etapa === "concluido");
-      const perdidos = agenteLeads.filter((l) => l.etapa === "perdido").length;
-      const faturamento = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
-      const followUpsHoje = interacoes.filter(
-        (i) => i.id_usuario === agente.id && i.tipo === "follow_up" && i.data.startsWith(today)
-      ).length;
+      const agendados = agenteLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length;
+      const perdidos = agenteLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const taxa = agenteLeads.length > 0 ? Math.round((agendados / agenteLeads.length) * 100) : 0;
 
-      return { ...agente, total: agenteLeads.length, agendados, perdidos, faturamento, followUpsHoje, taxa, leads: agenteLeads };
+      // Events compliance
+      const agenteEvents = eventos.filter((e) => {
+        const lead = leads.find((l) => l.id === e.id_lead);
+        return lead?.id_agente === agente.id;
+      });
+      const pendentes = agenteEvents.filter((e) => !e.concluido);
+      const atrasados = pendentes.filter((e) => e.data_prevista < today);
+      const totalEventos = agenteEvents.length;
+      const concluidos = agenteEvents.filter((e) => e.concluido).length;
+      const taxaEventos = totalEventos > 0 ? Math.round((concluidos / totalEventos) * 100) : 100;
+
+      return {
+        ...agente,
+        total: agenteLeads.length,
+        agendados,
+        perdidos,
+        taxa,
+        pendentes: pendentes.length,
+        atrasados: atrasados.length,
+        taxaEventos,
+        leads: agenteLeads,
+      };
     });
-  }, [leads, interacoes, today]);
+  }, [leads, eventos, today]);
 
   const unidadeStats = useMemo(() => {
     return UNIDADES.map((u) => {
       const unitLeads = leads.filter((l) => l.id_unidade === u.id);
       return {
         ...u,
-        agendados: unitLeads.filter((l) => ["agendado", "compareceu", "concluido"].includes(l.etapa)).length,
-        perdidos: unitLeads.filter((l) => l.etapa === "perdido").length,
-        faturamento: unitLeads.reduce((s, l) => s + (l.valor_servico || 0), 0),
+        total: unitLeads.length,
+        agendados: unitLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
+        concluidos: unitLeads.filter((l) => l.etapa === "concluido").length,
+        perdidos: unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
       };
     });
   }, [leads]);
 
   const globalStats = useMemo(() => ({
     totalLeads: leads.length,
-    totalAgendados: leads.filter((l) => ["agendado", "compareceu", "concluido"].includes(l.etapa)).length,
-    totalFaturamento: leads.reduce((s, l) => s + (l.valor_servico || 0), 0),
-    totalPerdidos: leads.filter((l) => l.etapa === "perdido").length,
+    totalAgendados: leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
+    totalPerdidos: leads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
+    taxaConversao: leads.length > 0 ? Math.round((leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length / leads.length) * 100) : 0,
   }), [leads]);
-
-  const exportCSV = () => {
-    const rows = [["Agente", "Leads", "Agendados", "Perdidos", "Taxa Conv.", "Follow-ups Hoje", "Faturamento"]];
-    agenteStats.forEach((a) => {
-      rows.push([a.nome, String(a.total), String(a.agendados), String(a.perdidos), `${a.taxa}%`, String(a.followUpsHoje), `R$ ${a.faturamento}`]);
-    });
-    const csv = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `relatorio-supervisor-${today}.csv`;
-    a.click();
-  };
 
   const selected = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
+  const chartData = useMemo(() => {
+    if (!selected) return [];
+    return [
+      { name: "Novos", value: selected.leads.filter((l) => l.etapa === "novo").length },
+      { name: "Agendados", value: selected.leads.filter((l) => l.etapa === "agendado").length },
+      { name: "Na Loja", value: selected.leads.filter((l) => l.etapa === "na_loja").length },
+      { name: "Concluídos", value: selected.leads.filter((l) => l.etapa === "concluido").length },
+      { name: "Perdidos", value: selected.leads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length },
+    ];
+  }, [selected]);
+
+  const chartColors = ["hsl(217, 91%, 60%)", "hsl(38, 92%, 50%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)", "hsl(0, 72%, 51%)"];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
-          <p className="text-muted-foreground text-sm">Desempenho dos agentes e unidades</p>
-        </div>
-        <Button variant="outline" onClick={exportCSV} className="gap-2">
-          <Download className="h-4 w-4" /> Exportar Excel
-        </Button>
-      </div>
+    <div className="flex min-h-screen bg-background">
+      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Total de Leads" value={globalStats.totalLeads} icon={Users} variant="info" />
-        <StatsCard title="Agendados" value={globalStats.totalAgendados} icon={CalendarCheck} variant="success" />
-        <StatsCard title="Perdidos" value={globalStats.totalPerdidos} icon={XCircle} variant="warning" />
-        <StatsCard title="Faturamento Total" value={`R$ ${globalStats.totalFaturamento.toLocaleString("pt-BR")}`} icon={TrendingUp} variant="primary" />
-      </div>
-
-      {/* Agentes */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Desempenho por Agente</h2>
-        <div className="space-y-2">
-          {agenteStats.map((agente) => (
-            <div
-              key={agente.id}
-              className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer animate-slide-in ${selectedAgente === agente.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
-              onClick={() => setSelectedAgente(selectedAgente === agente.id ? null : agente.id)}
-            >
-              <div className="flex-1">
-                <span className="font-semibold">{agente.nome}</span>
-                <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-                  <span>{agente.total} leads</span>
-                  <span className="text-success">{agente.agendados} agendados</span>
-                  <span className="text-destructive">{agente.perdidos} perdidos</span>
-                  <span className="text-primary font-medium">{agente.taxa}% conv.</span>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="font-bold">R$ {agente.faturamento.toLocaleString("pt-BR")}</p>
-                <p className="text-xs text-muted-foreground">{agente.followUpsHoje} follow-ups hoje</p>
-              </div>
-              <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedAgente === agente.id ? "rotate-90" : ""}`} />
+      <main className="flex-1 overflow-auto p-6 space-y-6">
+        {activeTab === "dashboard" && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
+              <p className="text-muted-foreground text-sm">Desempenho geral</p>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Agent Detail */}
-      {selected && (
-        <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in">
-          <h3 className="font-semibold mb-3 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" /> Leads de {selected.nome}
-          </h3>
-          <div className="space-y-2">
-            {selected.leads.map((lead) => {
-              const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
-              return (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Total de Leads" value={globalStats.totalLeads} icon={Users} variant="info" />
+              <StatsCard title="Agendados" value={globalStats.totalAgendados} icon={CalendarCheck} variant="success" />
+              <StatsCard title="Perdidos" value={globalStats.totalPerdidos} icon={XCircle} variant="warning" />
+              <StatsCard title="Taxa Conversão" value={`${globalStats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
+            </div>
+
+            {/* Quick agent overview */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4">Resumo por Agente</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONVERSÃO</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">EVENTOS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agenteStats.map((a) => (
+                      <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="py-3 font-medium">{a.nome}</td>
+                        <td className="py-3 text-center">{a.total}</td>
+                        <td className="py-3 text-center text-success">{a.agendados}</td>
+                        <td className="py-3 text-center text-destructive">{a.perdidos}</td>
+                        <td className="py-3 text-center font-medium">{a.taxa}%</td>
+                        <td className="py-3 text-center">
+                          <Badge variant="outline" className={`text-xs ${a.atrasados > 0 ? "bg-destructive/10 text-destructive border-destructive/30" : "bg-success/10 text-success border-success/30"}`}>
+                            {a.atrasados > 0 ? `${a.atrasados} atrasados` : "Em dia"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === "agentes" && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
+              <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
+            </div>
+
+            <div className="space-y-2">
+              {agenteStats.map((agente) => (
                 <div
-                  key={lead.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                  onClick={() => { setDetailLead(lead); setDetailOpen(true); }}
+                  key={agente.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer ${selectedAgente === agente.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
+                  onClick={() => setSelectedAgente(selectedAgente === agente.id ? null : agente.id)}
                 >
-                  <span className="font-medium text-sm">{lead.nome}</span>
-                  <Badge variant="outline" className="text-xs">{etapa?.label}</Badge>
-                  <span className="text-xs text-muted-foreground ml-auto">{lead.origem}</span>
+                  <div className="flex-1">
+                    <span className="font-semibold">{agente.nome}</span>
+                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
+                      <span>{agente.total} leads</span>
+                      <span className="text-success">{agente.agendados} agendados</span>
+                      <span className="text-destructive">{agente.perdidos} perdidos</span>
+                      <span className="text-primary font-medium">{agente.taxa}% conv.</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <Badge variant="outline" className={`text-xs ${agente.atrasados > 0 ? "bg-destructive/10 text-destructive border-destructive/30" : "bg-success/10 text-success border-success/30"}`}>
+                      {agente.taxaEventos}% eventos
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1">{agente.pendentes} pendentes</p>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedAgente === agente.id ? "rotate-90" : ""}`} />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              ))}
+            </div>
 
-      {/* Unidades */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Visão por Unidade</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {unidadeStats.map((u) => (
-            <div key={u.id} className="rounded-xl border border-border bg-card p-4 animate-slide-in">
-              <h3 className="font-semibold mb-2">{u.nome}</h3>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Agendados</p>
-                  <p className="font-bold text-success">{u.agendados}</p>
+            {/* Agent Detail with Chart */}
+            {selected && (
+              <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
+                <h3 className="font-semibold">{selected.nome} — Distribuição de Leads</h3>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold">{selected.total}</p>
+                    <p className="text-xs text-muted-foreground">Total Leads</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold text-primary">{selected.taxa}%</p>
+                    <p className="text-xs text-muted-foreground">Conversão</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className="text-2xl font-bold text-success">{selected.taxaEventos}%</p>
+                    <p className="text-xs text-muted-foreground">Eventos Cumpridos</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center">
+                    <p className={`text-2xl font-bold ${selected.atrasados > 0 ? "text-destructive" : "text-success"}`}>
+                      {selected.atrasados}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Eventos Atrasados</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Perdidos</p>
-                  <p className="font-bold text-destructive">{u.perdidos}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Faturamento</p>
-                  <p className="font-bold">R$ {u.faturamento.toLocaleString("pt-BR")}</p>
+
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                        {chartData.map((_, i) => (
+                          <Cell key={i} fill={chartColors[i]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            )}
+          </>
+        )}
 
-      <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+        {activeTab === "unidades" && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
+              <p className="text-muted-foreground text-sm">Comparativo entre lojas</p>
+            </div>
+
+            <div className="space-y-3">
+              {unidadeStats.map((u) => (
+                <div key={u.id} className="flex items-center gap-6 p-4 rounded-xl border border-border bg-card">
+                  <div className="flex items-center gap-2 min-w-32">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">{u.nome}</span>
+                  </div>
+                  <div className="flex gap-6 text-sm flex-1">
+                    <div>
+                      <span className="text-muted-foreground">{u.total} leads</span>
+                    </div>
+                    <div>
+                      <span className="text-success">{u.concluidos} concluídos</span>
+                    </div>
+                    <div>
+                      <span className="text-destructive">{u.perdidos} perdidos</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </main>
     </div>
   );
 };
