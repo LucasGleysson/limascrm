@@ -6,7 +6,7 @@ interface StatsCardProps {
   subtitle?: string;
   icon: LucideIcon;
   trend?: { value: number; positive: boolean };
-  variant?: "default" | "primary" | "success" | "warning" | "info";
+  variant?: "default" | "primary" | "success" | "warning" | "info" | "destructive";
 }
 
 const variantStyles = {
