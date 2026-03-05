@@ -24,6 +24,7 @@ const iconVariantStyles = {
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
   info: "bg-info/10 text-info",
+  destructive: "bg-destructive/10 text-destructive",
 };
 
 export const StatsCard = ({ title, value, subtitle, icon: Icon, trend, variant = "default" }: StatsCardProps) => (
