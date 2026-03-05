@@ -95,6 +95,7 @@ export const ReceptionistDashboard = () => {
 
   const handleCheckoutSubmit = () => {
     if (!checkoutLead) return;
+    if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
     const now = new Date().toISOString();
     updateLead(checkoutLead.id, {
       etapa: checkoutStatus,
@@ -102,18 +103,23 @@ export const ReceptionistDashboard = () => {
       tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
     });
     const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
+    const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
     addInteracao({
       id: `i${Date.now()}`,
       id_lead: checkoutLead.id,
       tipo: "checkout",
-      descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}`,
+      descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
       data: now,
       id_usuario: currentUser.id,
     });
     setCheckoutOpen(false);
     setTags([]);
+    setCheckoutMotivo("");
     setCheckoutStatus("concluido");
   };
+
+  const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
+  const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
 
   const toggleTag = (tag: string) => {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
