@@ -230,30 +230,94 @@ export const SupervisorDashboard = () => {
           <>
             <div>
               <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
-              <p className="text-muted-foreground text-sm">Comparativo entre lojas</p>
+              <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {unidadeStats.map((u) => (
-                <div key={u.id} className="flex items-center gap-6 p-4 rounded-xl border border-border bg-card">
+                <div
+                  key={u.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer ${selectedUnidade === u.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
+                  onClick={() => setSelectedUnidade(selectedUnidade === u.id ? null : u.id)}
+                >
                   <div className="flex items-center gap-2 min-w-32">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold">{u.nome}</span>
                   </div>
-                  <div className="flex gap-6 text-sm flex-1">
-                    <div>
-                      <span className="text-muted-foreground">{u.total} leads</span>
-                    </div>
-                    <div>
-                      <span className="text-success">{u.concluidos} concluídos</span>
-                    </div>
-                    <div>
-                      <span className="text-destructive">{u.perdidos} perdidos</span>
-                    </div>
+                  <div className="flex gap-4 text-sm flex-1">
+                    <span className="text-muted-foreground">{u.total} leads</span>
+                    <span className="text-success">{u.concluidos} concluídos</span>
+                    <span className="text-destructive">{u.perdidos} perdidos</span>
                   </div>
+                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedUnidade === u.id ? "rotate-90" : ""}`} />
                 </div>
               ))}
             </div>
+
+            {/* Unit Detail */}
+            {(() => {
+              const selUnit = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
+              if (!selUnit) return null;
+
+              const unitLeads = leads.filter((l) => l.id_unidade === selUnit.id);
+              const unitChartData = ETAPAS_FUNIL.map((e) => ({
+                name: e.label,
+                value: unitLeads.filter((l) => l.etapa === e.id).length,
+              }));
+              const unitChartColors = [
+                "hsl(217, 91%, 60%)", // novo
+                "hsl(38, 92%, 50%)",  // agendado
+                "hsl(38, 92%, 50%)",  // na_loja
+                "hsl(142, 71%, 45%)", // concluido
+                "hsl(0, 72%, 51%)",   // dispensado
+                "hsl(0, 72%, 51%)",   // perdido
+                "hsl(var(--muted-foreground))", // desqualificado
+              ];
+
+              return (
+                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    {selUnit.nome} — Detalhamento
+                  </h3>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold">{selUnit.total}</p>
+                      <p className="text-xs text-muted-foreground">Total Leads</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-warning">{selUnit.agendados}</p>
+                      <p className="text-xs text-muted-foreground">Agendados</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-success">{selUnit.concluidos}</p>
+                      <p className="text-xs text-muted-foreground">Concluídos</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-destructive">{selUnit.perdidos}</p>
+                      <p className="text-xs text-muted-foreground">Perdidos</p>
+                    </div>
+                  </div>
+
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={unitChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                        <Tooltip />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                          {unitChartData.map((_, i) => (
+                            <Cell key={i} fill={unitChartColors[i] || "hsl(var(--muted-foreground))"} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </main>
