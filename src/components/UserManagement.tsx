@@ -46,6 +46,7 @@ const CARGO_COLORS: Record<AppRole, string> = {
 };
 
 export const UserManagement = () => {
+  const { unidades } = useLeads();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
