@@ -2,20 +2,23 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 import { UserRole, Usuario, MOCK_USUARIOS } from "@/data/mockData";
 
 interface RoleContextType {
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
+  currentRole: UserRole | null;
+  setCurrentRole: (role: UserRole | null) => void;
   currentUser: Usuario;
+  logout: () => void;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export const RoleProvider = ({ children }: { children: ReactNode }) => {
-  const [currentRole, setCurrentRole] = useState<UserRole>("agente");
+  const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
 
-  const currentUser = MOCK_USUARIOS.find((u) => u.cargo === currentRole) || MOCK_USUARIOS[0];
+  const currentUser = MOCK_USUARIOS.find((u) => u.cargo === (currentRole || "agente")) || MOCK_USUARIOS[0];
+
+  const logout = () => setCurrentRole(null);
 
   return (
-    <RoleContext.Provider value={{ currentRole, setCurrentRole, currentUser }}>
+    <RoleContext.Provider value={{ currentRole, setCurrentRole, currentUser, logout }}>
       {children}
     </RoleContext.Provider>
   );
