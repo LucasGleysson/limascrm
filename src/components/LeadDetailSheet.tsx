@@ -16,6 +16,7 @@ import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   novo: "secondary",
   agendado: "default",
+  confirmado: "default",
   na_loja: "default",
   concluido: "default",
   dispensado: "destructive",
