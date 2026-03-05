@@ -10,7 +10,9 @@ import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { LeadTimeline } from "./LeadTimeline";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 
 const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -36,6 +38,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [disqualifyOpen, setDisqualifyOpen] = useState(false);
+  const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
@@ -133,6 +137,22 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const isAgendado = lead.etapa === "agendado";
   const isDispensado = lead.etapa === "dispensado";
   const canEditSchedule = isAgendado || isDispensado;
+  const canDisqualify = ["novo", "agendado"].includes(lead.etapa);
+
+  const handleDisqualify = () => {
+    if (!disqualifyMotivo.trim()) return;
+    updateLead(lead.id, { etapa: "desqualificado" });
+    addInteracao({
+      id: `i${Date.now()}`,
+      id_lead: lead.id,
+      tipo: "mudanca_etapa",
+      descricao: `Lead desqualificado: ${disqualifyMotivo.trim()}`,
+      data: new Date().toISOString(),
+      id_usuario: currentUser.id,
+    });
+    setDisqualifyMotivo("");
+    setDisqualifyOpen(false);
+  };
 
   return (
     <>
@@ -296,6 +316,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                       <CalendarCheck className="h-4 w-4" /> Concluir Agendamento
                     </Button>
                   )}
+                  {canDisqualify && (
+                    <Button variant="destructive" size="sm" className="gap-2" onClick={() => setDisqualifyOpen(true)}>
+                      <Ban className="h-4 w-4" /> Desqualificar
+                    </Button>
+                  )}
                 </div>
 
                 <div>
@@ -316,6 +341,31 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
           leadNome={lead.nome}
         />
       )}
+
+      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) setDisqualifyMotivo(""); setDisqualifyOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
+            </p>
+            <Textarea
+              value={disqualifyMotivo}
+              onChange={(e) => setDisqualifyMotivo(e.target.value)}
+              placeholder="Motivo da desqualificação..."
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOpen(false); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
