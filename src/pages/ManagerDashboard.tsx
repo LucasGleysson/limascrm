@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
-import { UNIDADES, ORIGENS, MOCK_USUARIOS, ETAPAS_FUNIL } from "@/data/mockData";
+import { ORIGENS, ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,16 +18,16 @@ const SIDEBAR_TABS = [
 ];
 
 const PIE_COLORS = [
-  "hsl(38, 92%, 50%)",   // primary/amber
-  "hsl(217, 91%, 60%)",  // info/blue
-  "hsl(142, 71%, 45%)",  // success/green
-  "hsl(0, 72%, 51%)",    // destructive/red
-  "hsl(280, 65%, 60%)",  // purple
-  "hsl(190, 80%, 45%)",  // teal
+  "hsl(38, 92%, 50%)",
+  "hsl(217, 91%, 60%)",
+  "hsl(142, 71%, 45%)",
+  "hsl(0, 72%, 51%)",
+  "hsl(280, 65%, 60%)",
+  "hsl(190, 80%, 45%)",
 ];
 
 export const ManagerDashboard = () => {
-  const { leads } = useLeads();
+  const { leads, unidades, profiles } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
 
@@ -36,24 +36,15 @@ export const ManagerDashboard = () => {
     return leads.filter((l) => l.id_unidade === unidadeFilter);
   }, [leads, unidadeFilter]);
 
-  // ─── Dashboard Stats ───
   const stats = useMemo(() => {
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido");
     const faturamentoTotal = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
     const agendados = filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length;
     const perdidos = filteredLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
     const taxaConversao = filteredLeads.length > 0 ? Math.round((concluidos.length / filteredLeads.length) * 100) : 0;
-    return {
-      totalLeads: filteredLeads.length,
-      agendados,
-      concluidos: concluidos.length,
-      perdidos,
-      receita: faturamentoTotal,
-      taxaConversao,
-    };
+    return { totalLeads: filteredLeads.length, agendados, concluidos: concluidos.length, perdidos, receita: faturamentoTotal, taxaConversao };
   }, [filteredLeads]);
 
-  // ─── Leads por Origem (for Dashboard + Leads) ───
   const porOrigem = useMemo(() => {
     return ORIGENS.map((origem) => {
       const originLeads = filteredLeads.filter((l) => l.origem === origem);
@@ -63,7 +54,6 @@ export const ManagerDashboard = () => {
     }).filter((o) => o.total > 0).sort((a, b) => b.total - a.total);
   }, [filteredLeads]);
 
-  // ─── Funnel data for chart ───
   const funnelData = useMemo(() => {
     return ETAPAS_FUNIL.map((etapa) => ({
       name: etapa.label,
@@ -71,23 +61,21 @@ export const ManagerDashboard = () => {
     })).filter((d) => d.value > 0);
   }, [filteredLeads]);
 
-  // ─── Desempenho por Unidade ───
   const porUnidade = useMemo(() => {
-    return UNIDADES.map((u) => {
+    return unidades.map((u) => {
       const unitLeads = leads.filter((l) => l.id_unidade === u.id);
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
       const perdidos = unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const receita = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
       return { ...u, total: unitLeads.length, concluidos: concluidos.length, perdidos, receita };
     });
-  }, [leads]);
+  }, [leads, unidades]);
 
-  // ─── Agente Table ───
-  const agentes = MOCK_USUARIOS.filter((u) => u.cargo === "agente");
+  const agentes = profiles.filter((u) => u.cargo === "agente");
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
-      const unidade = UNIDADES.find((u) => u.id === agente.unidade_padrao);
+      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
       const concluidos = aLeads.filter((l) => l.etapa === "concluido");
       return {
         nome: agente.nome,
@@ -103,9 +91,8 @@ export const ManagerDashboard = () => {
         taxa: aLeads.length > 0 ? Math.round((concluidos.length / aLeads.length) * 100) : 0,
       };
     });
-  }, [filteredLeads]);
+  }, [filteredLeads, agentes, unidades]);
 
-  // ─── Agendamentos Tab Data ───
   const todayStr = new Date().toISOString().split("T")[0];
   const agendamentos = useMemo(() => {
     return filteredLeads
@@ -117,12 +104,9 @@ export const ManagerDashboard = () => {
   const agendFuturos = agendamentos.filter((l) => l.data_agendamento! > todayStr);
   const agendAtrasados = agendamentos.filter((l) => l.data_agendamento! < todayStr);
 
-  // ─── Leads Tab Data: pie chart by origem ───
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));
   }, [porOrigem]);
-
-  const maxOrigem = Math.max(...porOrigem.map((o) => o.total), 1);
 
   const UnidadeFilterSelect = (
     <Select value={unidadeFilter} onValueChange={setUnidadeFilter}>
@@ -131,7 +115,7 @@ export const ManagerDashboard = () => {
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="todas">Todas as Unidades</SelectItem>
-        {UNIDADES.map((u) => (
+        {unidades.map((u) => (
           <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
         ))}
       </SelectContent>
@@ -144,7 +128,6 @@ export const ManagerDashboard = () => {
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
 
-        {/* ═══════ DASHBOARD TAB ═══════ */}
         {activeTab === "dashboard" && (
           <>
             <div className="flex items-center justify-between">
@@ -163,7 +146,6 @@ export const ManagerDashboard = () => {
               <StatsCard title="Faturamento" value={`R$ ${stats.receita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} variant="primary" />
             </div>
 
-            {/* Funnel Chart + Origem Pie */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Funil de Vendas</h2>
@@ -192,7 +174,6 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            {/* Unidade + Agent Performance */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Faturamento por Unidade</h2>
@@ -233,7 +214,6 @@ export const ManagerDashboard = () => {
           </>
         )}
 
-        {/* ═══════ LEADS TAB ═══════ */}
         {activeTab === "leads" && (
           <>
             <div className="flex items-center justify-between">
@@ -244,7 +224,6 @@ export const ManagerDashboard = () => {
               {UnidadeFilterSelect}
             </div>
 
-            {/* Origem ROI table */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Performance por Origem</h2>
               <div className="overflow-x-auto">
@@ -273,7 +252,6 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            {/* Agent performance table */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Desempenho por Agente</h2>
               <div className="overflow-x-auto">
@@ -314,7 +292,6 @@ export const ManagerDashboard = () => {
           </>
         )}
 
-        {/* ═══════ AGENDAMENTOS TAB ═══════ */}
         {activeTab === "agendamentos" && (
           <>
             <div className="flex items-center justify-between">
@@ -331,14 +308,13 @@ export const ManagerDashboard = () => {
               <StatsCard title="Futuros" value={agendFuturos.length} icon={CalendarCheck} variant="success" />
             </div>
 
-            {/* Atrasados */}
             {agendAtrasados.length > 0 && (
               <div className="rounded-xl border border-destructive/20 bg-card p-5">
                 <h2 className="text-lg font-semibold mb-3 text-destructive">Agendamentos Atrasados</h2>
                 <div className="space-y-2">
                   {agendAtrasados.map((l) => {
-                    const agente = MOCK_USUARIOS.find((u) => u.id === l.id_agente);
-                    const unidade = UNIDADES.find((u) => u.id === l.id_unidade);
+                    const agente = profiles.find((u) => u.id === l.id_agente);
+                    const unidade = unidades.find((u) => u.id === l.id_unidade);
                     return (
                       <div key={l.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
                         <div className="flex-1">
@@ -357,7 +333,6 @@ export const ManagerDashboard = () => {
               </div>
             )}
 
-            {/* Hoje */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-3">Agendados para Hoje</h2>
               {agendHoje.length === 0 ? (
@@ -365,8 +340,8 @@ export const ManagerDashboard = () => {
               ) : (
                 <div className="space-y-2">
                   {agendHoje.map((l) => {
-                    const agente = MOCK_USUARIOS.find((u) => u.id === l.id_agente);
-                    const unidade = UNIDADES.find((u) => u.id === l.id_unidade);
+                    const agente = profiles.find((u) => u.id === l.id_agente);
+                    const unidade = unidades.find((u) => u.id === l.id_unidade);
                     return (
                       <div key={l.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
                         <div className="flex-1">
@@ -385,14 +360,13 @@ export const ManagerDashboard = () => {
               )}
             </div>
 
-            {/* Futuros */}
             {agendFuturos.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-3">Próximos Agendamentos</h2>
                 <div className="space-y-2">
                   {agendFuturos.map((l) => {
-                    const agente = MOCK_USUARIOS.find((u) => u.id === l.id_agente);
-                    const unidade = UNIDADES.find((u) => u.id === l.id_unidade);
+                    const agente = profiles.find((u) => u.id === l.id_agente);
+                    const unidade = unidades.find((u) => u.id === l.id_unidade);
                     return (
                       <div key={l.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
                         <div className="flex-1">
@@ -411,7 +385,6 @@ export const ManagerDashboard = () => {
           </>
         )}
 
-        {/* ═══════ USUARIOS TAB ═══════ */}
         {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>

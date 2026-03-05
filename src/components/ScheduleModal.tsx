@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UNIDADES } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { CalendarCheck } from "lucide-react";
@@ -17,7 +16,7 @@ interface Props {
 }
 
 export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) => {
-  const { updateLead, addInteracao } = useLeads();
+  const { updateLead, addInteracao, unidades } = useLeads();
   const { currentUser } = useRole();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
@@ -25,18 +24,17 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!unidade || !data || !os) return;
     const now = new Date().toISOString();
-    const unidadeNome = UNIDADES.find((u) => u.id === unidade)?.nome;
-    updateLead(leadId, {
+    const unidadeNome = unidades.find((u) => u.id === unidade)?.nome;
+    await updateLead(leadId, {
       etapa: "agendado",
       id_unidade: unidade,
       data_agendamento: data,
       numero_os: os,
     });
-    addInteracao({
-      id: `i${Date.now()}`,
+    await addInteracao({
       id_lead: leadId,
       tipo: "mudanca_etapa",
       descricao: `Agendado para ${unidadeNome} em ${data} - OS: ${os}`,
@@ -61,7 +59,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
             <Select value={unidade} onValueChange={setUnidade}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
               <SelectContent>
-                {UNIDADES.map((u) => (
+                {unidades.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                 ))}
               </SelectContent>

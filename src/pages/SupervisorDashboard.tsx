@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
-import { MOCK_USUARIOS, UNIDADES, ETAPAS_FUNIL } from "@/data/mockData";
+import { ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin } from "lucide-react";
-import { Lead } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const SIDEBAR_TABS = [
@@ -15,12 +14,12 @@ const SIDEBAR_TABS = [
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos } = useLeads();
+  const { leads, eventos, unidades, profiles } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
 
-  const agentes = MOCK_USUARIOS.filter((u) => u.cargo === "agente");
+  const agentes = profiles.filter((u) => u.cargo === "agente");
   const today = new Date().toISOString().split("T")[0];
 
   const agenteStats = useMemo(() => {
@@ -30,7 +29,6 @@ export const SupervisorDashboard = () => {
       const perdidos = agenteLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const taxa = agenteLeads.length > 0 ? Math.round((agendados / agenteLeads.length) * 100) : 0;
 
-      // Events compliance
       const agenteEvents = eventos.filter((e) => {
         const lead = leads.find((l) => l.id === e.id_lead);
         return lead?.id_agente === agente.id;
@@ -53,10 +51,10 @@ export const SupervisorDashboard = () => {
         leads: agenteLeads,
       };
     });
-  }, [leads, eventos, today]);
+  }, [leads, eventos, today, agentes]);
 
   const unidadeStats = useMemo(() => {
-    return UNIDADES.map((u) => {
+    return unidades.map((u) => {
       const unitLeads = leads.filter((l) => l.id_unidade === u.id);
       return {
         ...u,
@@ -66,7 +64,7 @@ export const SupervisorDashboard = () => {
         perdidos: unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
       };
     });
-  }, [leads]);
+  }, [leads, unidades]);
 
   const globalStats = useMemo(() => ({
     totalLeads: leads.length,
@@ -109,7 +107,6 @@ export const SupervisorDashboard = () => {
               <StatsCard title="Taxa Conversão" value={`${globalStats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
-            {/* Quick agent overview */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Resumo por Agente</h2>
               <div className="overflow-x-auto">
@@ -180,7 +177,6 @@ export const SupervisorDashboard = () => {
               ))}
             </div>
 
-            {/* Agent Detail with Chart */}
             {selected && (
               <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
                 <h3 className="font-semibold">{selected.nome} — Distribuição de Leads</h3>
@@ -254,7 +250,6 @@ export const SupervisorDashboard = () => {
               ))}
             </div>
 
-            {/* Unit Detail */}
             {(() => {
               const selUnit = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
               if (!selUnit) return null;
@@ -265,13 +260,13 @@ export const SupervisorDashboard = () => {
                 value: unitLeads.filter((l) => l.etapa === e.id).length,
               }));
               const unitChartColors = [
-                "hsl(217, 91%, 60%)", // novo
-                "hsl(38, 92%, 50%)",  // agendado
-                "hsl(38, 92%, 50%)",  // na_loja
-                "hsl(142, 71%, 45%)", // concluido
-                "hsl(0, 72%, 51%)",   // dispensado
-                "hsl(0, 72%, 51%)",   // perdido
-                "hsl(var(--muted-foreground))", // desqualificado
+                "hsl(217, 91%, 60%)",
+                "hsl(38, 92%, 50%)",
+                "hsl(38, 92%, 50%)",
+                "hsl(142, 71%, 45%)",
+                "hsl(0, 72%, 51%)",
+                "hsl(0, 72%, 51%)",
+                "hsl(var(--muted-foreground))",
               ];
 
               return (

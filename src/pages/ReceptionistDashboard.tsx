@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
-import { UNIDADES, SERVICOS_TAGS, Lead, MOCK_USUARIOS, ETAPAS_FUNIL } from "@/data/mockData";
+import { SERVICOS_TAGS, Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
@@ -23,11 +23,11 @@ const SIDEBAR_TABS = [
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, addInteracao } = useLeads();
+  const { leads, updateLead, addInteracao, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
-  const unidadeId = currentUser.unidade_padrao || "6";
-  const unidadeNome = UNIDADES.find((u) => u.id === unidadeId)?.nome || "";
+  const unidadeId = currentUser.unidade_padrao || "";
+  const unidadeNome = unidades.find((u) => u.id === unidadeId)?.nome || "";
 
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -38,12 +38,10 @@ export const ReceptionistDashboard = () => {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Dispensar dialog
   const [dispensarOpen, setDispensarOpen] = useState(false);
   const [dispensarLead, setDispensarLead] = useState<Lead | null>(null);
   const [dispensarMotivo, setDispensarMotivo] = useState("");
 
-  // Client search state
   const [clientSearch, setClientSearch] = useState("");
   const [clientDateFilter, setClientDateFilter] = useState("");
   const [clientStatusFilter, setClientStatusFilter] = useState("todos");
@@ -52,21 +50,15 @@ export const ReceptionistDashboard = () => {
 
   const unitLeads = useMemo(() => leads.filter((l) => l.id_unidade === unidadeId), [leads, unidadeId]);
 
-  // Agendados (today + past pending)
   const agendados = useMemo(() => unitLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
   const agendadosAtrasados = agendados.filter((l) => l.data_agendamento! < today);
 
-  // Confirmados (checked in, waiting for "Em Serviço" or "Dispensado")
   const confirmados = unitLeads.filter((l) => l.etapa === "confirmado");
-
-  // Na loja (em serviço)
   const presentes = unitLeads.filter((l) => l.etapa === "na_loja");
-
   const concluidos = unitLeads.filter((l) => l.etapa === "concluido" && l.checkout?.startsWith(today));
   const dispensados = unitLeads.filter((l) => l.etapa === "dispensado");
 
-  // Clients tab filtered
   const filteredClients = useMemo(() => {
     let filtered = unitLeads;
     if (clientSearch) {
@@ -84,21 +76,21 @@ export const ReceptionistDashboard = () => {
     return filtered;
   }, [unitLeads, clientSearch, clientDateFilter, clientStatusFilter]);
 
-  const handleCheckin = (lead: Lead) => {
+  const handleCheckin = async (lead: Lead) => {
     const now = new Date().toISOString();
-    updateLead(lead.id, { etapa: "confirmado", checkin: now });
-    addInteracao({
-      id: `i${Date.now()}`, id_lead: lead.id, tipo: "checkin",
+    await updateLead(lead.id, { etapa: "confirmado", checkin: now });
+    await addInteracao({
+      id_lead: lead.id, tipo: "checkin",
       descricao: `Check-in na unidade ${unidadeNome} — Confirmado`,
       data: now, id_usuario: currentUser.id,
     });
   };
 
-  const handleEmServico = (lead: Lead) => {
+  const handleEmServico = async (lead: Lead) => {
     const now = new Date().toISOString();
-    updateLead(lead.id, { etapa: "na_loja" });
-    addInteracao({
-      id: `i${Date.now()}`, id_lead: lead.id, tipo: "mudanca_etapa",
+    await updateLead(lead.id, { etapa: "na_loja" });
+    await addInteracao({
+      id_lead: lead.id, tipo: "mudanca_etapa",
       descricao: `Em Serviço na unidade ${unidadeNome}`,
       data: now, id_usuario: currentUser.id,
     });
@@ -110,30 +102,30 @@ export const ReceptionistDashboard = () => {
     setDispensarOpen(true);
   };
 
-  const handleDispensarSubmit = () => {
+  const handleDispensarSubmit = async () => {
     if (!dispensarLead || !dispensarMotivo.trim()) return;
     const now = new Date().toISOString();
-    updateLead(dispensarLead.id, { etapa: "dispensado" });
-    addInteracao({
-      id: `i${Date.now()}`, id_lead: dispensarLead.id, tipo: "mudanca_etapa",
+    await updateLead(dispensarLead.id, { etapa: "dispensado" });
+    await addInteracao({
+      id_lead: dispensarLead.id, tipo: "mudanca_etapa",
       descricao: `Dispensado — Motivo: ${dispensarMotivo.trim()}`,
       data: now, id_usuario: currentUser.id,
     });
     setDispensarOpen(false);
   };
 
-  const handleCheckoutSubmit = () => {
+  const handleCheckoutSubmit = async () => {
     if (!checkoutLead) return;
     if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
     const now = new Date().toISOString();
-    updateLead(checkoutLead.id, {
+    await updateLead(checkoutLead.id, {
       etapa: checkoutStatus, checkout: now,
       tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
     });
     const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
     const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
-    addInteracao({
-      id: `i${Date.now()}`, id_lead: checkoutLead.id, tipo: "checkout",
+    await addInteracao({
+      id_lead: checkoutLead.id, tipo: "checkout",
       descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
       data: now, id_usuario: currentUser.id,
     });
@@ -187,7 +179,6 @@ export const ReceptionistDashboard = () => {
               <StatsCard title="Dispensados" value={dispensados.length} icon={XCircle} variant="destructive" />
             </div>
 
-            {/* Past pending */}
             {agendadosAtrasados.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-destructive">
@@ -195,7 +186,7 @@ export const ReceptionistDashboard = () => {
                 </h2>
                 <div className="space-y-2">
                   {agendadosAtrasados.map((lead) => {
-                    const agente = MOCK_USUARIOS.find((u) => u.id === lead.id_agente);
+                    const agente = profiles.find((u) => u.id === lead.id_agente);
                     return (
                       <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-destructive/20">
                         <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
@@ -214,7 +205,6 @@ export const ReceptionistDashboard = () => {
               </div>
             )}
 
-            {/* Agendados hoje */}
             <div>
               <h2 className="text-lg font-semibold mb-3">Aguardando Chegada</h2>
               {agendadosHoje.length === 0 ? (
@@ -222,7 +212,7 @@ export const ReceptionistDashboard = () => {
               ) : (
                 <div className="space-y-2">
                   {agendadosHoje.map((lead) => {
-                    const agente = MOCK_USUARIOS.find((u) => u.id === lead.id_agente);
+                    const agente = profiles.find((u) => u.id === lead.id_agente);
                     return (
                       <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
                         <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
@@ -239,7 +229,6 @@ export const ReceptionistDashboard = () => {
               )}
             </div>
 
-            {/* Confirmados — waiting for Em Serviço or Dispensado */}
             {confirmados.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold mb-3">Confirmados — Aguardando Serviço</h2>
@@ -269,7 +258,6 @@ export const ReceptionistDashboard = () => {
               </div>
             )}
 
-            {/* Em Serviço (na_loja) */}
             <div>
               <h2 className="text-lg font-semibold mb-3">Em Serviço</h2>
               {presentes.length === 0 ? (
@@ -368,7 +356,6 @@ export const ReceptionistDashboard = () => {
         <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isPorta isReceptionist unidadeId={unidadeId} />
         <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
-        {/* Dispensar Modal */}
         <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -395,7 +382,6 @@ export const ReceptionistDashboard = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Checkout Modal */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>

@@ -1,6 +1,6 @@
 import { Car, LogOut } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
-import { UNIDADES } from "@/data/mockData";
+import { useLeads } from "@/contexts/LeadContext";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -10,27 +10,26 @@ interface AppSidebarProps {
 
 export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) => {
   const { currentUser, logout } = useRole();
+  const { unidades } = useLeads();
 
   if (!currentUser) return null;
 
+  const unidadeNome = currentUser.unidade_padrao
+    ? unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || ""
+    : "";
+
   return (
     <aside className="w-64 min-h-screen bg-sidebar flex flex-col border-r border-sidebar-border shrink-0">
-      {/* Brand */}
       <div className="p-5 flex items-center gap-3">
         <div className="rounded-lg bg-sidebar-primary p-2">
           <Car className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         <div>
           <p className="text-sm font-bold text-sidebar-foreground">AutoCRM</p>
-          <p className="text-xs text-sidebar-foreground/60">
-            {currentUser.unidade_padrao
-              ? UNIDADES.find((u) => u.id === currentUser.unidade_padrao)?.nome || ""
-              : ""}
-          </p>
+          <p className="text-xs text-sidebar-foreground/60">{unidadeNome}</p>
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
@@ -48,7 +47,6 @@ export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) =>
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-3">
           <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sm font-semibold text-sidebar-foreground">
