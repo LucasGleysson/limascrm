@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UNIDADES } from "@/data/mockData";
+import { useLeads } from "@/contexts/LeadContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +46,7 @@ const CARGO_COLORS: Record<AppRole, string> = {
 };
 
 export const UserManagement = () => {
+  const { unidades } = useLeads();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -198,7 +199,7 @@ export const UserManagement = () => {
       ) : (
         <div className="space-y-2">
           {profiles.map((profile) => {
-            const unidade = UNIDADES.find((u) => u.id === profile.unidade_padrao);
+            const unidade = unidades.find((u) => u.id === profile.unidade_padrao);
             return (
               <div
                 key={profile.id}
@@ -293,7 +294,7 @@ export const UserManagement = () => {
                     <SelectValue placeholder="Selecione a unidade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNIDADES.map((u) => (
+                    {unidades.map((u) => (
                       <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                     ))}
                   </SelectContent>

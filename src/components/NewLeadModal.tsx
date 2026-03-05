@@ -31,34 +31,34 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     ["na_loja", "agendado"].includes(e.id)
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!nome || !telefone) return;
     if (isReceptionist && !numeroOs) return;
-    const id = `l${Date.now()}`;
     const now = new Date().toISOString();
-    addLead({
-      id,
+    const finalEtapa = isReceptionist ? etapa : (isPorta ? "na_loja" : "novo");
+    const leadId = await addLead({
       nome,
       telefone: formatPhone(telefone),
       origem: origem || "Porta",
-      etapa: isReceptionist ? etapa : (isPorta ? "na_loja" : "novo"),
+      etapa: finalEtapa,
       data_entrada: now.split("T")[0],
       id_agente: currentUser.id,
-      id_unidade: unidadeId,
-      is_porta: isPorta,
-      checkin: (isReceptionist && etapa === "na_loja") || isPorta ? now : undefined,
-      numero_os: numeroOs || undefined,
+      id_unidade: unidadeId || null,
+      is_porta: isPorta || false,
+      checkin: (isReceptionist && etapa === "na_loja") || isPorta ? now : null,
+      numero_os: numeroOs || null,
     });
-    addInteracao({
-      id: `i${Date.now()}`,
-      id_lead: id,
-      tipo: "mudanca_etapa",
-      descricao: isPorta || (isReceptionist && etapa === "na_loja")
-        ? "Cliente de porta registrado com check-in"
-        : `Lead criado como '${ETAPAS_FUNIL.find(e => e.id === etapa)?.label || "Novo Lead"}'`,
-      data: now,
-      id_usuario: currentUser.id,
-    });
+    if (leadId) {
+      await addInteracao({
+        id_lead: leadId,
+        tipo: "mudanca_etapa",
+        descricao: isPorta || (isReceptionist && etapa === "na_loja")
+          ? "Cliente de porta registrado com check-in"
+          : `Lead criado como '${ETAPAS_FUNIL.find(e => e.id === finalEtapa)?.label || "Novo Lead"}'`,
+        data: now,
+        id_usuario: currentUser.id,
+      });
+    }
     setNome("");
     setTelefone("");
     setOrigem("");

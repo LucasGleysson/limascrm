@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LeadDetailSheet } from "./LeadDetailSheet";
-import { CheckCircle2, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Evento, Lead } from "@/data/mockData";
 
 export const EventoPanel = () => {
@@ -34,9 +34,9 @@ export const EventoPanel = () => {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const handleConclude = () => {
+  const handleConclude = async () => {
     if (!selectedEvento || !descricao.trim()) return;
-    concluirEvento(selectedEvento.id, descricao.trim(), currentUser.id);
+    await concluirEvento(selectedEvento.id, descricao.trim(), currentUser.id);
     setConcludeOpen(false);
     setDescricao("");
     setSelectedEvento(null);
@@ -62,7 +62,6 @@ export const EventoPanel = () => {
         <p className="text-muted-foreground text-sm">Follow-ups pendentes e concluídos</p>
       </div>
 
-      {/* Pending */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <Clock className="h-5 w-5 text-warning" /> Pendentes ({pendentes.length})
@@ -112,7 +111,6 @@ export const EventoPanel = () => {
         )}
       </div>
 
-      {/* Concluded */}
       {concluidos.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -142,7 +140,6 @@ export const EventoPanel = () => {
         </div>
       )}
 
-      {/* Conclude Dialog */}
       <Dialog open={concludeOpen} onOpenChange={setConcludeOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -173,7 +170,6 @@ export const EventoPanel = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Lead Detail Sheet */}
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );

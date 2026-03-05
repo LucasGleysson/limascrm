@@ -14,6 +14,180 @@ export type Database = {
   }
   public: {
     Tables: {
+      eventos: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          data_conclusao: string | null
+          data_prevista: string
+          descricao_conclusao: string | null
+          id: string
+          id_lead: string
+          id_usuario: string | null
+          numero: number
+          tipo: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          data_conclusao?: string | null
+          data_prevista: string
+          descricao_conclusao?: string | null
+          id?: string
+          id_lead: string
+          id_usuario?: string | null
+          numero: number
+          tipo?: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          data_conclusao?: string | null
+          data_prevista?: string
+          descricao_conclusao?: string | null
+          id?: string
+          id_lead?: string
+          id_usuario?: string | null
+          numero?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_id_usuario_fkey"
+            columns: ["id_usuario"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interacoes: {
+        Row: {
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          id_lead: string
+          id_usuario: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          descricao: string
+          id?: string
+          id_lead: string
+          id_usuario: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          id_lead?: string
+          id_usuario?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacoes_id_lead_fkey"
+            columns: ["id_lead"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacoes_id_usuario_fkey"
+            columns: ["id_usuario"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          checkin: string | null
+          checkout: string | null
+          created_at: string
+          data_agendamento: string | null
+          data_entrada: string
+          etapa: string
+          id: string
+          id_agente: string
+          id_unidade: string | null
+          is_porta: boolean | null
+          nome: string
+          numero_os: string | null
+          origem: string
+          tags_servico: string[] | null
+          telefone: string
+          updated_at: string
+          valor_servico: number | null
+        }
+        Insert: {
+          checkin?: string | null
+          checkout?: string | null
+          created_at?: string
+          data_agendamento?: string | null
+          data_entrada?: string
+          etapa?: string
+          id?: string
+          id_agente: string
+          id_unidade?: string | null
+          is_porta?: boolean | null
+          nome: string
+          numero_os?: string | null
+          origem?: string
+          tags_servico?: string[] | null
+          telefone: string
+          updated_at?: string
+          valor_servico?: number | null
+        }
+        Update: {
+          checkin?: string | null
+          checkout?: string | null
+          created_at?: string
+          data_agendamento?: string | null
+          data_entrada?: string
+          etapa?: string
+          id?: string
+          id_agente?: string
+          id_unidade?: string | null
+          is_porta?: boolean | null
+          nome?: string
+          numero_os?: string | null
+          origem?: string
+          tags_servico?: string[] | null
+          telefone?: string
+          updated_at?: string
+          valor_servico?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_id_agente_fkey"
+            columns: ["id_agente"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_id_unidade_fkey"
+            columns: ["id_unidade"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cargo: Database["public"]["Enums"]["app_role"]
@@ -41,6 +215,24 @@ export type Database = {
           nome?: string
           unidade_padrao?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      unidades: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
         }
         Relationships: []
       }

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
-import { ETAPAS_FUNIL, UNIDADES, Lead } from "@/data/mockData";
+import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { ScheduleModal } from "@/components/ScheduleModal";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
@@ -24,7 +24,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const AgentDashboard = () => {
-  const { leads, updateLead, addInteracao, eventos } = useLeads();
+  const { leads, updateLead, addInteracao, eventos, unidades } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("leads");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -65,16 +65,15 @@ export const AgentDashboard = () => {
     return counts;
   }, [leads, currentUser.id]);
 
-  const handleMoveEtapa = (lead: Lead, novaEtapa: string) => {
+  const handleMoveEtapa = async (lead: Lead, novaEtapa: string) => {
     if (novaEtapa === "agendado") {
       setScheduleLead({ id: lead.id, nome: lead.nome });
       setScheduleOpen(true);
       return;
     }
-    updateLead(lead.id, { etapa: novaEtapa });
+    await updateLead(lead.id, { etapa: novaEtapa });
     const etapaLabel = ETAPAS_FUNIL.find((e) => e.id === novaEtapa)?.label;
-    addInteracao({
-      id: `i${Date.now()}`,
+    await addInteracao({
       id_lead: lead.id,
       tipo: "mudanca_etapa",
       descricao: `Movido para '${etapaLabel}'`,
@@ -108,7 +107,6 @@ export const AgentDashboard = () => {
       <main className="flex-1 overflow-auto">
         {activeTab === "leads" && (
           <div className="p-6 space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold">Leads</h1>
@@ -119,7 +117,6 @@ export const AgentDashboard = () => {
               </Button>
             </div>
 
-            {/* Funnel tabs */}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setEtapaFilter("todos")}
@@ -146,7 +143,6 @@ export const AgentDashboard = () => {
               ))}
             </div>
 
-            {/* Search + Date filters */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -191,7 +187,6 @@ export const AgentDashboard = () => {
               </Popover>
             </div>
 
-            {/* Lead table */}
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <Table>
                 <TableHeader>
@@ -214,7 +209,7 @@ export const AgentDashboard = () => {
                   ) : (
                     myLeads.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
-                      const unidade = UNIDADES.find((u) => u.id === lead.id_unidade);
+                      const unidade = unidades.find((u) => u.id === lead.id_unidade);
                       return (
                         <TableRow
                           key={lead.id}

@@ -1,5 +1,4 @@
 import { useLeads } from "@/contexts/LeadContext";
-import { MOCK_USUARIOS } from "@/data/mockData";
 import { MessageSquare, ArrowRight, LogIn, LogOut, StickyNote, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -23,7 +22,7 @@ const tipoColors: Record<string, string> = {
 };
 
 export const LeadTimeline = ({ leadId }: { leadId: string }) => {
-  const { interacoes } = useLeads();
+  const { interacoes, profiles } = useLeads();
   const timeline = interacoes
     .filter((i) => i.id_lead === leadId)
     .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
@@ -36,7 +35,7 @@ export const LeadTimeline = ({ leadId }: { leadId: string }) => {
     <div className="space-y-3">
       {timeline.map((item) => {
         const Icon = tipoIcons[item.tipo] || StickyNote;
-        const user = MOCK_USUARIOS.find((u) => u.id === item.id_usuario);
+        const user = profiles.find((u) => u.id === item.id_usuario);
         return (
           <div key={item.id} className="flex gap-3 animate-fade-in">
             <div className={`rounded-full p-2 border shrink-0 ${tipoColors[item.tipo] || tipoColors.nota}`}>

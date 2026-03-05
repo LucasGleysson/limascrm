@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lead, UNIDADES, ETAPAS_FUNIL, MOCK_USUARIOS, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
+import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { LeadTimeline } from "./LeadTimeline";
@@ -33,7 +33,7 @@ interface Props {
 }
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, addInteracao } = useLeads();
+  const { updateLead, addInteracao, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -41,14 +41,12 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [disqualifyOpen, setDisqualifyOpen] = useState(false);
   const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
 
-  // Edit form state
   const [editNome, setEditNome] = useState("");
   const [editTelefone, setEditTelefone] = useState("");
   const [editOrigem, setEditOrigem] = useState("");
   const [editUnidade, setEditUnidade] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
 
-  // Schedule edit state
   const [editDataAgendamento, setEditDataAgendamento] = useState("");
   const [editNumeroOs, setEditNumeroOs] = useState("");
   const [editUnidadeAgendamento, setEditUnidadeAgendamento] = useState("");
@@ -56,8 +54,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   if (!lead) return null;
 
   const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
-  const unidade = UNIDADES.find((u) => u.id === lead.id_unidade);
-  const agente = MOCK_USUARIOS.find((u) => u.id === lead.id_agente);
+  const unidade = unidades.find((u) => u.id === lead.id_unidade);
+  const agente = profiles.find((u) => u.id === lead.id_agente);
   const todayStr = new Date().toISOString().split("T")[0];
 
   const startEdit = () => {
@@ -71,7 +69,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const cancelEdit = () => setEditing(false);
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     const updates: Partial<Lead> = {};
     if (editNome !== lead.nome) updates.nome = editNome;
     if (editTelefone !== lead.telefone) updates.telefone = formatPhone(editTelefone);
@@ -81,9 +79,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (JSON.stringify(editTags.sort()) !== JSON.stringify([...currentTags].sort())) updates.tags_servico = editTags;
 
     if (Object.keys(updates).length > 0) {
-      updateLead(lead.id, updates);
-      addInteracao({
-        id: `i${Date.now()}`,
+      await updateLead(lead.id, updates);
+      await addInteracao({
         id_lead: lead.id,
         tipo: "nota",
         descricao: "Ficha do cliente editada",
@@ -101,24 +98,22 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEditingSchedule(true);
   };
 
-  const saveScheduleEdit = () => {
+  const saveScheduleEdit = async () => {
     const updates: Partial<Lead> = {};
     if (editDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editDataAgendamento;
     if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
     if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
 
-    // Rescue dispensado back to agendado
     if (lead.etapa === "dispensado") {
       updates.etapa = "agendado";
     }
 
     if (Object.keys(updates).length > 0) {
-      updateLead(lead.id, updates);
+      await updateLead(lead.id, updates);
       const desc = lead.etapa === "dispensado"
         ? "Reagendado (resgatado de dispensado)"
         : "Informações de agendamento editadas";
-      addInteracao({
-        id: `i${Date.now()}`,
+      await addInteracao({
         id_lead: lead.id,
         tipo: lead.etapa === "dispensado" ? "mudanca_etapa" : "nota",
         descricao: desc,
@@ -139,11 +134,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const canEditSchedule = isAgendado || isDispensado;
   const canDisqualify = ["novo", "agendado"].includes(lead.etapa);
 
-  const handleDisqualify = () => {
+  const handleDisqualify = async () => {
     if (!disqualifyMotivo.trim()) return;
-    updateLead(lead.id, { etapa: "desqualificado" });
-    addInteracao({
-      id: `i${Date.now()}`,
+    await updateLead(lead.id, { etapa: "desqualificado" });
+    await addInteracao({
       id_lead: lead.id,
       tipo: "mudanca_etapa",
       descricao: `Lead desqualificado: ${disqualifyMotivo.trim()}`,
@@ -194,7 +188,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editUnidade} onValueChange={setEditUnidade}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {UNIDADES.map((u) => (
+                      {unidades.map((u) => (
                         <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                       ))}
                     </SelectContent>
@@ -231,7 +225,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editUnidadeAgendamento} onValueChange={setEditUnidadeAgendamento}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {UNIDADES.map((u) => (
+                      {unidades.map((u) => (
                         <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                       ))}
                     </SelectContent>
@@ -262,7 +256,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               </div>
             ) : (
               <>
-                {/* View mode: Info first, then buttons */}
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={etapaBadgeVariant[lead.etapa] || "secondary"}>{etapa?.label}</Badge>
                   {lead.is_porta && <Badge variant="outline">Porta</Badge>}
@@ -301,7 +294,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   )}
                 </div>
 
-                {/* Action buttons AFTER info */}
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
                     <Pencil className="h-4 w-4" /> Editar Ficha
