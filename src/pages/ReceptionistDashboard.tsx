@@ -334,6 +334,17 @@ export const ReceptionistDashboard = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {checkoutNeedsMotivo && (
+                <div>
+                  <Label>Motivo <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={checkoutMotivo}
+                    onChange={(e) => setCheckoutMotivo(e.target.value)}
+                    placeholder="Descreva o motivo..."
+                    className="mt-1"
+                  />
+                </div>
+              )}
               <div>
                 <Label>Tags de Serviço</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -352,7 +363,7 @@ export const ReceptionistDashboard = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCheckoutSubmit}>Finalizar</Button>
+              <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout}>Finalizar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
