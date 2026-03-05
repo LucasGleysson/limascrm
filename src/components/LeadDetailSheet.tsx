@@ -38,6 +38,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [disqualifyOpen, setDisqualifyOpen] = useState(false);
+  const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
 
   // Edit form state
   const [editNome, setEditNome] = useState("");
