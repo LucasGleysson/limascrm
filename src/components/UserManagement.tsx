@@ -294,7 +294,7 @@ export const UserManagement = () => {
                     <SelectValue placeholder="Selecione a unidade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {UNIDADES.map((u) => (
+                    {unidades.map((u) => (
                       <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                     ))}
                   </SelectContent>
