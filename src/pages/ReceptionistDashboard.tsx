@@ -32,6 +32,7 @@ export const ReceptionistDashboard = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLead, setCheckoutLead] = useState<Lead | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"concluido" | "perdido" | "desqualificado">("concluido");
+  const [checkoutMotivo, setCheckoutMotivo] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
