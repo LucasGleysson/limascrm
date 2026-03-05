@@ -221,7 +221,7 @@ export const AgentDashboard = () => {
                           onClick={() => { setDetailLead(lead); setDetailOpen(true); }}
                         >
                           <TableCell className="font-medium">{lead.nome}</TableCell>
-                          <TableCell className="text-muted-foreground">{lead.telefone}</TableCell>
+                          <TableCell className="text-muted-foreground">{formatPhone(lead.telefone)}</TableCell>
                           <TableCell className="text-muted-foreground">{lead.origem}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`text-xs ${getStatusBadge(lead.etapa)}`}>
