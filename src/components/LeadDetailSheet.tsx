@@ -10,7 +10,9 @@ import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { LeadTimeline } from "./LeadTimeline";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 
 const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
