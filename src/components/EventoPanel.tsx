@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { Evento } from "@/data/mockData";
+import { LeadDetailSheet } from "./LeadDetailSheet";
+import { CheckCircle2, Clock, AlertCircle, ExternalLink } from "lucide-react";
+import { Evento, Lead } from "@/data/mockData";
 
 export const EventoPanel = () => {
   const { eventos, leads, concluirEvento } = useLeads();
@@ -15,6 +16,8 @@ export const EventoPanel = () => {
   const [concludeOpen, setConcludeOpen] = useState(false);
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
   const [descricao, setDescricao] = useState("");
+  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const myEvents = useMemo(() => {
     const myLeadIds = leads.filter((l) => l.id_agente === currentUser.id).map((l) => l.id);
@@ -40,8 +43,17 @@ export const EventoPanel = () => {
   };
 
   const getLeadName = (leadId: string) => leads.find((l) => l.id === leadId)?.nome || "";
+  const getLead = (leadId: string) => leads.find((l) => l.id === leadId) || null;
 
   const isOverdue = (dataPrevista: string) => dataPrevista < today;
+
+  const openLeadDetail = (leadId: string) => {
+    const lead = getLead(leadId);
+    if (lead) {
+      setDetailLead(lead);
+      setDetailOpen(true);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -62,13 +74,14 @@ export const EventoPanel = () => {
             {pendentes.map((evento) => (
               <div
                 key={evento.id}
-                className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all ${
+                className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer hover:bg-muted/50 ${
                   isOverdue(evento.data_prevista) ? "border-destructive/30" : "border-border"
                 }`}
+                onClick={() => openLeadDetail(evento.id_lead)}
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">{getLeadName(evento.id_lead)}</span>
+                    <span className="font-semibold hover:underline">{getLeadName(evento.id_lead)}</span>
                     <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">
                       Follow-up {evento.numero}
                     </Badge>
@@ -84,7 +97,8 @@ export const EventoPanel = () => {
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedEvento(evento);
                     setConcludeOpen(true);
                   }}
@@ -106,10 +120,14 @@ export const EventoPanel = () => {
           </h2>
           <div className="space-y-2">
             {concluidos.map((evento) => (
-              <div key={evento.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border opacity-70">
+              <div
+                key={evento.id}
+                className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border opacity-70 cursor-pointer hover:opacity-90"
+                onClick={() => openLeadDetail(evento.id_lead)}
+              >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{getLeadName(evento.id_lead)}</span>
+                    <span className="font-medium hover:underline">{getLeadName(evento.id_lead)}</span>
                     <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
                       Follow-up {evento.numero} ✓
                     </Badge>
@@ -154,6 +172,9 @@ export const EventoPanel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Lead Detail Sheet */}
+      <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );
 };

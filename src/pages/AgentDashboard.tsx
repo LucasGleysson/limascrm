@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Users, CalendarDays, Calendar } from "lucide-react";
+import { formatPhone } from "@/lib/phoneUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -220,7 +221,7 @@ export const AgentDashboard = () => {
                           onClick={() => { setDetailLead(lead); setDetailOpen(true); }}
                         >
                           <TableCell className="font-medium">{lead.nome}</TableCell>
-                          <TableCell className="text-muted-foreground">{lead.telefone}</TableCell>
+                          <TableCell className="text-muted-foreground">{formatPhone(lead.telefone)}</TableCell>
                           <TableCell className="text-muted-foreground">{lead.origem}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`text-xs ${getStatusBadge(lead.etapa)}`}>
