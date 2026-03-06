@@ -366,7 +366,7 @@ export const ManagerDashboard = () => {
                         <div className="flex-1">
                           <span className="font-medium">{l.nome}</span>
                           <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os} · Agente: {agente?.nome}
+                            {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os || "—"} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
                         <Badge variant={l.etapa === "na_loja" ? "default" : "secondary"} className="text-xs">
