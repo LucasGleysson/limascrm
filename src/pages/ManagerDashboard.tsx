@@ -72,13 +72,13 @@ export const ManagerDashboard = () => {
 
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
-      const unitLeads = leads.filter((l) => l.id_unidade === u.id);
+      const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
       const perdidos = unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const receita = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
       return { ...u, total: unitLeads.length, concluidos: concluidos.length, perdidos, receita };
     });
-  }, [leads, unidades]);
+  }, [filteredLeads, unidades]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
   const agenteTable = useMemo(() => {
