@@ -31,11 +31,19 @@ export const ManagerDashboard = () => {
   const { leads, unidades, profiles } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
+  const [period, setPeriod] = useState<PeriodKey>("mes");
 
   const filteredLeads = useMemo(() => {
-    if (unidadeFilter === "todas") return leads;
-    return leads.filter((l) => l.id_unidade === unidadeFilter);
-  }, [leads, unidadeFilter]);
+    let result = leads;
+    if (unidadeFilter !== "todas") {
+      result = result.filter((l) => l.id_unidade === unidadeFilter);
+    }
+    const { from } = getDateRangeForPeriod(period);
+    if (from) {
+      result = result.filter((l) => l.data_entrada >= from);
+    }
+    return result;
+  }, [leads, unidadeFilter, period]);
 
   const stats = useMemo(() => {
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido");
