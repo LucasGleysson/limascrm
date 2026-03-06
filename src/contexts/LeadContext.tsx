@@ -189,7 +189,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
     // Max 7 follow-ups
     if (maxExisting >= 7) {
-      // All 7 done → auto-disqualify if still "novo"
       if (lead.etapa === "novo") {
         await updateLead(leadId, { etapa: "desqualificado" });
         await addInteracao({
@@ -204,24 +203,48 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const nextNum = maxExisting + 1;
-    const entryDate = new Date(lead.data_entrada);
-    entryDate.setHours(0, 0, 0, 0);
-    const eventDate = new Date(entryDate);
-    eventDate.setDate(eventDate.getDate() + nextNum);
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    // Only create if the event date is today or in the past
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    if (eventDate > todayDate) return;
+    if (nextNum === 1) {
+      // First follow-up: created the day after entry (or today if entry was in the past)
+      const entryDate = new Date(lead.data_entrada + "T00:00:00");
+      const nextDay = new Date(entryDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const eventDateStr = nextDay.toISOString().split("T")[0];
+      if (eventDateStr > todayStr) return; // not yet time
 
-    await addEvento({
-      id_lead: leadId,
-      tipo: "followup",
-      numero: nextNum,
-      data_prevista: eventDate.toISOString().split("T")[0],
-      concluido: false,
-      id_usuario: lead.id_agente,
-    });
+      await addEvento({
+        id_lead: leadId,
+        tipo: "followup",
+        numero: nextNum,
+        data_prevista: eventDateStr,
+        concluido: false,
+        id_usuario: lead.id_agente,
+      });
+    } else {
+      // Subsequent follow-ups: created for the day AFTER the last one was concluded
+      const lastConcluded = leadEventos
+        .filter((e) => e.concluido && e.data_conclusao)
+        .sort((a, b) => (b.data_conclusao || "").localeCompare(a.data_conclusao || ""))
+        [0];
+
+      if (!lastConcluded || !lastConcluded.data_conclusao) return;
+
+      const conclusionDate = new Date(lastConcluded.data_conclusao);
+      const nextDay = new Date(conclusionDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const eventDateStr = nextDay.toISOString().split("T")[0];
+      if (eventDateStr > todayStr) return; // not yet time
+
+      await addEvento({
+        id_lead: leadId,
+        tipo: "followup",
+        numero: nextNum,
+        data_prevista: eventDateStr,
+        concluido: false,
+        id_usuario: lead.id_agente,
+      });
+    }
   }, [leads, eventos]);
 
   // Auto-generate follow-ups for eligible leads after data loads
