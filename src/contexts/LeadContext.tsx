@@ -253,8 +253,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     let createdCount = 0;
 
     for (const lead of leads) {
-      const beforeCount = eventos.length;
-
       // "novo" leads that entered before today
       if (lead.etapa === "novo" && lead.data_entrada < today) {
         await generateFollowups(lead.id);
@@ -262,33 +260,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
       // "agendado" leads with missed appointments (past date, no checkin)
       if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
-        const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
-        const hasPending = leadEventos.some((e) => !e.concluido);
-        if (!hasPending) {
-          const maxExisting = leadEventos.length > 0
-            ? Math.max(...leadEventos.map((e) => e.numero))
-            : 0;
-          if (maxExisting < 7) {
-            const nextNum = maxExisting + 1;
-            const eventDate = new Date(lead.data_agendamento);
-            eventDate.setDate(eventDate.getDate() + nextNum);
-            const todayDate = new Date();
-            todayDate.setHours(0, 0, 0, 0);
-            if (eventDate <= todayDate) {
-              await addEvento({
-                id_lead: lead.id,
-                tipo: "followup",
-                numero: nextNum,
-                data_prevista: eventDate.toISOString().split("T")[0],
-                concluido: false,
-                id_usuario: lead.id_agente,
-              });
-            }
-          }
-        }
+        await generateFollowups(lead.id);
       }
-
-      if (eventos.length > beforeCount) createdCount += eventos.length - beforeCount;
     }
 
     return createdCount;
