@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Users, CalendarDays, Calendar } from "lucide-react";
+import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck } from "lucide-react";
+import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { formatPhone } from "@/lib/phoneUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -20,6 +21,7 @@ import { ptBR } from "date-fns/locale";
 
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
+  { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
 ];
 
@@ -192,17 +194,18 @@ export const AgentDashboard = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>CLIENTE</TableHead>
-                    <TableHead>CONTATO</TableHead>
-                    <TableHead>ORIGEM</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead>UNIDADE</TableHead>
-                    <TableHead>DATA</TableHead>
+                     <TableHead>CONTATO</TableHead>
+                     <TableHead>ORIGEM</TableHead>
+                     <TableHead>STATUS</TableHead>
+                     <TableHead>UNIDADE</TableHead>
+                     <TableHead>AGENDAMENTO</TableHead>
+                     <TableHead>ENTRADA</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {myLeads.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                       <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         Nenhum lead encontrado.
                       </TableCell>
                     </TableRow>
@@ -225,7 +228,16 @@ export const AgentDashboard = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{unidade?.nome || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell>
+                            {lead.data_agendamento ? (
+                              <span className="font-semibold text-primary text-sm">
+                                {new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
                             {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}
                           </TableCell>
                         </TableRow>
@@ -236,6 +248,10 @@ export const AgentDashboard = () => {
               </Table>
             </div>
           </div>
+        )}
+
+        {activeTab === "agendamentos" && (
+          <AgentSchedulePanel />
         )}
 
         {activeTab === "eventos" && (
