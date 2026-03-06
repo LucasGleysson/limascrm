@@ -194,11 +194,12 @@ export const AgentDashboard = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>CLIENTE</TableHead>
-                    <TableHead>CONTATO</TableHead>
-                    <TableHead>ORIGEM</TableHead>
-                    <TableHead>STATUS</TableHead>
-                    <TableHead>UNIDADE</TableHead>
-                    <TableHead>DATA</TableHead>
+                     <TableHead>CONTATO</TableHead>
+                     <TableHead>ORIGEM</TableHead>
+                     <TableHead>STATUS</TableHead>
+                     <TableHead>UNIDADE</TableHead>
+                     <TableHead>AGENDAMENTO</TableHead>
+                     <TableHead>ENTRADA</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
