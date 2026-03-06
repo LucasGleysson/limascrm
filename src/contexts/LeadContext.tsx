@@ -49,12 +49,15 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Listen for auth state changes and refetch when user logs in/out
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
+        setAuthUserId(session.user.id);
         // User is authenticated, fetch data
         fetchAll();
       } else {
         // User logged out, clear data
+        setAuthUserId(null);
+        autoGenForUserRef.current = null;
         setLeads([]);
         setInteracoes([]);
         setEventos([]);
