@@ -15,6 +15,7 @@ import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn } fro
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { formatPhone } from "@/lib/phoneUtils";
+import { getStatusBadgeClass, formatDateBR } from "@/lib/leadUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
