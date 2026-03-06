@@ -23,6 +23,7 @@ import { ptBR } from "date-fns/locale";
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
+  { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
 ];
 
