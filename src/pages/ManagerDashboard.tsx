@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
+import { formatDateBR } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
