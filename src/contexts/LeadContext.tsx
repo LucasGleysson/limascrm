@@ -27,6 +27,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; nome: string; cargo: string; unidade_padrao?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const autoGenForUserRef = useRef<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [leadsRes, eventosRes, interacoesRes, unidadesRes, profilesRes] = await Promise.all([
