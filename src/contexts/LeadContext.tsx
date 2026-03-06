@@ -27,6 +27,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; nome: string; cargo: string; unidade_padrao?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const autoGenForUserRef = useRef<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     const [leadsRes, eventosRes, interacoesRes, unidadesRes, profilesRes] = await Promise.all([
@@ -47,12 +49,15 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Listen for auth state changes and refetch when user logs in/out
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
+        setAuthUserId(session.user.id);
         // User is authenticated, fetch data
         fetchAll();
       } else {
         // User logged out, clear data
+        setAuthUserId(null);
+        autoGenForUserRef.current = null;
         setLeads([]);
         setInteracoes([]);
         setEventos([]);
@@ -63,8 +68,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     // Also try initial fetch (in case session is already available)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        setAuthUserId(session.user.id);
         fetchAll();
       } else {
+        setAuthUserId(null);
+        autoGenForUserRef.current = null;
         setLoading(false);
       }
     });
@@ -121,15 +129,26 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addEvento = async (evento: Omit<Evento, "id">) => {
-    const { error } = await supabase.from("eventos").insert({
+    const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
       tipo: evento.tipo,
       numero: evento.numero,
       data_prevista: evento.data_prevista,
       concluido: evento.concluido,
       id_usuario: evento.id_usuario || null,
-    });
-    if (error) console.error("addEvento error:", error);
+    }).select("*").single();
+    if (error) {
+      console.error("addEvento error:", error);
+      return;
+    }
+
+    if (data) {
+      const mapped = mapEvento(data);
+      setEventos((prev) => {
+        if (prev.some((e) => e.id === mapped.id)) return prev;
+        return [...prev, mapped].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista));
+      });
+    }
   };
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
@@ -208,12 +227,16 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   // Auto-generate follow-ups for eligible leads after data loads
   const autoGenerateFollowups = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
+    let createdCount = 0;
 
     for (const lead of leads) {
+      const beforeCount = eventos.length;
+
       // "novo" leads that entered before today
       if (lead.etapa === "novo" && lead.data_entrada < today) {
         await generateFollowups(lead.id);
       }
+
       // "agendado" leads with missed appointments (past date, no checkin)
       if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
         const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
@@ -241,17 +264,20 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
+
+      if (eventos.length > beforeCount) createdCount += eventos.length - beforeCount;
     }
+
+    return createdCount;
   }, [leads, eventos, generateFollowups]);
 
-  // Auto-run follow-up generation once after data loads
-  const autoGenRan = useRef(false);
+  // Auto-run follow-up generation once per logged user after data loads
   useEffect(() => {
-    if (!loading && leads.length > 0 && !autoGenRan.current) {
-      autoGenRan.current = true;
-      autoGenerateFollowups();
+    if (!loading && leads.length > 0 && authUserId && autoGenForUserRef.current !== authUserId) {
+      autoGenForUserRef.current = authUserId;
+      void autoGenerateFollowups().then(() => fetchAll());
     }
-  }, [loading, leads, autoGenerateFollowups]);
+  }, [loading, leads.length, authUserId, autoGenerateFollowups, fetchAll]);
 
   return (
     <LeadContext.Provider value={{
