@@ -271,14 +271,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return createdCount;
   }, [leads, eventos, generateFollowups]);
 
-  // Auto-run follow-up generation once after data loads
-  const autoGenRan = useRef(false);
+  // Auto-run follow-up generation once per logged user after data loads
   useEffect(() => {
-    if (!loading && leads.length > 0 && !autoGenRan.current) {
-      autoGenRan.current = true;
-      autoGenerateFollowups();
+    if (!loading && leads.length > 0 && authUserId && autoGenForUserRef.current !== authUserId) {
+      autoGenForUserRef.current = authUserId;
+      void autoGenerateFollowups().then(() => fetchAll());
     }
-  }, [loading, leads, autoGenerateFollowups]);
+  }, [loading, leads.length, authUserId, autoGenerateFollowups, fetchAll]);
 
   return (
     <LeadContext.Provider value={{
