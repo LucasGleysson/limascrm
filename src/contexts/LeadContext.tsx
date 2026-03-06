@@ -68,8 +68,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     // Also try initial fetch (in case session is already available)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        setAuthUserId(session.user.id);
         fetchAll();
       } else {
+        setAuthUserId(null);
+        autoGenForUserRef.current = null;
         setLoading(false);
       }
     });
