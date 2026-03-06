@@ -3,6 +3,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
