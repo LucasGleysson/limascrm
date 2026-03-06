@@ -256,6 +256,10 @@ export const AgentDashboard = () => {
           <AgentSchedulePanel />
         )}
 
+        {activeTab === "recepcao" && (
+          <AgentReceptionPanel />
+        )}
+
         {activeTab === "eventos" && (
           <EventoPanel />
         )}
