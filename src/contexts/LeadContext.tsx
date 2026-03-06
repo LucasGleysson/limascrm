@@ -129,15 +129,26 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addEvento = async (evento: Omit<Evento, "id">) => {
-    const { error } = await supabase.from("eventos").insert({
+    const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
       tipo: evento.tipo,
       numero: evento.numero,
       data_prevista: evento.data_prevista,
       concluido: evento.concluido,
       id_usuario: evento.id_usuario || null,
-    });
-    if (error) console.error("addEvento error:", error);
+    }).select("*").single();
+    if (error) {
+      console.error("addEvento error:", error);
+      return;
+    }
+
+    if (data) {
+      const mapped = mapEvento(data);
+      setEventos((prev) => {
+        if (prev.some((e) => e.id === mapped.id)) return prev;
+        return [...prev, mapped].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista));
+      });
+    }
   };
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
