@@ -87,19 +87,7 @@ export const AgentDashboard = () => {
     });
   };
 
-  const getStatusBadge = (etapa: string) => {
-    const map: Record<string, string> = {
-      novo: "bg-info/15 text-info border-info/30",
-      agendado: "bg-purple/15 text-purple border-purple/30",
-      confirmado: "bg-info/15 text-info border-info/30",
-      na_loja: "bg-warning/15 text-warning border-warning/30",
-      concluido: "bg-success/15 text-success border-success/30",
-      dispensado: "bg-destructive/15 text-destructive border-destructive/30",
-      perdido: "bg-destructive/15 text-destructive border-destructive/30",
-      desqualificado: "bg-muted text-muted-foreground border-muted",
-    };
-    return map[etapa] || "";
-  };
+  const getStatusBadge = getStatusBadgeClass;
 
   const pendingEvents = useMemo(() => {
     return eventos.filter((e) => !e.concluido && e.id_usuario === currentUser.id);
