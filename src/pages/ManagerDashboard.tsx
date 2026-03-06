@@ -391,10 +391,10 @@ export const ManagerDashboard = () => {
                         <div className="flex-1">
                           <span className="font-medium">{l.nome}</span>
                           <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · {l.data_agendamento} · Agente: {agente?.nome}
+                            {formatPhone(l.telefone)} · {unidade?.nome} · {formatDateBR(l.data_agendamento)} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-xs">{l.data_agendamento}</Badge>
+                        <Badge variant="outline" className="text-xs">{formatDateBR(l.data_agendamento)}</Badge>
                       </div>
                     );
                   })}
