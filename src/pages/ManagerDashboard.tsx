@@ -7,13 +7,15 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight } from "lucide-react";
+import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight, Lightbulb } from "lucide-react";
+import { ManagerIntelligencePanel } from "@/components/ManagerIntelligencePanel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
 import { formatDateBR } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "inteligencia", label: "Inteligência", icon: Lightbulb },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "usuarios", label: "Usuários", icon: Users },
@@ -224,6 +226,22 @@ export const ManagerDashboard = () => {
                 </div>
               </div>
             </div>
+          </>
+        )}
+
+        {activeTab === "inteligencia" && (
+          <>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Inteligência</h1>
+                <p className="text-muted-foreground text-sm">Fluxo de veículos, faturamento e aproveitamento</p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
+            </div>
+            <ManagerIntelligencePanel filteredLeads={filteredLeads} unidades={unidades} profiles={profiles} />
           </>
         )}
 
