@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRole } from "@/contexts/RoleContext";
 import type { Lead, Interacao, Evento, Unidade } from "@/data/mockData";
 
 interface LeadContextType {
@@ -21,6 +22,7 @@ interface LeadContextType {
 const LeadContext = createContext<LeadContextType | undefined>(undefined);
 
 export const LeadProvider = ({ children }: { children: ReactNode }) => {
+  const { currentUser } = useRole();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [interacoes, setInteracoes] = useState<Interacao[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -29,12 +31,47 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const autoGenForUserRef = useRef<string | null>(null);
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
+
+  // Build role-aware queries
+  const buildLeadsQuery = useCallback(() => {
+    const user = currentUserRef.current;
+    let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
+    // Agentes only see their own leads
+    if (user?.cargo === "agente") {
+      query = query.eq("id_agente", user.id);
+    }
+    // Recepcionistas only see leads from their unit
+    if (user?.cargo === "recepcionista" && user.unidade_padrao) {
+      query = query.eq("id_unidade", user.unidade_padrao);
+    }
+    return query;
+  }, []);
+
+  const buildEventosQuery = useCallback(() => {
+    const user = currentUserRef.current;
+    let query = supabase.from("eventos").select("*").order("data_prevista", { ascending: true });
+    if (user?.cargo === "agente") {
+      query = query.eq("id_usuario", user.id);
+    }
+    return query;
+  }, []);
+
+  const buildInteracoesQuery = useCallback(() => {
+    const user = currentUserRef.current;
+    let query = supabase.from("interacoes").select("*").order("data", { ascending: false });
+    if (user?.cargo === "agente") {
+      query = query.eq("id_usuario", user.id);
+    }
+    return query;
+  }, []);
 
   const fetchAll = useCallback(async () => {
     const [leadsRes, eventosRes, interacoesRes, unidadesRes, profilesRes] = await Promise.all([
-      supabase.from("leads").select("*").order("created_at", { ascending: false }),
-      supabase.from("eventos").select("*").order("data_prevista", { ascending: true }),
-      supabase.from("interacoes").select("*").order("data", { ascending: false }),
+      buildLeadsQuery(),
+      buildEventosQuery(),
+      buildInteracoesQuery(),
       supabase.from("unidades").select("*").order("nome"),
       supabase.from("profiles").select("id, nome, cargo, unidade_padrao"),
     ]);
@@ -45,17 +82,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
     setLoading(false);
-  }, []);
+  }, [buildLeadsQuery, buildEventosQuery, buildInteracoesQuery]);
 
   useEffect(() => {
-    // Listen for auth state changes and refetch when user logs in/out
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setAuthUserId(session.user.id);
-        // User is authenticated, fetch data
-        fetchAll();
       } else {
-        // User logged out, clear data
         setAuthUserId(null);
         autoGenForUserRef.current = null;
         setLeads([]);
@@ -65,11 +98,9 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Also try initial fetch (in case session is already available)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setAuthUserId(session.user.id);
-        fetchAll();
       } else {
         setAuthUserId(null);
         autoGenForUserRef.current = null;
@@ -77,19 +108,77 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Realtime subscriptions
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch data when user profile is ready (role-aware queries need currentUser)
+  useEffect(() => {
+    if (authUserId && currentUser) {
+      fetchAll();
+    }
+  }, [authUserId, currentUser, fetchAll]);
+
+  // Realtime: use payload to update local state instead of refetching
+  useEffect(() => {
+    if (!authUserId) return;
+
     const channel = supabase
       .channel("lead-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "eventos" }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "interacoes" }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
+        handleRealtimeEvent("leads", payload);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "eventos" }, (payload) => {
+        handleRealtimeEvent("eventos", payload);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "interacoes" }, (payload) => {
+        handleRealtimeEvent("interacoes", payload);
+      })
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [authUserId]);
+
+  const handleRealtimeEvent = useCallback((table: string, payload: any) => {
+    const { eventType, new: newRow, old: oldRow } = payload;
+    const user = currentUserRef.current;
+
+    if (table === "leads") {
+      if (eventType === "INSERT") {
+        const lead = mapLead(newRow);
+        // Only add if it passes role filter
+        if (user?.cargo === "agente" && lead.id_agente !== user.id) return;
+        if (user?.cargo === "recepcionista" && user.unidade_padrao && lead.id_unidade !== user.unidade_padrao) return;
+        setLeads((prev) => prev.some((l) => l.id === lead.id) ? prev : [lead, ...prev]);
+      } else if (eventType === "UPDATE") {
+        const lead = mapLead(newRow);
+        setLeads((prev) => prev.map((l) => l.id === lead.id ? lead : l));
+      } else if (eventType === "DELETE") {
+        setLeads((prev) => prev.filter((l) => l.id !== oldRow.id));
+      }
+    } else if (table === "eventos") {
+      if (eventType === "INSERT") {
+        const evento = mapEvento(newRow);
+        if (user?.cargo === "agente" && evento.id_usuario !== user.id) return;
+        setEventos((prev) => {
+          if (prev.some((e) => e.id === evento.id)) return prev;
+          return [...prev, evento].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista));
+        });
+      } else if (eventType === "UPDATE") {
+        const evento = mapEvento(newRow);
+        setEventos((prev) => prev.map((e) => e.id === evento.id ? evento : e));
+      } else if (eventType === "DELETE") {
+        setEventos((prev) => prev.filter((e) => e.id !== oldRow.id));
+      }
+    } else if (table === "interacoes") {
+      if (eventType === "INSERT") {
+        const interacao = mapInteracao(newRow);
+        if (user?.cargo === "agente" && interacao.id_usuario !== user.id) return;
+        setInteracoes((prev) => prev.some((i) => i.id === interacao.id) ? prev : [interacao, ...prev]);
+      }
+    }
+  }, []);
 
   const addLead = async (lead: Omit<Lead, "id">): Promise<string | null> => {
     const { data, error } = await supabase.from("leads").insert({
@@ -141,14 +230,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       console.error("addEvento error:", error);
       return;
     }
-
-    if (data) {
-      const mapped = mapEvento(data);
-      setEventos((prev) => {
-        if (prev.some((e) => e.id === mapped.id)) return prev;
-        return [...prev, mapped].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista));
-      });
-    }
+    // Local state updated via Realtime — no need to manually add here
   };
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
@@ -161,6 +243,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }).eq("id", eventoId);
     if (error) { console.error("concluirEvento error:", error); return; }
 
+    // Find evento from current state for the interacao
     const evento = eventos.find((e) => e.id === eventoId);
     if (evento) {
       await addInteracao({
@@ -179,7 +262,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
     const leadEventos = eventos.filter((e) => e.id_lead === leadId);
 
-    // Rule: don't create a new follow-up if there's an unconcluded one
     const hasPending = leadEventos.some((e) => !e.concluido);
     if (hasPending) return;
 
@@ -187,7 +269,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       ? Math.max(...leadEventos.map((e) => e.numero))
       : 0;
 
-    // Max 7 follow-ups
     if (maxExisting >= 7) {
       if (lead.etapa === "novo") {
         await updateLead(leadId, { etapa: "desqualificado" });
@@ -206,12 +287,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     const todayStr = new Date().toISOString().split("T")[0];
 
     if (nextNum === 1) {
-      // First follow-up: created the day after entry (or today if entry was in the past)
       const entryDate = new Date(lead.data_entrada + "T00:00:00");
       const nextDay = new Date(entryDate);
       nextDay.setDate(nextDay.getDate() + 1);
       const eventDateStr = nextDay.toISOString().split("T")[0];
-      if (eventDateStr > todayStr) return; // not yet time
+      if (eventDateStr > todayStr) return;
 
       await addEvento({
         id_lead: leadId,
@@ -222,7 +302,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
         id_usuario: lead.id_agente,
       });
     } else {
-      // Subsequent follow-ups: created for the day AFTER the last one was concluded
       const lastConcluded = leadEventos
         .filter((e) => e.concluido && e.data_conclusao)
         .sort((a, b) => (b.data_conclusao || "").localeCompare(a.data_conclusao || ""))
@@ -234,7 +313,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       const nextDay = new Date(conclusionDate);
       nextDay.setDate(nextDay.getDate() + 1);
       const eventDateStr = nextDay.toISOString().split("T")[0];
-      if (eventDateStr > todayStr) return; // not yet time
+      if (eventDateStr > todayStr) return;
 
       await addEvento({
         id_lead: leadId,
@@ -247,33 +326,27 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [leads, eventos]);
 
-  // Auto-generate follow-ups for eligible leads after data loads
+  // Auto-generate follow-ups once per session after data loads
   const autoGenerateFollowups = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
-    let createdCount = 0;
 
     for (const lead of leads) {
-      // "novo" leads that entered before today
       if (lead.etapa === "novo" && lead.data_entrada < today) {
         await generateFollowups(lead.id);
       }
-
-      // "agendado" leads with missed appointments (past date, no checkin)
       if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
         await generateFollowups(lead.id);
       }
     }
-
-    return createdCount;
   }, [leads, eventos, generateFollowups]);
 
-  // Auto-run follow-up generation once per logged user after data loads
+  // Run auto-gen once per user session — NO fetchAll after (Realtime handles it)
   useEffect(() => {
     if (!loading && leads.length > 0 && authUserId && autoGenForUserRef.current !== authUserId) {
       autoGenForUserRef.current = authUserId;
-      void autoGenerateFollowups().then(() => fetchAll());
+      void autoGenerateFollowups();
     }
-  }, [loading, leads.length, authUserId, autoGenerateFollowups, fetchAll]);
+  }, [loading, leads.length, authUserId, autoGenerateFollowups]);
 
   return (
     <LeadContext.Provider value={{
