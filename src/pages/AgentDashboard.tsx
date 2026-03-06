@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { usePagination } from "@/hooks/usePagination";
 import { useRole } from "@/contexts/RoleContext";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { NewLeadModal } from "@/components/NewLeadModal";
