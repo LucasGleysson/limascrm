@@ -240,6 +240,10 @@ export const AgentDashboard = () => {
           </div>
         )}
 
+        {activeTab === "agendamentos" && (
+          <AgentSchedulePanel />
+        )}
+
         {activeTab === "eventos" && (
           <EventoPanel />
         )}
