@@ -15,17 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 
-const etapaBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  novo: "secondary",
-  agendado: "default",
-  confirmado: "default",
-  na_loja: "default",
-  concluido: "default",
-  dispensado: "destructive",
-  perdido: "destructive",
-  desqualificado: "destructive",
-};
-
 interface Props {
   lead: Lead | null;
   open: boolean;
@@ -148,15 +137,54 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setDisqualifyOpen(false);
   };
 
+  const isEditMode = editing || editingSchedule;
+
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => { if (!v) { setEditing(false); setEditingSchedule(false); } onOpenChange(v); }}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="text-xl">{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : lead.nome}</SheetTitle>
-          </SheetHeader>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-4">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-lg font-semibold">
+                {editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}
+              </SheetTitle>
+              {!isEditMode && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={startEdit}
+                    title="Editar ficha"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  {canDisqualify && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setDisqualifyOpen(true)}
+                      title="Desqualificar"
+                    >
+                      <Ban className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
 
-          <div className="mt-4 space-y-6">
+          <div className="px-6 py-5 space-y-6">
             {editing ? (
               <div className="space-y-4">
                 <div>
@@ -256,65 +284,75 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               </div>
             ) : (
               <>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant={etapaBadgeVariant[lead.etapa] || "secondary"}>{etapa?.label}</Badge>
-                  {lead.is_porta && <Badge variant="outline">Porta</Badge>}
-                  {lead.origem && <Badge variant="outline">{lead.origem}</Badge>}
-                </div>
-
-                <div className="grid gap-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" /> {formatPhone(lead.telefone)}
+                {/* Client info card */}
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <span className="font-semibold text-base">{lead.nome}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="h-4 w-4" /> Agente: {agente?.nome || "—"}
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <span>{formatPhone(lead.telefone)}</span>
                   </div>
                   {unidade && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4" /> {unidade.nome}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      <span>{unidade.nome}</span>
                     </div>
                   )}
-                  {lead.data_agendamento && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-4 w-4" /> {lead.data_agendamento}
-                    </div>
-                  )}
-                  {lead.numero_os && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileText className="h-4 w-4" /> {lead.numero_os}
-                    </div>
-                  )}
-                  {lead.tags_servico && lead.tags_servico.length > 0 && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Tag className="h-4 w-4 text-muted-foreground" />
-                      {lead.tags_servico.map((t) => (
-                        <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Tag className="h-4 w-4 shrink-0" />
+                    <span>{lead.origem}{lead.numero_os ? ` (${lead.numero_os})` : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 shrink-0" />
+                    <span>Criado: {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-8">
+                    Agente: {agente?.nome || "—"}
+                  </p>
                 </div>
 
+                {/* Status & tags */}
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="gap-2" onClick={startEdit}>
-                    <Pencil className="h-4 w-4" /> Editar Ficha
-                  </Button>
-                  {canEditSchedule && (
-                    <Button variant="outline" size="sm" className="gap-2" onClick={startEditSchedule}>
-                      <Calendar className="h-4 w-4" /> Editar Agendamento
-                    </Button>
-                  )}
-                  {canSchedule && (
-                    <Button size="sm" className="gap-2 bg-primary text-primary-foreground" onClick={() => setScheduleOpen(true)}>
-                      <CalendarCheck className="h-4 w-4" /> Concluir Agendamento
-                    </Button>
-                  )}
-                  {canDisqualify && (
-                    <Button variant="destructive" size="sm" className="gap-2" onClick={() => setDisqualifyOpen(true)}>
-                      <Ban className="h-4 w-4" /> Desqualificar
-                    </Button>
+                  <Badge variant={lead.etapa === "novo" ? "secondary" : ["dispensado", "perdido", "desqualificado"].includes(lead.etapa) ? "destructive" : "default"}>
+                    {etapa?.label}
+                  </Badge>
+                  {lead.is_porta && <Badge variant="outline">Porta</Badge>}
+                  {lead.data_agendamento && (
+                    <Badge variant="outline" className="gap-1">
+                      <CalendarCheck className="h-3 w-3" />
+                      {lead.data_agendamento}
+                    </Badge>
                   )}
                 </div>
 
+                {lead.tags_servico && lead.tags_servico.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {lead.tags_servico.map((t) => (
+                      <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Schedule button - prominent and alone */}
+                {canSchedule && (
+                  <Button
+                    size="lg"
+                    className="w-full gap-2 text-base"
+                    onClick={() => setScheduleOpen(true)}
+                  >
+                    <CalendarCheck className="h-5 w-5" /> Concluir Agendamento
+                  </Button>
+                )}
+
+                {canEditSchedule && (
+                  <Button variant="outline" size="sm" className="gap-2" onClick={startEditSchedule}>
+                    <Calendar className="h-4 w-4" /> Editar Agendamento
+                  </Button>
+                )}
+
+                {/* Timeline */}
                 <div>
                   <h4 className="font-semibold mb-3">Timeline</h4>
                   <LeadTimeline leadId={lead.id} />

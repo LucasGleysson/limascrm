@@ -46,7 +46,28 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    fetchAll();
+    // Listen for auth state changes and refetch when user logs in/out
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        // User is authenticated, fetch data
+        fetchAll();
+      } else {
+        // User logged out, clear data
+        setLeads([]);
+        setInteracoes([]);
+        setEventos([]);
+        setLoading(false);
+      }
+    });
+
+    // Also try initial fetch (in case session is already available)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchAll();
+      } else {
+        setLoading(false);
+      }
+    });
 
     // Realtime subscriptions
     const channel = supabase
@@ -56,7 +77,10 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       .on("postgres_changes", { event: "*", schema: "public", table: "interacoes" }, () => fetchAll())
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, [fetchAll]);
 
   const addLead = async (lead: Omit<Lead, "id">): Promise<string | null> => {
