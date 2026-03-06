@@ -239,9 +239,12 @@ export const SupervisorDashboard = () => {
 
         {activeTab === "unidades" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
-              <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
+                <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
+              </div>
+              <PeriodFilter value={period} onChange={setPeriod} />
             </div>
 
             <div className="space-y-2">
