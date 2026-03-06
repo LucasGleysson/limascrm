@@ -19,6 +19,14 @@ export const SupervisorDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
+  const [period, setPeriod] = useState<PeriodKey>("mes");
+
+  const periodRange = useMemo(() => getDateRangeForPeriod(period), [period]);
+
+  const filteredLeads = useMemo(() => {
+    if (!periodRange.from) return leads;
+    return leads.filter((l) => l.data_entrada >= periodRange.from!);
+  }, [leads, periodRange]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
   const today = new Date().toISOString().split("T")[0];
