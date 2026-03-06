@@ -302,8 +302,14 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   )}
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Tag className="h-4 w-4 shrink-0" />
-                    <span>{lead.origem}{lead.numero_os ? ` (${lead.numero_os})` : ""}</span>
+                    <span>{lead.origem}</span>
                   </div>
+                  {lead.numero_os && (
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span>OS: {lead.numero_os}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 shrink-0" />
                     <span>Criado: {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}</span>
