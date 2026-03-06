@@ -63,6 +63,8 @@ export const AgentDashboard = () => {
       });
   }, [leads, currentUser.id, etapaFilter, search, dateStart, dateEnd]);
 
+  const pagination = usePagination(myLeads, { pageSize: 15 });
+
   const etapaCounts = useMemo(() => {
     const mine = leads.filter((l) => l.id_agente === currentUser.id);
     const counts: Record<string, number> = { todos: mine.length };
