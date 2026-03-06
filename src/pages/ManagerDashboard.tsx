@@ -4,6 +4,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { ORIGENS, ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight } from "lucide-react";
@@ -30,11 +31,19 @@ export const ManagerDashboard = () => {
   const { leads, unidades, profiles } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
+  const [period, setPeriod] = useState<PeriodKey>("mes");
 
   const filteredLeads = useMemo(() => {
-    if (unidadeFilter === "todas") return leads;
-    return leads.filter((l) => l.id_unidade === unidadeFilter);
-  }, [leads, unidadeFilter]);
+    let result = leads;
+    if (unidadeFilter !== "todas") {
+      result = result.filter((l) => l.id_unidade === unidadeFilter);
+    }
+    const { from } = getDateRangeForPeriod(period);
+    if (from) {
+      result = result.filter((l) => l.data_entrada >= from);
+    }
+    return result;
+  }, [leads, unidadeFilter, period]);
 
   const stats = useMemo(() => {
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido");
@@ -130,12 +139,15 @@ export const ManagerDashboard = () => {
 
         {activeTab === "dashboard" && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground text-sm">Visão estratégica do desempenho</p>
               </div>
-              {UnidadeFilterSelect}
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -216,12 +228,15 @@ export const ManagerDashboard = () => {
 
         {activeTab === "leads" && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Análise de Leads</h1>
                 <p className="text-muted-foreground text-sm">ROI por canal e performance detalhada</p>
               </div>
-              {UnidadeFilterSelect}
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5">
@@ -294,12 +309,15 @@ export const ManagerDashboard = () => {
 
         {activeTab === "agendamentos" && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Agendamentos</h1>
                 <p className="text-muted-foreground text-sm">Acompanhamento de agenda por unidade</p>
               </div>
-              {UnidadeFilterSelect}
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

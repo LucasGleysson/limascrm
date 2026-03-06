@@ -3,6 +3,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { ETAPAS_FUNIL } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
+import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -18,19 +19,27 @@ export const SupervisorDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
+  const [period, setPeriod] = useState<PeriodKey>("mes");
+
+  const periodRange = useMemo(() => getDateRangeForPeriod(period), [period]);
+
+  const filteredLeads = useMemo(() => {
+    if (!periodRange.from) return leads;
+    return leads.filter((l) => l.data_entrada >= periodRange.from!);
+  }, [leads, periodRange]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
   const today = new Date().toISOString().split("T")[0];
 
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
-      const agenteLeads = leads.filter((l) => l.id_agente === agente.id);
+      const agenteLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const agendados = agenteLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length;
       const perdidos = agenteLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const taxa = agenteLeads.length > 0 ? Math.round((agendados / agenteLeads.length) * 100) : 0;
 
       const agenteEvents = eventos.filter((e) => {
-        const lead = leads.find((l) => l.id === e.id_lead);
+        const lead = filteredLeads.find((l) => l.id === e.id_lead);
         return lead?.id_agente === agente.id;
       });
       const pendentes = agenteEvents.filter((e) => !e.concluido);
@@ -51,11 +60,11 @@ export const SupervisorDashboard = () => {
         leads: agenteLeads,
       };
     });
-  }, [leads, eventos, today, agentes]);
+  }, [filteredLeads, eventos, today, agentes]);
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
-      const unitLeads = leads.filter((l) => l.id_unidade === u.id);
+      const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       return {
         ...u,
         total: unitLeads.length,
@@ -64,14 +73,14 @@ export const SupervisorDashboard = () => {
         perdidos: unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
       };
     });
-  }, [leads, unidades]);
+  }, [filteredLeads, unidades]);
 
   const globalStats = useMemo(() => ({
-    totalLeads: leads.length,
-    totalAgendados: leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
-    totalPerdidos: leads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
-    taxaConversao: leads.length > 0 ? Math.round((leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length / leads.length) * 100) : 0,
-  }), [leads]);
+    totalLeads: filteredLeads.length,
+    totalAgendados: filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
+    totalPerdidos: filteredLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
+    taxaConversao: filteredLeads.length > 0 ? Math.round((filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length / filteredLeads.length) * 100) : 0,
+  }), [filteredLeads]);
 
   const selected = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
@@ -95,9 +104,12 @@ export const SupervisorDashboard = () => {
       <main className="flex-1 overflow-auto p-6 space-y-6">
         {activeTab === "dashboard" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
-              <p className="text-muted-foreground text-sm">Desempenho geral</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
+                <p className="text-muted-foreground text-sm">Desempenho geral</p>
+              </div>
+              <PeriodFilter value={period} onChange={setPeriod} />
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -145,9 +157,12 @@ export const SupervisorDashboard = () => {
 
         {activeTab === "agentes" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
-              <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
+                <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
+              </div>
+              <PeriodFilter value={period} onChange={setPeriod} />
             </div>
 
             <div className="space-y-2">
@@ -224,9 +239,12 @@ export const SupervisorDashboard = () => {
 
         {activeTab === "unidades" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
-              <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
+                <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
+              </div>
+              <PeriodFilter value={period} onChange={setPeriod} />
             </div>
 
             <div className="space-y-2">
@@ -254,7 +272,7 @@ export const SupervisorDashboard = () => {
               const selUnit = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
               if (!selUnit) return null;
 
-              const unitLeads = leads.filter((l) => l.id_unidade === selUnit.id);
+              const unitLeads = filteredLeads.filter((l) => l.id_unidade === selUnit.id);
               const unitChartData = ETAPAS_FUNIL.map((e) => ({
                 name: e.label,
                 value: unitLeads.filter((l) => l.etapa === e.id).length,
