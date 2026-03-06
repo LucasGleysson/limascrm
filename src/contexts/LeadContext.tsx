@@ -157,33 +157,21 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const generateFollowups = useCallback(async (leadId: string) => {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
-    const entryDate = new Date(lead.data_entrada);
-    entryDate.setHours(0, 0, 0, 0);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    const daysDiff = Math.floor((todayDate.getTime() - entryDate.getTime()) / 86400000);
 
-    const existingEventNums = eventos.filter((e) => e.id_lead === leadId).map((e) => e.numero);
+    const leadEventos = eventos.filter((e) => e.id_lead === leadId);
 
-    for (let i = 1; i <= Math.min(daysDiff, 7); i++) {
-      if (!existingEventNums.includes(i)) {
-        const eventDate = new Date(entryDate);
-        eventDate.setDate(eventDate.getDate() + i);
-        await addEvento({
-          id_lead: leadId,
-          tipo: "followup",
-          numero: i,
-          data_prevista: eventDate.toISOString().split("T")[0],
-          concluido: false,
-          id_usuario: lead.id_agente,
-        });
-      }
-    }
+    // Rule: don't create a new follow-up if there's an unconcluded one
+    const hasPending = leadEventos.some((e) => !e.concluido);
+    if (hasPending) return;
 
-    if (daysDiff > 7 && lead.etapa === "novo") {
-      const leadEvents = eventos.filter((e) => e.id_lead === leadId);
-      const allDone = leadEvents.length >= 7 && leadEvents.every((e) => e.concluido);
-      if (allDone) {
+    const maxExisting = leadEventos.length > 0
+      ? Math.max(...leadEventos.map((e) => e.numero))
+      : 0;
+
+    // Max 7 follow-ups
+    if (maxExisting >= 7) {
+      // All 7 done → auto-disqualify if still "novo"
+      if (lead.etapa === "novo") {
         await updateLead(leadId, { etapa: "desqualificado" });
         await addInteracao({
           id_lead: leadId,
@@ -193,8 +181,68 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
           id_usuario: "system",
         });
       }
+      return;
     }
+
+    const nextNum = maxExisting + 1;
+    const entryDate = new Date(lead.data_entrada);
+    entryDate.setHours(0, 0, 0, 0);
+    const eventDate = new Date(entryDate);
+    eventDate.setDate(eventDate.getDate() + nextNum);
+
+    // Only create if the event date is today or in the past
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    if (eventDate > todayDate) return;
+
+    await addEvento({
+      id_lead: leadId,
+      tipo: "followup",
+      numero: nextNum,
+      data_prevista: eventDate.toISOString().split("T")[0],
+      concluido: false,
+      id_usuario: lead.id_agente,
+    });
   }, [leads, eventos]);
+
+  // Auto-generate follow-ups for eligible leads after data loads
+  const autoGenerateFollowups = useCallback(async () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    for (const lead of leads) {
+      // "novo" leads that entered before today
+      if (lead.etapa === "novo" && lead.data_entrada < today) {
+        await generateFollowups(lead.id);
+      }
+      // "agendado" leads with missed appointments (past date, no checkin)
+      if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
+        const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
+        const hasPending = leadEventos.some((e) => !e.concluido);
+        if (!hasPending) {
+          const maxExisting = leadEventos.length > 0
+            ? Math.max(...leadEventos.map((e) => e.numero))
+            : 0;
+          if (maxExisting < 7) {
+            const nextNum = maxExisting + 1;
+            const eventDate = new Date(lead.data_agendamento);
+            eventDate.setDate(eventDate.getDate() + nextNum);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            if (eventDate <= todayDate) {
+              await addEvento({
+                id_lead: lead.id,
+                tipo: "followup",
+                numero: nextNum,
+                data_prevista: eventDate.toISOString().split("T")[0],
+                concluido: false,
+                id_usuario: lead.id_agente,
+              });
+            }
+          }
+        }
+      }
+    }
+  }, [leads, eventos, generateFollowups]);
 
   return (
     <LeadContext.Provider value={{
