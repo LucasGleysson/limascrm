@@ -244,6 +244,15 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [leads, eventos, generateFollowups]);
 
+  // Auto-run follow-up generation once after data loads
+  const autoGenRan = useRef(false);
+  useEffect(() => {
+    if (!loading && leads.length > 0 && !autoGenRan.current) {
+      autoGenRan.current = true;
+      autoGenerateFollowups();
+    }
+  }, [loading, leads, autoGenerateFollowups]);
+
   return (
     <LeadContext.Provider value={{
       leads, interacoes, eventos, unidades, profiles, loading,
