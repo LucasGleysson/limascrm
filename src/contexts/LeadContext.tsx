@@ -227,12 +227,16 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   // Auto-generate follow-ups for eligible leads after data loads
   const autoGenerateFollowups = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
+    let createdCount = 0;
 
     for (const lead of leads) {
+      const beforeCount = eventos.length;
+
       // "novo" leads that entered before today
       if (lead.etapa === "novo" && lead.data_entrada < today) {
         await generateFollowups(lead.id);
       }
+
       // "agendado" leads with missed appointments (past date, no checkin)
       if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
         const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
@@ -260,7 +264,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       }
+
+      if (eventos.length > beforeCount) createdCount += eventos.length - beforeCount;
     }
+
+    return createdCount;
   }, [leads, eventos, generateFollowups]);
 
   // Auto-run follow-up generation once after data loads
