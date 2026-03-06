@@ -309,12 +309,15 @@ export const ManagerDashboard = () => {
 
         {activeTab === "agendamentos" && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Agendamentos</h1>
                 <p className="text-muted-foreground text-sm">Acompanhamento de agenda por unidade</p>
               </div>
-              {UnidadeFilterSelect}
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
