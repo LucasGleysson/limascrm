@@ -228,12 +228,15 @@ export const ManagerDashboard = () => {
 
         {activeTab === "leads" && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Análise de Leads</h1>
                 <p className="text-muted-foreground text-sm">ROI por canal e performance detalhada</p>
               </div>
-              {UnidadeFilterSelect}
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5">
