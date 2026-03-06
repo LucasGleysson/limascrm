@@ -64,7 +64,7 @@ export const SupervisorDashboard = () => {
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
-      const unitLeads = leads.filter((l) => l.id_unidade === u.id);
+      const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       return {
         ...u,
         total: unitLeads.length,
@@ -73,14 +73,14 @@ export const SupervisorDashboard = () => {
         perdidos: unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
       };
     });
-  }, [leads, unidades]);
+  }, [filteredLeads, unidades]);
 
   const globalStats = useMemo(() => ({
-    totalLeads: leads.length,
-    totalAgendados: leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
-    totalPerdidos: leads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
-    taxaConversao: leads.length > 0 ? Math.round((leads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length / leads.length) * 100) : 0,
-  }), [leads]);
+    totalLeads: filteredLeads.length,
+    totalAgendados: filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length,
+    totalPerdidos: filteredLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length,
+    taxaConversao: filteredLeads.length > 0 ? Math.round((filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length / filteredLeads.length) * 100) : 0,
+  }), [filteredLeads]);
 
   const selected = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
