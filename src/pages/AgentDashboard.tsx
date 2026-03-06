@@ -228,7 +228,16 @@ export const AgentDashboard = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{unidade?.nome || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell>
+                            {lead.data_agendamento ? (
+                              <span className="font-semibold text-primary text-sm">
+                                {new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
                             {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}
                           </TableCell>
                         </TableRow>
