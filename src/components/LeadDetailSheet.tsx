@@ -353,8 +353,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 )}
 
                 {canEditSchedule && (
-                  <Button variant="outline" size="sm" className="gap-2" onClick={startEditSchedule}>
-                    <Calendar className="h-4 w-4" /> Editar Agendamento
+                  <Button size="lg" variant="outline" className="w-full gap-2 text-base" onClick={startEditSchedule}>
+                    <Calendar className="h-5 w-5" /> Editar Agendamento
                   </Button>
                 )}
 
