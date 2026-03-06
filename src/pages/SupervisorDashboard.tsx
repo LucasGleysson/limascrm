@@ -272,7 +272,7 @@ export const SupervisorDashboard = () => {
               const selUnit = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
               if (!selUnit) return null;
 
-              const unitLeads = leads.filter((l) => l.id_unidade === selUnit.id);
+              const unitLeads = filteredLeads.filter((l) => l.id_unidade === selUnit.id);
               const unitChartData = ETAPAS_FUNIL.map((e) => ({
                 name: e.label,
                 value: unitLeads.filter((l) => l.etapa === e.id).length,
