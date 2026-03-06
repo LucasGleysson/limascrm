@@ -222,14 +222,14 @@ export const AgentDashboard = () => {
                           <TableCell>
                             {lead.data_agendamento ? (
                               <span className="font-semibold text-primary text-sm">
-                                {new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}
+                                {formatDateBR(lead.data_agendamento)}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
-                            {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}
+                            {formatDateBR(lead.data_entrada)}
                           </TableCell>
                         </TableRow>
                       );
