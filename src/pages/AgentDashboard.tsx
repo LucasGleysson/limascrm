@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck } from "lucide-react";
+import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn } from "lucide-react";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
+import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { formatPhone } from "@/lib/phoneUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -22,6 +23,7 @@ import { ptBR } from "date-fns/locale";
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
+  { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
 ];
 
@@ -252,6 +254,10 @@ export const AgentDashboard = () => {
 
         {activeTab === "agendamentos" && (
           <AgentSchedulePanel />
+        )}
+
+        {activeTab === "recepcao" && (
+          <AgentReceptionPanel />
         )}
 
         {activeTab === "eventos" && (
