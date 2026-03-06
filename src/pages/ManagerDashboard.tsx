@@ -229,6 +229,22 @@ export const ManagerDashboard = () => {
           </>
         )}
 
+        {activeTab === "inteligencia" && (
+          <>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Inteligência</h1>
+                <p className="text-muted-foreground text-sm">Fluxo de veículos, faturamento e aproveitamento</p>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {UnidadeFilterSelect}
+              </div>
+            </div>
+            <ManagerIntelligencePanel filteredLeads={filteredLeads} unidades={unidades} profiles={profiles} />
+          </>
+        )}
+
         {activeTab === "leads" && (
           <>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
