@@ -323,14 +323,15 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const autoGenerateFollowups = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
 
-    for (const lead of leads) {
-      if (lead.etapa === "novo" && lead.data_entrada < today) {
-        await generateFollowups(lead.id);
-      }
-      if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) {
-        await generateFollowups(lead.id);
-      }
-    }
+    const eligibleLeads = leads.filter((lead) => {
+      if (lead.etapa === "novo" && lead.data_entrada < today) return true;
+      if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) return true;
+      return false;
+    });
+
+    if (eligibleLeads.length === 0) return;
+
+    await Promise.all(eligibleLeads.map((lead) => generateFollowups(lead.id)));
   }, [leads, eventos, generateFollowups]);
 
   // Run auto-gen once per user session

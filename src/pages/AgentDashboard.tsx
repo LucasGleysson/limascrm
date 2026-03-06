@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { usePagination } from "@/hooks/usePagination";
 import { useRole } from "@/contexts/RoleContext";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { NewLeadModal } from "@/components/NewLeadModal";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { formatPhone } from "@/lib/phoneUtils";
@@ -60,6 +62,8 @@ export const AgentDashboard = () => {
         return d <= end;
       });
   }, [leads, currentUser.id, etapaFilter, search, dateStart, dateEnd]);
+
+  const pagination = usePagination(myLeads, { pageSize: 15 });
 
   const etapaCounts = useMemo(() => {
     const mine = leads.filter((l) => l.id_agente === currentUser.id);
@@ -194,14 +198,14 @@ export const AgentDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {myLeads.length === 0 ? (
+                  {pagination.paginatedItems.length === 0 ? (
                     <TableRow>
                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         Nenhum lead encontrado.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    myLeads.map((lead) => {
+                    pagination.paginatedItems.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
                       const unidade = unidades.find((u) => u.id === lead.id_unidade);
                       return (
@@ -237,6 +241,15 @@ export const AgentDashboard = () => {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.goToPage}
+                hasNextPage={pagination.hasNextPage}
+                hasPrevPage={pagination.hasPrevPage}
+              />
             </div>
           </div>
         )}
