@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { formatPhone } from "@/lib/phoneUtils";
