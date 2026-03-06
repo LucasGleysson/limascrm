@@ -104,9 +104,12 @@ export const SupervisorDashboard = () => {
       <main className="flex-1 overflow-auto p-6 space-y-6">
         {activeTab === "dashboard" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
-              <p className="text-muted-foreground text-sm">Desempenho geral</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
+                <p className="text-muted-foreground text-sm">Desempenho geral</p>
+              </div>
+              <PeriodFilter value={period} onChange={setPeriod} />
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
