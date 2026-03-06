@@ -198,14 +198,14 @@ export const AgentDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {myLeads.length === 0 ? (
+                  {pagination.paginatedItems.length === 0 ? (
                     <TableRow>
                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         Nenhum lead encontrado.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    myLeads.map((lead) => {
+                    pagination.paginatedItems.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
                       const unidade = unidades.find((u) => u.id === lead.id_unidade);
                       return (
@@ -241,6 +241,15 @@ export const AgentDashboard = () => {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.goToPage}
+                hasNextPage={pagination.hasNextPage}
+                hasPrevPage={pagination.hasPrevPage}
+              />
             </div>
           </div>
         )}
