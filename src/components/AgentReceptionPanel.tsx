@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
+import { getToday } from "@/lib/leadUtils";
 
 export const AgentReceptionPanel = () => {
   const { leads, updateLead, addInteracao, unidades } = useLeads();
@@ -29,9 +30,12 @@ export const AgentReceptionPanel = () => {
   const [dispensarLead, setDispensarLead] = useState<Lead | null>(null);
   const [dispensarMotivo, setDispensarMotivo] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  // Loading states for buttons
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-  const myLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser.id), [leads, currentUser.id]);
+  const today = getToday();
+
+  const myLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser?.id), [leads, currentUser?.id]);
 
   const agendados = useMemo(() => myLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today), [myLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
@@ -46,25 +50,37 @@ export const AgentReceptionPanel = () => {
     id ? unidades.find((u) => u.id === id)?.nome || "—" : "—";
 
   const handleCheckin = async (lead: Lead) => {
-    const now = new Date().toISOString();
-    const unidadeNome = getUnidadeNome(lead.id_unidade);
-    await updateLead(lead.id, { etapa: "confirmado", checkin: now });
-    await addInteracao({
-      id_lead: lead.id, tipo: "checkin",
-      descricao: `Check-in na unidade ${unidadeNome} — Confirmado`,
-      data: now, id_usuario: currentUser.id,
-    });
+    if (loadingAction) return;
+    setLoadingAction(`checkin-${lead.id}`);
+    try {
+      const now = new Date().toISOString();
+      const unidadeNome = getUnidadeNome(lead.id_unidade);
+      await updateLead(lead.id, { etapa: "confirmado", checkin: now });
+      await addInteracao({
+        id_lead: lead.id, tipo: "checkin",
+        descricao: `Check-in na unidade ${unidadeNome} — Confirmado`,
+        data: now, id_usuario: currentUser!.id,
+      });
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const handleEmServico = async (lead: Lead) => {
-    const now = new Date().toISOString();
-    const unidadeNome = getUnidadeNome(lead.id_unidade);
-    await updateLead(lead.id, { etapa: "na_loja" });
-    await addInteracao({
-      id_lead: lead.id, tipo: "mudanca_etapa",
-      descricao: `Em Serviço na unidade ${unidadeNome}`,
-      data: now, id_usuario: currentUser.id,
-    });
+    if (loadingAction) return;
+    setLoadingAction(`servico-${lead.id}`);
+    try {
+      const now = new Date().toISOString();
+      const unidadeNome = getUnidadeNome(lead.id_unidade);
+      await updateLead(lead.id, { etapa: "na_loja" });
+      await addInteracao({
+        id_lead: lead.id, tipo: "mudanca_etapa",
+        descricao: `Em Serviço na unidade ${unidadeNome}`,
+        data: now, id_usuario: currentUser!.id,
+      });
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const handleDispensarOpen = (lead: Lead) => {
@@ -74,36 +90,47 @@ export const AgentReceptionPanel = () => {
   };
 
   const handleDispensarSubmit = async () => {
-    if (!dispensarLead || !dispensarMotivo.trim()) return;
-    const now = new Date().toISOString();
-    await updateLead(dispensarLead.id, { etapa: "dispensado" });
-    await addInteracao({
-      id_lead: dispensarLead.id, tipo: "mudanca_etapa",
-      descricao: `Dispensado — Motivo: ${dispensarMotivo.trim()}`,
-      data: now, id_usuario: currentUser.id,
-    });
-    setDispensarOpen(false);
+    if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
+    setLoadingAction("dispensar");
+    try {
+      const now = new Date().toISOString();
+      // Keep checkin data, clear checkout and tags
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null });
+      await addInteracao({
+        id_lead: dispensarLead.id, tipo: "mudanca_etapa",
+        descricao: `Dispensado — Motivo: ${dispensarMotivo.trim()}`,
+        data: now, id_usuario: currentUser!.id,
+      });
+      setDispensarOpen(false);
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const handleCheckoutSubmit = async () => {
-    if (!checkoutLead) return;
+    if (!checkoutLead || loadingAction) return;
     if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
-    const now = new Date().toISOString();
-    await updateLead(checkoutLead.id, {
-      etapa: checkoutStatus, checkout: now,
-      tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
-    });
-    const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
-    const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
-    await addInteracao({
-      id_lead: checkoutLead.id, tipo: "checkout",
-      descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
-      data: now, id_usuario: currentUser.id,
-    });
-    setCheckoutOpen(false);
-    setTags([]);
-    setCheckoutMotivo("");
-    setCheckoutStatus("concluido");
+    setLoadingAction("checkout");
+    try {
+      const now = new Date().toISOString();
+      await updateLead(checkoutLead.id, {
+        etapa: checkoutStatus, checkout: now,
+        tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
+      });
+      const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
+      const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
+      await addInteracao({
+        id_lead: checkoutLead.id, tipo: "checkout",
+        descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
+        data: now, id_usuario: currentUser!.id,
+      });
+      setCheckoutOpen(false);
+      setTags([]);
+      setCheckoutMotivo("");
+      setCheckoutStatus("concluido");
+    } finally {
+      setLoadingAction(null);
+    }
   };
 
   const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
@@ -139,8 +166,13 @@ export const AgentReceptionPanel = () => {
                     {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agendado: {lead.data_agendamento ? new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR") : "—"} · {getUnidadeNome(lead.id_unidade)}
                   </p>
                 </div>
-                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg">
-                  <LogIn className="h-4 w-4" /> Check-in
+                <Button
+                  onClick={() => handleCheckin(lead)}
+                  className="gap-2"
+                  size="lg"
+                  disabled={loadingAction === `checkin-${lead.id}`}
+                >
+                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
                 </Button>
               </div>
             ))}
@@ -162,8 +194,13 @@ export const AgentReceptionPanel = () => {
                     {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · {getUnidadeNome(lead.id_unidade)}
                   </p>
                 </div>
-                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg">
-                  <LogIn className="h-4 w-4" /> Check-in
+                <Button
+                  onClick={() => handleCheckin(lead)}
+                  className="gap-2"
+                  size="lg"
+                  disabled={loadingAction === `checkin-${lead.id}`}
+                >
+                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
                 </Button>
               </div>
             ))}
@@ -187,8 +224,13 @@ export const AgentReceptionPanel = () => {
                   <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => handleEmServico(lead)} className="gap-2" size="lg">
-                    <Wrench className="h-4 w-4" /> Em Serviço
+                  <Button
+                    onClick={() => handleEmServico(lead)}
+                    className="gap-2"
+                    size="lg"
+                    disabled={loadingAction === `servico-${lead.id}`}
+                  >
+                    <Wrench className="h-4 w-4" /> {loadingAction === `servico-${lead.id}` ? "Aguarde..." : "Em Serviço"}
                   </Button>
                   <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
                     <XCircle className="h-4 w-4" /> Dispensado
@@ -247,7 +289,9 @@ export const AgentReceptionPanel = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim()}>Confirmar</Button>
+            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim() || loadingAction === "dispensar"}>
+              {loadingAction === "dispensar" ? "Aguarde..." : "Confirmar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -291,7 +335,9 @@ export const AgentReceptionPanel = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout}>Finalizar</Button>
+            <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout || loadingAction === "checkout"}>
+              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

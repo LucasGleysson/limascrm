@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
+import { formatDateBR } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -72,13 +73,13 @@ export const ManagerDashboard = () => {
 
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
-      const unitLeads = leads.filter((l) => l.id_unidade === u.id);
+      const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
       const perdidos = unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const receita = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
       return { ...u, total: unitLeads.length, concluidos: concluidos.length, perdidos, receita };
     });
-  }, [leads, unidades]);
+  }, [filteredLeads, unidades]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
   const agenteTable = useMemo(() => {
@@ -338,7 +339,7 @@ export const ManagerDashboard = () => {
                         <div className="flex-1">
                           <span className="font-medium">{l.nome}</span>
                           <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · {l.data_agendamento} · Agente: {agente?.nome}
+                            {formatPhone(l.telefone)} · {unidade?.nome} · {formatDateBR(l.data_agendamento)} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs border-destructive/30 text-destructive">
@@ -365,7 +366,7 @@ export const ManagerDashboard = () => {
                         <div className="flex-1">
                           <span className="font-medium">{l.nome}</span>
                           <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os} · Agente: {agente?.nome}
+                            {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os || "—"} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
                         <Badge variant={l.etapa === "na_loja" ? "default" : "secondary"} className="text-xs">
@@ -390,10 +391,10 @@ export const ManagerDashboard = () => {
                         <div className="flex-1">
                           <span className="font-medium">{l.nome}</span>
                           <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · {l.data_agendamento} · Agente: {agente?.nome}
+                            {formatPhone(l.telefone)} · {unidade?.nome} · {formatDateBR(l.data_agendamento)} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-xs">{l.data_agendamento}</Badge>
+                        <Badge variant="outline" className="text-xs">{formatDateBR(l.data_agendamento)}</Badge>
                       </div>
                     );
                   })}

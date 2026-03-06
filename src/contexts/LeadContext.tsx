@@ -38,11 +38,9 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const buildLeadsQuery = useCallback(() => {
     const user = currentUserRef.current;
     let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
-    // Agentes only see their own leads
     if (user?.cargo === "agente") {
       query = query.eq("id_agente", user.id);
     }
-    // Recepcionistas only see leads from their unit
     if (user?.cargo === "recepcionista" && user.unidade_padrao) {
       query = query.eq("id_unidade", user.unidade_padrao);
     }
@@ -61,9 +59,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const buildInteracoesQuery = useCallback(() => {
     const user = currentUserRef.current;
     let query = supabase.from("interacoes").select("*").order("data", { ascending: false });
-    if (user?.cargo === "agente") {
-      query = query.eq("id_usuario", user.id);
-    }
+    // Don't filter interacoes by id_usuario for agents - they need to see all interactions on their leads
+    // The leads themselves are already filtered by agent
     return query;
   }, []);
 
@@ -111,7 +108,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch data when user profile is ready (role-aware queries need currentUser)
+  // Fetch data when user profile is ready
   useEffect(() => {
     if (authUserId && currentUser) {
       fetchAll();
@@ -147,7 +144,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (table === "leads") {
       if (eventType === "INSERT") {
         const lead = mapLead(newRow);
-        // Only add if it passes role filter
         if (user?.cargo === "agente" && lead.id_agente !== user.id) return;
         if (user?.cargo === "recepcionista" && user.unidade_padrao && lead.id_unidade !== user.unidade_padrao) return;
         setLeads((prev) => prev.some((l) => l.id === lead.id) ? prev : [lead, ...prev]);
@@ -174,7 +170,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     } else if (table === "interacoes") {
       if (eventType === "INSERT") {
         const interacao = mapInteracao(newRow);
-        if (user?.cargo === "agente" && interacao.id_usuario !== user.id) return;
         setInteracoes((prev) => prev.some((i) => i.id === interacao.id) ? prev : [interacao, ...prev]);
       }
     }
@@ -230,7 +225,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       console.error("addEvento error:", error);
       return;
     }
-    // Local state updated via Realtime — no need to manually add here
   };
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
@@ -243,7 +237,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }).eq("id", eventoId);
     if (error) { console.error("concluirEvento error:", error); return; }
 
-    // Find evento from current state for the interacao
     const evento = eventos.find((e) => e.id === eventoId);
     if (evento) {
       await addInteracao({
@@ -261,7 +254,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (!lead) return;
 
     const leadEventos = eventos.filter((e) => e.id_lead === leadId);
-
     const hasPending = leadEventos.some((e) => !e.concluido);
     if (hasPending) return;
 
@@ -272,12 +264,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (maxExisting >= 7) {
       if (lead.etapa === "novo") {
         await updateLead(leadId, { etapa: "desqualificado" });
+        // Use the lead's agent ID instead of "system" to satisfy RLS
         await addInteracao({
           id_lead: leadId,
           tipo: "mudanca_etapa",
           descricao: "Lead desqualificado automaticamente após 7 follow-ups sem resposta",
           data: new Date().toISOString(),
-          id_usuario: "system",
+          id_usuario: lead.id_agente,
         });
       }
       return;
@@ -340,7 +333,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [leads, eventos, generateFollowups]);
 
-  // Run auto-gen once per user session — NO fetchAll after (Realtime handles it)
+  // Run auto-gen once per user session
   useEffect(() => {
     if (!loading && leads.length > 0 && authUserId && autoGenForUserRef.current !== authUserId) {
       autoGenForUserRef.current = authUserId;

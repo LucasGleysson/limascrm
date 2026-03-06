@@ -15,6 +15,7 @@ import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn } fro
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { formatPhone } from "@/lib/phoneUtils";
+import { getStatusBadgeClass, formatDateBR } from "@/lib/leadUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -86,19 +87,7 @@ export const AgentDashboard = () => {
     });
   };
 
-  const getStatusBadge = (etapa: string) => {
-    const map: Record<string, string> = {
-      novo: "bg-info/15 text-info border-info/30",
-      agendado: "bg-purple/15 text-purple border-purple/30",
-      confirmado: "bg-info/15 text-info border-info/30",
-      na_loja: "bg-warning/15 text-warning border-warning/30",
-      concluido: "bg-success/15 text-success border-success/30",
-      dispensado: "bg-destructive/15 text-destructive border-destructive/30",
-      perdido: "bg-destructive/15 text-destructive border-destructive/30",
-      desqualificado: "bg-muted text-muted-foreground border-muted",
-    };
-    return map[etapa] || "";
-  };
+  const getStatusBadge = getStatusBadgeClass;
 
   const pendingEvents = useMemo(() => {
     return eventos.filter((e) => !e.concluido && e.id_usuario === currentUser.id);
@@ -233,14 +222,14 @@ export const AgentDashboard = () => {
                           <TableCell>
                             {lead.data_agendamento ? (
                               <span className="font-semibold text-primary text-sm">
-                                {new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR")}
+                                {formatDateBR(lead.data_agendamento)}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
-                            {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}
+                            {formatDateBR(lead.data_entrada)}
                           </TableCell>
                         </TableRow>
                       );
