@@ -33,13 +33,13 @@ export const SupervisorDashboard = () => {
 
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
-      const agenteLeads = leads.filter((l) => l.id_agente === agente.id);
+      const agenteLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const agendados = agenteLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length;
       const perdidos = agenteLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
       const taxa = agenteLeads.length > 0 ? Math.round((agendados / agenteLeads.length) * 100) : 0;
 
       const agenteEvents = eventos.filter((e) => {
-        const lead = leads.find((l) => l.id === e.id_lead);
+        const lead = filteredLeads.find((l) => l.id === e.id_lead);
         return lead?.id_agente === agente.id;
       });
       const pendentes = agenteEvents.filter((e) => !e.concluido);
@@ -60,7 +60,7 @@ export const SupervisorDashboard = () => {
         leads: agenteLeads,
       };
     });
-  }, [leads, eventos, today, agentes]);
+  }, [filteredLeads, eventos, today, agentes]);
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
