@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getToday } from "@/lib/leadUtils";
+import { appendNota } from "@/lib/notasUtils";
 
 export const AgentReceptionPanel = () => {
   const { leads, updateLead, unidades } = useLeads();
