@@ -105,11 +105,18 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Skip all DB fetches for recepcionista to save costs (re-enable when ready)
+  const isRecepcionista = currentUser?.cargo === "recepcionista";
+
   useEffect(() => {
     if (authUserId && currentUser) {
+      if (isRecepcionista) {
+        setLoading(false);
+        return;
+      }
       fetchAll();
     }
-  }, [authUserId, currentUser, fetchAll]);
+  }, [authUserId, currentUser, fetchAll, isRecepcionista]);
 
   // Realtime ONLY for agents — other roles use manual refresh
   useEffect(() => {
