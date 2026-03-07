@@ -1,6 +1,6 @@
 // Constants only - data now lives in the database
 
-export const ORIGENS = ["WhatsApp", "Instagram", "Facebook", "Google Ads", "Indicação", "Porta"] as const;
+export const ORIGENS = ["WhatsApp", "Instagram", "Facebook", "Site", "Indicação", "Porta"] as const;
 
 export const ETAPAS_FUNIL = [
   { id: "novo", label: "Novo Lead", color: "info" },
@@ -36,6 +36,7 @@ export interface Lead {
   checkin?: string | null;
   checkout?: string | null;
   is_porta?: boolean | null;
+  notas?: string | null;
 }
 
 export interface Evento {

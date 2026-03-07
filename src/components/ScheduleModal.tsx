@@ -35,7 +35,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && unidade && data && os) { e.preventDefault(); handleSubmit(); } }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarCheck className="h-5 w-5 text-primary" />

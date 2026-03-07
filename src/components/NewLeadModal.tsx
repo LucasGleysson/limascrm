@@ -23,7 +23,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
   const { currentUser } = useRole();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [origem, setOrigem] = useState(isPorta ? "Porta" : "");
+  const [origem, setOrigem] = useState(isPorta ? "Porta" : "Instagram");
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
 
@@ -60,7 +60,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && canSubmit) { e.preventDefault(); handleSubmit(); } }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />

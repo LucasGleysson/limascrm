@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getToday } from "@/lib/leadUtils";
+import { appendNota } from "@/lib/notasUtils";
 
 export const AgentReceptionPanel = () => {
   const { leads, updateLead, unidades } = useLeads();
@@ -79,7 +80,8 @@ export const AgentReceptionPanel = () => {
     if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null });
+      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
       setDispensarOpen(false);
     } finally {
       setLoadingAction(null);
@@ -92,10 +94,15 @@ export const AgentReceptionPanel = () => {
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
-      await updateLead(checkoutLead.id, {
+      const updates: Partial<Lead> = {
         etapa: checkoutStatus, checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
-      });
+      };
+      if (checkoutMotivo.trim()) {
+        const label = checkoutStatus === "perdido" ? "Perdido" : checkoutStatus === "desqualificado" ? "Desqualificado" : "Check-out";
+        updates.notas = appendNota(checkoutLead.notas, label, checkoutMotivo.trim());
+      }
+      await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
@@ -107,6 +114,10 @@ export const AgentReceptionPanel = () => {
 
   const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
   const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
+  const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
+    if (e.key === "Enter" && !e.shiftKey && !disabled) { e.preventDefault(); action(); }
+  };
+
   const toggleTag = (tag: string) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
   return (
@@ -226,7 +237,7 @@ export const AgentReceptionPanel = () => {
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
       <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, !dispensarMotivo.trim() || loadingAction === "dispensar")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-destructive" />
@@ -249,7 +260,7 @@ export const AgentReceptionPanel = () => {
       </Dialog>
 
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, !canSubmitCheckout || loadingAction === "checkout")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5 text-success" />
