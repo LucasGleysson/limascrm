@@ -237,7 +237,7 @@ export const AgentReceptionPanel = () => {
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
       <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, !dispensarMotivo.trim() || loadingAction === "dispensar")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-destructive" />
