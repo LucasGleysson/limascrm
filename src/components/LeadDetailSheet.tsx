@@ -10,8 +10,9 @@ import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
+import { appendNota } from "@/lib/notasUtils";
 
 interface Props {
   lead: Lead | null;
@@ -37,6 +38,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editDataAgendamento, setEditDataAgendamento] = useState("");
   const [editNumeroOs, setEditNumeroOs] = useState("");
   const [editUnidadeAgendamento, setEditUnidadeAgendamento] = useState("");
+
+  const [newNota, setNewNota] = useState("");
 
   if (!lead) return null;
 
@@ -106,9 +109,25 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const handleDisqualify = async () => {
     if (!disqualifyMotivo.trim()) return;
-    await updateLead(lead.id, { etapa: "desqualificado" });
+    const notas = appendNota(lead.notas, "Desqualificado", disqualifyMotivo.trim());
+    await updateLead(lead.id, { etapa: "desqualificado", notas });
     setDisqualifyMotivo("");
     setDisqualifyOpen(false);
+  };
+
+  const handleAddNota = async () => {
+    if (!newNota.trim()) return;
+    const userName = currentUser?.nome || "Sistema";
+    const notas = appendNota(lead.notas, userName, newNota.trim());
+    await updateLead(lead.id, { notas });
+    setNewNota("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
+    if (e.key === "Enter" && !e.shiftKey && !disabled) {
+      e.preventDefault();
+      action();
+    }
   };
 
   const isEditMode = editing || editingSchedule;
@@ -116,7 +135,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) { setEditing(false); setEditingSchedule(false); } onOpenChange(v); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}</span>
@@ -137,7 +156,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
           <div className="space-y-4">
             {editing ? (
-              <div className="space-y-4">
+              <div className="space-y-4" onKeyDown={(e) => handleKeyDown(e, saveEdit, !editNome || !editTelefone)}>
                 <div>
                   <Label>Nome</Label>
                   <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} className="mt-1" />
@@ -188,7 +207,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 </div>
               </div>
             ) : editingSchedule ? (
-              <div className="space-y-4">
+              <div className="space-y-4" onKeyDown={(e) => handleKeyDown(e, saveScheduleEdit, !editDataAgendamento || !editNumeroOs || !editUnidadeAgendamento)}>
                 <div>
                   <Label>Unidade / Cidade</Label>
                   <Select value={editUnidadeAgendamento} onValueChange={setEditUnidadeAgendamento}>
@@ -276,6 +295,32 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </div>
                 )}
 
+                {/* Notas section */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-semibold">Notas</Label>
+                  </div>
+                  {lead.notas && (
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-md p-3 max-h-40 overflow-y-auto font-sans">
+                      {lead.notas}
+                    </pre>
+                  )}
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={newNota}
+                      onChange={(e) => setNewNota(e.target.value)}
+                      placeholder="Adicionar nota..."
+                      rows={2}
+                      className="text-sm"
+                      onKeyDown={(e) => handleKeyDown(e, handleAddNota, !newNota.trim())}
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" onClick={handleAddNota} disabled={!newNota.trim()} className="gap-2">
+                    <Check className="h-3 w-3" /> Adicionar Nota
+                  </Button>
+                </div>
+
                 {canSchedule && (
                   <Button size="lg" className="w-full gap-2 text-base" onClick={() => setScheduleOpen(true)}>
                     <CalendarCheck className="h-5 w-5" /> Concluir Agendamento
@@ -298,7 +343,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
       )}
 
       <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) setDisqualifyMotivo(""); setDisqualifyOpen(v); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim())}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
