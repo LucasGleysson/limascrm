@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriangle, Wrench, XCircle } from "lucide-react";
+import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriangle, Wrench, XCircle, RefreshCw } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, getToday, formatDateBR } from "@/lib/leadUtils";
 
@@ -24,7 +24,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, unidades, profiles } = useLeads();
+  const { leads, updateLead, unidades, profiles, refreshAll } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
   const unidadeId = currentUser.unidade_padrao || "";
@@ -48,6 +48,13 @@ export const ReceptionistDashboard = () => {
   const [clientStatusFilter, setClientStatusFilter] = useState("todos");
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  };
 
   const today = getToday();
 
@@ -153,9 +160,15 @@ export const ReceptionistDashboard = () => {
                 <h1 className="text-2xl font-bold">Recepção — {unidadeNome}</h1>
                 <p className="text-muted-foreground text-sm">Chegadas e atendimentos do dia</p>
               </div>
-              <Button onClick={() => setNewLeadOpen(true)} size="lg" className="gap-2">
-                <UserPlus className="h-4 w-4" /> Novo Cliente
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+                <Button onClick={() => setNewLeadOpen(true)} size="lg" className="gap-2">
+                  <UserPlus className="h-4 w-4" /> Novo Cliente
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
