@@ -26,6 +26,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const [profiles, setProfiles] = useState<{ id: string; nome: string; cargo: string; unidade_padrao?: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const lastFetchRef = useRef<number>(0);
+  const CACHE_TTL = 30_000; // 30 seconds
   const currentUserRef = useRef(currentUser);
   currentUserRef.current = currentUser;
 
@@ -58,7 +60,12 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return query;
   }, []);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && lastFetchRef.current && now - lastFetchRef.current < CACHE_TTL) {
+      return; // cache still valid
+    }
+
     const [leadsRes, eventosRes, unidadesRes, profilesRes] = await Promise.all([
       buildLeadsQuery(),
       buildEventosQuery(),
@@ -70,6 +77,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (eventosRes.data) setEventos(eventosRes.data.map(mapEvento));
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
+    lastFetchRef.current = Date.now();
     setLoading(false);
   }, [buildLeadsQuery, buildEventosQuery]);
 
@@ -211,7 +219,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     <LeadContext.Provider value={{
       leads, eventos, unidades, profiles, loading,
       addLead, updateLead, addEvento, concluirEvento,
-      refreshAll: fetchAll,
+      refreshAll: () => fetchAll(true),
     }}>
       {children}
     </LeadContext.Provider>
