@@ -80,7 +80,8 @@ export const AgentReceptionPanel = () => {
     if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null });
+      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
       setDispensarOpen(false);
     } finally {
       setLoadingAction(null);
