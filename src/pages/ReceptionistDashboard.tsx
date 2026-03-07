@@ -48,6 +48,13 @@ export const ReceptionistDashboard = () => {
   const [clientStatusFilter, setClientStatusFilter] = useState("todos");
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  };
 
   const today = getToday();
 
