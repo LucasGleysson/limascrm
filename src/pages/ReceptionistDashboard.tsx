@@ -160,9 +160,15 @@ export const ReceptionistDashboard = () => {
                 <h1 className="text-2xl font-bold">Recepção — {unidadeNome}</h1>
                 <p className="text-muted-foreground text-sm">Chegadas e atendimentos do dia</p>
               </div>
-              <Button onClick={() => setNewLeadOpen(true)} size="lg" className="gap-2">
-                <UserPlus className="h-4 w-4" /> Novo Cliente
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+                  <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                  Atualizar
+                </Button>
+                <Button onClick={() => setNewLeadOpen(true)} size="lg" className="gap-2">
+                  <UserPlus className="h-4 w-4" /> Novo Cliente
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
