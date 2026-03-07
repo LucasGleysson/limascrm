@@ -5,7 +5,8 @@ import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
-import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const SIDEBAR_TABS = [
@@ -15,11 +16,25 @@ const SIDEBAR_TABS = [
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos, unidades, profiles } = useLeads();
+  const { leads, eventos, unidades, profiles, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  };
+
+  const RefreshButton = (
+    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+      <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+      Atualizar
+    </Button>
+  );
 
   const periodRange = useMemo(() => getDateRangeForPeriod(period), [period]);
 
@@ -109,7 +124,10 @@ export const SupervisorDashboard = () => {
                 <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
                 <p className="text-muted-foreground text-sm">Desempenho geral</p>
               </div>
-              <PeriodFilter value={period} onChange={setPeriod} />
+              <div className="flex items-center gap-3">
+                {RefreshButton}
+                <PeriodFilter value={period} onChange={setPeriod} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -162,7 +180,10 @@ export const SupervisorDashboard = () => {
                 <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
                 <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
               </div>
-              <PeriodFilter value={period} onChange={setPeriod} />
+              <div className="flex items-center gap-3">
+                {RefreshButton}
+                <PeriodFilter value={period} onChange={setPeriod} />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -244,7 +265,10 @@ export const SupervisorDashboard = () => {
                 <h1 className="text-2xl font-bold">Desempenho por Unidade</h1>
                 <p className="text-muted-foreground text-sm">Clique em uma unidade para ver detalhes</p>
               </div>
-              <PeriodFilter value={period} onChange={setPeriod} />
+              <div className="flex items-center gap-3">
+                {RefreshButton}
+                <PeriodFilter value={period} onChange={setPeriod} />
+              </div>
             </div>
 
             <div className="space-y-2">
