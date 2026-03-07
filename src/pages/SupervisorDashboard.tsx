@@ -6,11 +6,13 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin, RefreshCw } from "lucide-react";
+import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin, RefreshCw, Target } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { MetasAgentesPanel } from "@/components/MetasAgentesPanel";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "metas", label: "Metas", icon: Target },
   { id: "agentes", label: "Agentes", icon: Users },
   { id: "unidades", label: "Unidades", icon: MapPin },
 ];
@@ -171,6 +173,10 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
           </>
+        )}
+
+        {activeTab === "metas" && (
+          <MetasAgentesPanel profiles={profiles} />
         )}
 
         {activeTab === "agentes" && (

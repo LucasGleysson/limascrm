@@ -146,6 +146,41 @@ export type Database = {
           },
         ]
       }
+      metas_agentes: {
+        Row: {
+          created_at: string
+          id: string
+          id_agente: string
+          mes_ref: string
+          meta_carros: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_agente: string
+          mes_ref: string
+          meta_carros?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_agente?: string
+          mes_ref?: string
+          meta_carros?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_agentes_id_agente_fkey"
+            columns: ["id_agente"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cargo: Database["public"]["Enums"]["app_role"]
