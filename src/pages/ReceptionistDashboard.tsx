@@ -24,7 +24,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, unidades, profiles } = useLeads();
+  const { leads, updateLead, unidades, profiles, refreshAll } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
   const unidadeId = currentUser.unidade_padrao || "";
