@@ -187,6 +187,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       checkin: lead.checkin || null,
       checkout: lead.checkout || null,
       is_porta: lead.is_porta || false,
+      notas: (lead as any).notas || null,
     }).select("id").single();
     if (error) { console.error("addLead error:", error); return null; }
     return data?.id || null;
