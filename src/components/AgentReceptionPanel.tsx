@@ -94,10 +94,15 @@ export const AgentReceptionPanel = () => {
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
-      await updateLead(checkoutLead.id, {
+      const updates: Partial<Lead> = {
         etapa: checkoutStatus, checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
-      });
+      };
+      if (checkoutMotivo.trim()) {
+        const label = checkoutStatus === "perdido" ? "Perdido" : checkoutStatus === "desqualificado" ? "Desqualificado" : "Check-out";
+        updates.notas = appendNota(checkoutLead.notas, label, checkoutMotivo.trim());
+      }
+      await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
