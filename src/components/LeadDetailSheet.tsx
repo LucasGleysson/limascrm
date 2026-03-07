@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
-import { LeadTimeline } from "./LeadTimeline";
 import { ScheduleModal } from "./ScheduleModal";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 
@@ -22,7 +20,7 @@ interface Props {
 }
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, addInteracao, unidades, profiles } = useLeads();
+  const { updateLead, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -69,13 +67,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
     if (Object.keys(updates).length > 0) {
       await updateLead(lead.id, updates);
-      await addInteracao({
-        id_lead: lead.id,
-        tipo: "nota",
-        descricao: "Ficha do cliente editada",
-        data: new Date().toISOString(),
-        id_usuario: currentUser.id,
-      });
     }
     setEditing(false);
   };
@@ -99,16 +90,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
     if (Object.keys(updates).length > 0) {
       await updateLead(lead.id, updates);
-      const desc = lead.etapa === "dispensado"
-        ? "Reagendado (resgatado de dispensado)"
-        : "Informações de agendamento editadas";
-      await addInteracao({
-        id_lead: lead.id,
-        tipo: lead.etapa === "dispensado" ? "mudanca_etapa" : "nota",
-        descricao: desc,
-        data: new Date().toISOString(),
-        id_usuario: currentUser.id,
-      });
     }
     setEditingSchedule(false);
   };
@@ -126,13 +107,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const handleDisqualify = async () => {
     if (!disqualifyMotivo.trim()) return;
     await updateLead(lead.id, { etapa: "desqualificado" });
-    await addInteracao({
-      id_lead: lead.id,
-      tipo: "mudanca_etapa",
-      descricao: `Lead desqualificado: ${disqualifyMotivo.trim()}`,
-      data: new Date().toISOString(),
-      id_usuario: currentUser.id,
-    });
     setDisqualifyMotivo("");
     setDisqualifyOpen(false);
   };
@@ -141,50 +115,27 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   return (
     <>
-      <Sheet open={open} onOpenChange={(v) => { if (!v) { setEditing(false); setEditingSchedule(false); } onOpenChange(v); }}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0">
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-background border-b border-border px-6 py-4">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-lg font-semibold">
-                {editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}
-              </SheetTitle>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { setEditing(false); setEditingSchedule(false); } onOpenChange(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}</span>
               {!isEditMode && (
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={startEdit}
-                    title="Editar ficha"
-                  >
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={startEdit} title="Editar ficha">
                     <Pencil className="h-4 w-4" />
                   </Button>
                   {canDisqualify && (
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setDisqualifyOpen(true)}
-                      title="Desqualificar"
-                    >
+                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDisqualifyOpen(true)} title="Desqualificar">
                       <Ban className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
               )}
-            </div>
-          </div>
+            </DialogTitle>
+          </DialogHeader>
 
-          <div className="px-6 py-5 space-y-6">
+          <div className="space-y-4">
             {editing ? (
               <div className="space-y-4">
                 <div>
@@ -193,12 +144,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input
-                    value={editTelefone}
-                    onChange={(e) => setEditTelefone(maskPhoneInput(e.target.value))}
-                    placeholder="(00) 99999-9999"
-                    className="mt-1"
-                  />
+                  <Input value={editTelefone} onChange={(e) => setEditTelefone(maskPhoneInput(e.target.value))} placeholder="(00) 99999-9999" className="mt-1" />
                 </div>
                 <div>
                   <Label>Origem</Label>
@@ -226,12 +172,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Label>Tags de Serviço</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {SERVICOS_TAGS.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant={editTags.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer text-xs py-1 px-3"
-                        onClick={() => toggleTag(tag)}
-                      >
+                      <Badge key={tag} variant={editTags.includes(tag) ? "default" : "outline"} className="cursor-pointer text-xs py-1 px-3" onClick={() => toggleTag(tag)}>
                         {tag}
                       </Badge>
                     ))}
@@ -261,13 +202,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input
-                    type="date"
-                    value={editDataAgendamento}
-                    onChange={(e) => setEditDataAgendamento(e.target.value)}
-                    min={todayStr}
-                    className="mt-1"
-                  />
+                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} min={todayStr} className="mt-1" />
                 </div>
                 <div>
                   <Label>Número da OS</Label>
@@ -284,8 +219,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               </div>
             ) : (
               <>
-                {/* Client info card */}
-                <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                {/* Client info */}
+                <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-muted-foreground shrink-0" />
                     <span className="font-semibold text-base">{lead.nome}</span>
@@ -341,13 +276,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </div>
                 )}
 
-                {/* Schedule button - prominent and alone */}
                 {canSchedule && (
-                  <Button
-                    size="lg"
-                    className="w-full gap-2 text-base"
-                    onClick={() => setScheduleOpen(true)}
-                  >
+                  <Button size="lg" className="w-full gap-2 text-base" onClick={() => setScheduleOpen(true)}>
                     <CalendarCheck className="h-5 w-5" /> Concluir Agendamento
                   </Button>
                 )}
@@ -357,25 +287,14 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     <Calendar className="h-5 w-5" /> Editar Agendamento
                   </Button>
                 )}
-
-                {/* Timeline */}
-                <div>
-                  <h4 className="font-semibold mb-3">Timeline</h4>
-                  <LeadTimeline leadId={lead.id} />
-                </div>
               </>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {lead && (
-        <ScheduleModal
-          open={scheduleOpen}
-          onOpenChange={setScheduleOpen}
-          leadId={lead.id}
-          leadNome={lead.nome}
-        />
+        <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={lead.id} leadNome={lead.nome} />
       )}
 
       <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) setDisqualifyMotivo(""); setDisqualifyOpen(v); }}>
@@ -389,12 +308,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
             <p className="text-sm text-muted-foreground">
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
-            <Textarea
-              value={disqualifyMotivo}
-              onChange={(e) => setDisqualifyMotivo(e.target.value)}
-              placeholder="Motivo da desqualificação..."
-              rows={3}
-            />
+            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo da desqualificação..." rows={3} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOpen(false); }}>Cancelar</Button>

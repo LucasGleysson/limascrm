@@ -68,51 +68,6 @@ export type Database = {
           },
         ]
       }
-      interacoes: {
-        Row: {
-          created_at: string
-          data: string
-          descricao: string
-          id: string
-          id_lead: string
-          id_usuario: string
-          tipo: string
-        }
-        Insert: {
-          created_at?: string
-          data?: string
-          descricao: string
-          id?: string
-          id_lead: string
-          id_usuario: string
-          tipo: string
-        }
-        Update: {
-          created_at?: string
-          data?: string
-          descricao?: string
-          id?: string
-          id_lead?: string
-          id_usuario?: string
-          tipo?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "interacoes_id_lead_fkey"
-            columns: ["id_lead"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "interacoes_id_usuario_fkey"
-            columns: ["id_usuario"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       leads: {
         Row: {
           checkin: string | null

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLeads } from "@/contexts/LeadContext";
-import { useRole } from "@/contexts/RoleContext";
 import { CalendarCheck } from "lucide-react";
 
 interface Props {
@@ -16,8 +15,7 @@ interface Props {
 }
 
 export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) => {
-  const { updateLead, addInteracao, unidades } = useLeads();
-  const { currentUser } = useRole();
+  const { updateLead, unidades } = useLeads();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
@@ -26,20 +24,11 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
 
   const handleSubmit = async () => {
     if (!unidade || !data || !os) return;
-    const now = new Date().toISOString();
-    const unidadeNome = unidades.find((u) => u.id === unidade)?.nome;
     await updateLead(leadId, {
       etapa: "agendado",
       id_unidade: unidade,
       data_agendamento: data,
       numero_os: os,
-    });
-    await addInteracao({
-      id_lead: leadId,
-      tipo: "mudanca_etapa",
-      descricao: `Agendado para ${unidadeNome} em ${data} - OS: ${os}`,
-      data: now,
-      id_usuario: currentUser.id,
     });
     onOpenChange(false);
   };

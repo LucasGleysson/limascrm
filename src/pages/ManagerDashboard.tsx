@@ -7,11 +7,14 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight, Lightbulb } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight, Lightbulb, RefreshCw } from "lucide-react";
 import { ManagerIntelligencePanel } from "@/components/ManagerIntelligencePanel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
 import { formatDateBR } from "@/lib/leadUtils";
+import { usePagination } from "@/hooks/usePagination";
+import { TablePagination } from "@/components/TablePagination";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,10 +34,17 @@ const PIE_COLORS = [
 ];
 
 export const ManagerDashboard = () => {
-  const { leads, unidades, profiles } = useLeads();
+  const { leads, unidades, profiles, refreshAll, loading } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  };
 
   const filteredLeads = useMemo(() => {
     let result = leads;
@@ -116,9 +126,21 @@ export const ManagerDashboard = () => {
   const agendFuturos = agendamentos.filter((l) => l.data_agendamento! > todayStr);
   const agendAtrasados = agendamentos.filter((l) => l.data_agendamento! < todayStr);
 
+  // Pagination for agendamentos
+  const atrasadosPag = usePagination(agendAtrasados, { pageSize: 10 });
+  const hojePag = usePagination(agendHoje, { pageSize: 10 });
+  const futurosPag = usePagination(agendFuturos, { pageSize: 10 });
+
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));
   }, [porOrigem]);
+
+  const RefreshButton = (
+    <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
+      <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+      Atualizar
+    </Button>
+  );
 
   const UnidadeFilterSelect = (
     <Select value={unidadeFilter} onValueChange={setUnidadeFilter}>
@@ -148,6 +170,7 @@ export const ManagerDashboard = () => {
                 <p className="text-muted-foreground text-sm">Visão estratégica do desempenho</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
+                {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
                 {UnidadeFilterSelect}
               </div>
@@ -237,6 +260,7 @@ export const ManagerDashboard = () => {
                 <p className="text-muted-foreground text-sm">Fluxo de veículos, faturamento e aproveitamento</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
+                {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
                 {UnidadeFilterSelect}
               </div>
@@ -253,6 +277,7 @@ export const ManagerDashboard = () => {
                 <p className="text-muted-foreground text-sm">ROI por canal e performance detalhada</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
+                {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
                 {UnidadeFilterSelect}
               </div>
@@ -334,6 +359,7 @@ export const ManagerDashboard = () => {
                 <p className="text-muted-foreground text-sm">Acompanhamento de agenda por unidade</p>
               </div>
               <div className="flex items-center gap-3 flex-wrap">
+                {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
                 {UnidadeFilterSelect}
               </div>
@@ -349,7 +375,7 @@ export const ManagerDashboard = () => {
               <div className="rounded-xl border border-destructive/20 bg-card p-5">
                 <h2 className="text-lg font-semibold mb-3 text-destructive">Agendamentos Atrasados</h2>
                 <div className="space-y-2">
-                  {agendAtrasados.map((l) => {
+                  {atrasadosPag.paginatedItems.map((l) => {
                     const agente = profiles.find((u) => u.id === l.id_agente);
                     const unidade = unidades.find((u) => u.id === l.id_unidade);
                     return (
@@ -367,6 +393,7 @@ export const ManagerDashboard = () => {
                     );
                   })}
                 </div>
+                <TablePagination currentPage={atrasadosPag.currentPage} totalPages={atrasadosPag.totalPages} totalItems={atrasadosPag.totalItems} pageSize={atrasadosPag.pageSize} onPageChange={atrasadosPag.goToPage} hasNextPage={atrasadosPag.hasNextPage} hasPrevPage={atrasadosPag.hasPrevPage} />
               </div>
             )}
 
@@ -375,25 +402,28 @@ export const ManagerDashboard = () => {
               {agendHoje.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum agendamento para hoje.</p>
               ) : (
-                <div className="space-y-2">
-                  {agendHoje.map((l) => {
-                    const agente = profiles.find((u) => u.id === l.id_agente);
-                    const unidade = unidades.find((u) => u.id === l.id_unidade);
-                    return (
-                      <div key={l.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                        <div className="flex-1">
-                          <span className="font-medium">{l.nome}</span>
-                          <p className="text-sm text-muted-foreground">
-                            {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os || "—"} · Agente: {agente?.nome || "—"}
-                          </p>
+                <>
+                  <div className="space-y-2">
+                    {hojePag.paginatedItems.map((l) => {
+                      const agente = profiles.find((u) => u.id === l.id_agente);
+                      const unidade = unidades.find((u) => u.id === l.id_unidade);
+                      return (
+                        <div key={l.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
+                          <div className="flex-1">
+                            <span className="font-medium">{l.nome}</span>
+                            <p className="text-sm text-muted-foreground">
+                              {formatPhone(l.telefone)} · {unidade?.nome} · OS: {l.numero_os || "—"} · Agente: {agente?.nome || "—"}
+                            </p>
+                          </div>
+                          <Badge variant={l.etapa === "na_loja" ? "default" : "secondary"} className="text-xs">
+                            {l.etapa === "na_loja" ? "Na Loja" : "Aguardando"}
+                          </Badge>
                         </div>
-                        <Badge variant={l.etapa === "na_loja" ? "default" : "secondary"} className="text-xs">
-                          {l.etapa === "na_loja" ? "Na Loja" : "Aguardando"}
-                        </Badge>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                  <TablePagination currentPage={hojePag.currentPage} totalPages={hojePag.totalPages} totalItems={hojePag.totalItems} pageSize={hojePag.pageSize} onPageChange={hojePag.goToPage} hasNextPage={hojePag.hasNextPage} hasPrevPage={hojePag.hasPrevPage} />
+                </>
               )}
             </div>
 
@@ -401,7 +431,7 @@ export const ManagerDashboard = () => {
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-3">Próximos Agendamentos</h2>
                 <div className="space-y-2">
-                  {agendFuturos.map((l) => {
+                  {futurosPag.paginatedItems.map((l) => {
                     const agente = profiles.find((u) => u.id === l.id_agente);
                     const unidade = unidades.find((u) => u.id === l.id_unidade);
                     return (
@@ -417,6 +447,7 @@ export const ManagerDashboard = () => {
                     );
                   })}
                 </div>
+                <TablePagination currentPage={futurosPag.currentPage} totalPages={futurosPag.totalPages} totalItems={futurosPag.totalItems} pageSize={futurosPag.pageSize} onPageChange={futurosPag.goToPage} hasNextPage={futurosPag.hasNextPage} hasPrevPage={futurosPag.hasPrevPage} />
               </div>
             )}
           </>
