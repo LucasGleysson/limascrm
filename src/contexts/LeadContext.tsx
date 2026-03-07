@@ -256,6 +256,7 @@ function mapLead(row: any): Lead {
     checkin: row.checkin,
     checkout: row.checkout,
     is_porta: row.is_porta,
+    notas: row.notas,
   };
 }
 
