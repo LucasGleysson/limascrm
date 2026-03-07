@@ -60,7 +60,12 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return query;
   }, []);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && lastFetchRef.current && now - lastFetchRef.current < CACHE_TTL) {
+      return; // cache still valid
+    }
+
     const [leadsRes, eventosRes, unidadesRes, profilesRes] = await Promise.all([
       buildLeadsQuery(),
       buildEventosQuery(),
@@ -72,6 +77,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (eventosRes.data) setEventos(eventosRes.data.map(mapEvento));
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
+    lastFetchRef.current = Date.now();
     setLoading(false);
   }, [buildLeadsQuery, buildEventosQuery]);
 
