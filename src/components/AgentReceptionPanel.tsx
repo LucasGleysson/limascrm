@@ -114,6 +114,10 @@ export const AgentReceptionPanel = () => {
 
   const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
   const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
+  const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
+    if (e.key === "Enter" && !e.shiftKey && !disabled) { e.preventDefault(); action(); }
+  };
+
   const toggleTag = (tag: string) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
   return (
