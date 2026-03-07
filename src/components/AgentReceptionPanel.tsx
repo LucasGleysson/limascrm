@@ -260,7 +260,7 @@ export const AgentReceptionPanel = () => {
       </Dialog>
 
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, !canSubmitCheckout || loadingAction === "checkout")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5 text-success" />
