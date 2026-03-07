@@ -50,15 +50,6 @@ export interface Evento {
   id_usuario?: string | null;
 }
 
-export interface Interacao {
-  id: string;
-  id_lead: string;
-  tipo: string;
-  descricao: string;
-  data: string;
-  id_usuario: string;
-}
-
 export interface Unidade {
   id: string;
   nome: string;

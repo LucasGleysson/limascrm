@@ -19,7 +19,7 @@ interface Props {
 }
 
 export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist }: Props) => {
-  const { addLead, addInteracao } = useLeads();
+  const { addLead } = useLeads();
   const { currentUser } = useRole();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -36,7 +36,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     if (isReceptionist && !numeroOs) return;
     const now = new Date().toISOString();
     const finalEtapa = isReceptionist ? etapa : (isPorta ? "na_loja" : "novo");
-    const leadId = await addLead({
+    await addLead({
       nome,
       telefone: formatPhone(telefone),
       origem: origem || "Porta",
@@ -48,17 +48,6 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       checkin: (isReceptionist && etapa === "na_loja") || isPorta ? now : null,
       numero_os: numeroOs || null,
     });
-    if (leadId) {
-      await addInteracao({
-        id_lead: leadId,
-        tipo: "mudanca_etapa",
-        descricao: isPorta || (isReceptionist && etapa === "na_loja")
-          ? "Cliente de porta registrado com check-in"
-          : `Lead criado como '${ETAPAS_FUNIL.find(e => e.id === finalEtapa)?.label || "Novo Lead"}'`,
-        data: now,
-        id_usuario: currentUser.id,
-      });
-    }
     setNome("");
     setTelefone("");
     setOrigem("");
@@ -85,12 +74,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
           </div>
           <div>
             <Label>Telefone</Label>
-            <Input
-              value={telefone}
-              onChange={(e) => setTelefone(maskPhoneInput(e.target.value))}
-              placeholder="(00) 99999-9999"
-              className="mt-1"
-            />
+            <Input value={telefone} onChange={(e) => setTelefone(maskPhoneInput(e.target.value))} placeholder="(00) 99999-9999" className="mt-1" />
           </div>
           {isReceptionist && (
             <div>

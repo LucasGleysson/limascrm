@@ -31,7 +31,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const AgentDashboard = () => {
-  const { leads, updateLead, addInteracao, eventos, unidades } = useLeads();
+  const { leads, updateLead, eventos, unidades } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("leads");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -81,14 +81,6 @@ export const AgentDashboard = () => {
       return;
     }
     await updateLead(lead.id, { etapa: novaEtapa });
-    const etapaLabel = ETAPAS_FUNIL.find((e) => e.id === novaEtapa)?.label;
-    await addInteracao({
-      id_lead: lead.id,
-      tipo: "mudanca_etapa",
-      descricao: `Movido para '${etapaLabel}'`,
-      data: new Date().toISOString(),
-      id_usuario: currentUser.id,
-    });
   };
 
   const getStatusBadge = getStatusBadgeClass;
@@ -143,12 +135,7 @@ export const AgentDashboard = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome ou telefone..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
               <Popover>
                 <PopoverTrigger asChild>
@@ -158,12 +145,7 @@ export const AgentDashboard = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateStart}
-                    onSelect={setDateStart}
-                    locale={ptBR}
-                  />
+                  <CalendarComponent mode="single" selected={dateStart} onSelect={setDateStart} locale={ptBR} />
                 </PopoverContent>
               </Popover>
               <Popover>
@@ -174,12 +156,7 @@ export const AgentDashboard = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent
-                    mode="single"
-                    selected={dateEnd}
-                    onSelect={setDateEnd}
-                    locale={ptBR}
-                  />
+                  <CalendarComponent mode="single" selected={dateEnd} onSelect={setDateEnd} locale={ptBR} />
                 </PopoverContent>
               </Popover>
             </div>
@@ -189,18 +166,18 @@ export const AgentDashboard = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>CLIENTE</TableHead>
-                     <TableHead>CONTATO</TableHead>
-                     <TableHead>ORIGEM</TableHead>
-                     <TableHead>STATUS</TableHead>
-                     <TableHead>UNIDADE</TableHead>
-                     <TableHead>AGENDAMENTO</TableHead>
-                     <TableHead>ENTRADA</TableHead>
+                    <TableHead>CONTATO</TableHead>
+                    <TableHead>ORIGEM</TableHead>
+                    <TableHead>STATUS</TableHead>
+                    <TableHead>UNIDADE</TableHead>
+                    <TableHead>AGENDAMENTO</TableHead>
+                    <TableHead>ENTRADA</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pagination.paginatedItems.length === 0 ? (
                     <TableRow>
-                       <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                         Nenhum lead encontrado.
                       </TableCell>
                     </TableRow>
@@ -209,11 +186,7 @@ export const AgentDashboard = () => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
                       const unidade = unidades.find((u) => u.id === lead.id_unidade);
                       return (
-                        <TableRow
-                          key={lead.id}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => { setDetailLead(lead); setDetailOpen(true); }}
-                        >
+                        <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
                           <TableCell className="font-medium">{lead.nome}</TableCell>
                           <TableCell className="text-muted-foreground">{formatPhone(lead.telefone)}</TableCell>
                           <TableCell className="text-muted-foreground">{lead.origem}</TableCell>
@@ -225,16 +198,12 @@ export const AgentDashboard = () => {
                           <TableCell className="text-muted-foreground">{unidade?.nome || "—"}</TableCell>
                           <TableCell>
                             {lead.data_agendamento ? (
-                              <span className="font-semibold text-primary text-sm">
-                                {formatDateBR(lead.data_agendamento)}
-                              </span>
+                              <span className="font-semibold text-primary text-sm">{formatDateBR(lead.data_agendamento)}</span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {formatDateBR(lead.data_entrada)}
-                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{formatDateBR(lead.data_entrada)}</TableCell>
                         </TableRow>
                       );
                     })
@@ -254,27 +223,14 @@ export const AgentDashboard = () => {
           </div>
         )}
 
-        {activeTab === "agendamentos" && (
-          <AgentSchedulePanel />
-        )}
-
-        {activeTab === "recepcao" && (
-          <AgentReceptionPanel />
-        )}
-
-        {activeTab === "eventos" && (
-          <EventoPanel />
-        )}
+        {activeTab === "agendamentos" && <AgentSchedulePanel />}
+        {activeTab === "recepcao" && <AgentReceptionPanel />}
+        {activeTab === "eventos" && <EventoPanel />}
       </main>
 
       <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} />
       {scheduleLead && (
-        <ScheduleModal
-          open={scheduleOpen}
-          onOpenChange={setScheduleOpen}
-          leadId={scheduleLead.id}
-          leadNome={scheduleLead.nome}
-        />
+        <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={scheduleLead.id} leadNome={scheduleLead.nome} />
       )}
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>

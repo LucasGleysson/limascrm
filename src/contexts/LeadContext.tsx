@@ -1,18 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
-import type { Lead, Interacao, Evento, Unidade } from "@/data/mockData";
+import type { Lead, Evento, Unidade } from "@/data/mockData";
 
 interface LeadContextType {
   leads: Lead[];
-  interacoes: Interacao[];
   eventos: Evento[];
   unidades: Unidade[];
   profiles: { id: string; nome: string; cargo: string; unidade_padrao?: string | null }[];
   loading: boolean;
   addLead: (lead: Omit<Lead, "id">) => Promise<string | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
-  addInteracao: (interacao: Omit<Interacao, "id">) => Promise<void>;
   addEvento: (evento: Omit<Evento, "id">) => Promise<void>;
   concluirEvento: (eventoId: string, descricao: string, userId: string) => Promise<void>;
   generateFollowups: (leadId: string) => Promise<void>;
@@ -24,7 +22,6 @@ const LeadContext = createContext<LeadContextType | undefined>(undefined);
 export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const { currentUser } = useRole();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [interacoes, setInteracoes] = useState<Interacao[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; nome: string; cargo: string; unidade_padrao?: string | null }[]>([]);
@@ -34,7 +31,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const currentUserRef = useRef(currentUser);
   currentUserRef.current = currentUser;
 
-  // Build role-aware queries
   const buildLeadsQuery = useCallback(() => {
     const user = currentUserRef.current;
     let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
@@ -56,30 +52,20 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return query;
   }, []);
 
-  const buildInteracoesQuery = useCallback(() => {
-    const user = currentUserRef.current;
-    let query = supabase.from("interacoes").select("*").order("data", { ascending: false });
-    // Don't filter interacoes by id_usuario for agents - they need to see all interactions on their leads
-    // The leads themselves are already filtered by agent
-    return query;
-  }, []);
-
   const fetchAll = useCallback(async () => {
-    const [leadsRes, eventosRes, interacoesRes, unidadesRes, profilesRes] = await Promise.all([
+    const [leadsRes, eventosRes, unidadesRes, profilesRes] = await Promise.all([
       buildLeadsQuery(),
       buildEventosQuery(),
-      buildInteracoesQuery(),
       supabase.from("unidades").select("*").order("nome"),
       supabase.from("profiles").select("id, nome, cargo, unidade_padrao"),
     ]);
 
     if (leadsRes.data) setLeads(leadsRes.data.map(mapLead));
     if (eventosRes.data) setEventos(eventosRes.data.map(mapEvento));
-    if (interacoesRes.data) setInteracoes(interacoesRes.data.map(mapInteracao));
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
     setLoading(false);
-  }, [buildLeadsQuery, buildEventosQuery, buildInteracoesQuery]);
+  }, [buildLeadsQuery, buildEventosQuery]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -89,7 +75,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
         setAuthUserId(null);
         autoGenForUserRef.current = null;
         setLeads([]);
-        setInteracoes([]);
         setEventos([]);
         setLoading(false);
       }
@@ -108,14 +93,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch data when user profile is ready
   useEffect(() => {
     if (authUserId && currentUser) {
       fetchAll();
     }
   }, [authUserId, currentUser, fetchAll]);
 
-  // Realtime: use payload to update local state instead of refetching
+  // Realtime only for leads and eventos (no interacoes)
   useEffect(() => {
     if (!authUserId) return;
 
@@ -126,9 +110,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "eventos" }, (payload) => {
         handleRealtimeEvent("eventos", payload);
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "interacoes" }, (payload) => {
-        handleRealtimeEvent("interacoes", payload);
       })
       .subscribe();
 
@@ -167,11 +148,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       } else if (eventType === "DELETE") {
         setEventos((prev) => prev.filter((e) => e.id !== oldRow.id));
       }
-    } else if (table === "interacoes") {
-      if (eventType === "INSERT") {
-        const interacao = mapInteracao(newRow);
-        setInteracoes((prev) => prev.some((i) => i.id === interacao.id) ? prev : [interacao, ...prev]);
-      }
     }
   }, []);
 
@@ -201,17 +177,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (error) console.error("updateLead error:", error);
   };
 
-  const addInteracao = async (interacao: Omit<Interacao, "id">) => {
-    const { error } = await supabase.from("interacoes").insert({
-      id_lead: interacao.id_lead,
-      tipo: interacao.tipo,
-      descricao: interacao.descricao,
-      data: interacao.data,
-      id_usuario: interacao.id_usuario,
-    });
-    if (error) console.error("addInteracao error:", error);
-  };
-
   const addEvento = async (evento: Omit<Evento, "id">) => {
     const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
@@ -236,18 +201,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       id_usuario: userId,
     }).eq("id", eventoId);
     if (error) { console.error("concluirEvento error:", error); return; }
-
-    const evento = eventos.find((e) => e.id === eventoId);
-    if (evento) {
-      await addInteracao({
-        id_lead: evento.id_lead,
-        tipo: "evento_concluido",
-        descricao: `Follow-up ${evento.numero} concluído: ${descricao}`,
-        data: now,
-        id_usuario: userId,
-      });
-    }
-  }, [eventos]);
+  }, []);
 
   const generateFollowups = useCallback(async (leadId: string) => {
     const lead = leads.find((l) => l.id === leadId);
@@ -264,14 +218,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (maxExisting >= 7) {
       if (lead.etapa === "novo") {
         await updateLead(leadId, { etapa: "desqualificado" });
-        // Use the lead's agent ID instead of "system" to satisfy RLS
-        await addInteracao({
-          id_lead: leadId,
-          tipo: "mudanca_etapa",
-          descricao: "Lead desqualificado automaticamente após 7 follow-ups sem resposta",
-          data: new Date().toISOString(),
-          id_usuario: lead.id_agente,
-        });
       }
       return;
     }
@@ -344,8 +290,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <LeadContext.Provider value={{
-      leads, interacoes, eventos, unidades, profiles, loading,
-      addLead, updateLead, addInteracao, addEvento, concluirEvento, generateFollowups,
+      leads, eventos, unidades, profiles, loading,
+      addLead, updateLead, addEvento, concluirEvento, generateFollowups,
       refreshAll: fetchAll,
     }}>
       {children}
@@ -359,7 +305,6 @@ export const useLeads = () => {
   return context;
 };
 
-// Mappers from DB row to app types
 function mapLead(row: any): Lead {
   return {
     id: row.id,
@@ -390,17 +335,6 @@ function mapEvento(row: any): Evento {
     concluido: row.concluido,
     data_conclusao: row.data_conclusao,
     descricao_conclusao: row.descricao_conclusao,
-    id_usuario: row.id_usuario,
-  };
-}
-
-function mapInteracao(row: any): Interacao {
-  return {
-    id: row.id,
-    id_lead: row.id_lead,
-    tipo: row.tipo,
-    descricao: row.descricao,
-    data: row.data,
     id_usuario: row.id_usuario,
   };
 }

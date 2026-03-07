@@ -24,7 +24,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, addInteracao, unidades, profiles } = useLeads();
+  const { leads, updateLead, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
   const unidadeId = currentUser.unidade_padrao || "";
@@ -85,11 +85,6 @@ export const ReceptionistDashboard = () => {
     try {
       const now = new Date().toISOString();
       await updateLead(lead.id, { etapa: "confirmado", checkin: now });
-      await addInteracao({
-        id_lead: lead.id, tipo: "checkin",
-        descricao: `Check-in na unidade ${unidadeNome} — Confirmado`,
-        data: now, id_usuario: currentUser.id,
-      });
     } finally {
       setLoadingAction(null);
     }
@@ -99,13 +94,7 @@ export const ReceptionistDashboard = () => {
     if (loadingAction) return;
     setLoadingAction(`servico-${lead.id}`);
     try {
-      const now = new Date().toISOString();
       await updateLead(lead.id, { etapa: "na_loja" });
-      await addInteracao({
-        id_lead: lead.id, tipo: "mudanca_etapa",
-        descricao: `Em Serviço na unidade ${unidadeNome}`,
-        data: now, id_usuario: currentUser.id,
-      });
     } finally {
       setLoadingAction(null);
     }
@@ -121,13 +110,7 @@ export const ReceptionistDashboard = () => {
     if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      const now = new Date().toISOString();
       await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null });
-      await addInteracao({
-        id_lead: dispensarLead.id, tipo: "mudanca_etapa",
-        descricao: `Dispensado — Motivo: ${dispensarMotivo.trim()}`,
-        data: now, id_usuario: currentUser.id,
-      });
       setDispensarOpen(false);
     } finally {
       setLoadingAction(null);
@@ -143,13 +126,6 @@ export const ReceptionistDashboard = () => {
       await updateLead(checkoutLead.id, {
         etapa: checkoutStatus, checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
-      });
-      const statusLabel = ETAPAS_FUNIL.find(e => e.id === checkoutStatus)?.label || checkoutStatus;
-      const motivoText = checkoutMotivo.trim() ? ` — Motivo: ${checkoutMotivo.trim()}` : "";
-      await addInteracao({
-        id_lead: checkoutLead.id, tipo: "checkout",
-        descricao: `Check-out: ${statusLabel}${tags.length > 0 ? ` - ${tags.join(", ")}` : ""}${motivoText}`,
-        data: now, id_usuario: currentUser.id,
       });
       setCheckoutOpen(false);
       setTags([]);
@@ -206,12 +182,7 @@ export const ReceptionistDashboard = () => {
                             {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agendado: {formatDateBR(lead.data_agendamento)} · Agente: {agente?.nome || "—"}
                           </p>
                         </div>
-                        <Button
-                          onClick={() => handleCheckin(lead)}
-                          className="gap-2"
-                          size="lg"
-                          disabled={loadingAction === `checkin-${lead.id}`}
-                        >
+                        <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
                           <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
                         </Button>
                       </div>
@@ -235,12 +206,7 @@ export const ReceptionistDashboard = () => {
                           <span className="font-semibold">{lead.nome}</span>
                           <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agente: {agente?.nome || "—"}</p>
                         </div>
-                        <Button
-                          onClick={() => handleCheckin(lead)}
-                          className="gap-2"
-                          size="lg"
-                          disabled={loadingAction === `checkin-${lead.id}`}
-                        >
+                        <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
                           <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
                         </Button>
                       </div>
@@ -266,12 +232,7 @@ export const ReceptionistDashboard = () => {
                         <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleEmServico(lead)}
-                          className="gap-2"
-                          size="lg"
-                          disabled={loadingAction === `servico-${lead.id}`}
-                        >
+                        <Button onClick={() => handleEmServico(lead)} className="gap-2" size="lg" disabled={loadingAction === `servico-${lead.id}`}>
                           <Wrench className="h-4 w-4" /> {loadingAction === `servico-${lead.id}` ? "Aguarde..." : "Em Serviço"}
                         </Button>
                         <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
@@ -299,12 +260,7 @@ export const ReceptionistDashboard = () => {
                         </div>
                         <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        className="gap-2 border-success/30 text-success hover:bg-success/10"
-                        size="lg"
-                        onClick={() => { setCheckoutLead(lead); setCheckoutOpen(true); }}
-                      >
+                      <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setCheckoutOpen(true); }}>
                         <LogOut className="h-4 w-4" /> Check-out
                       </Button>
                     </div>
@@ -365,10 +321,10 @@ export const ReceptionistDashboard = () => {
                           <TableCell>{lead.numero_os || "—"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>
-                              <span className="mr-1">●</span> {etapa?.label}
+                              {etapa?.label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground">{formatDateBR(lead.data_agendamento || lead.data_entrada)}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{formatDateBR(lead.data_entrada)}</TableCell>
                         </TableRow>
                       );
                     })
@@ -378,84 +334,79 @@ export const ReceptionistDashboard = () => {
             </div>
           </>
         )}
-
-        <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isPorta isReceptionist unidadeId={unidadeId} />
-        <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
-
-        <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-destructive" />
-                Dispensar: {dispensarLead?.nome}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Motivo da dispensa <span className="text-destructive">*</span></Label>
-                <Textarea
-                  value={dispensarMotivo}
-                  onChange={(e) => setDispensarMotivo(e.target.value)}
-                  placeholder="Descreva o motivo..."
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
-              <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim() || loadingAction === "dispensar"}>
-                {loadingAction === "dispensar" ? "Aguarde..." : "Confirmar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <LogOut className="h-5 w-5 text-success" />
-                Check-out: {checkoutLead?.nome}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Status de Saída</Label>
-                <Select value={checkoutStatus} onValueChange={(v) => setCheckoutStatus(v as any)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="concluido">Serviço Concluído</SelectItem>
-                    <SelectItem value="perdido">Perdido</SelectItem>
-                    <SelectItem value="desqualificado">Desqualificado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {checkoutNeedsMotivo && (
-                <div>
-                  <Label>Motivo <span className="text-destructive">*</span></Label>
-                  <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
-                </div>
-              )}
-              <div>
-                <Label>Tags de Serviço</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {SERVICOS_TAGS.map((tag) => (
-                    <Badge key={tag} variant={tags.includes(tag) ? "default" : "outline"} className="cursor-pointer text-sm py-1 px-3" onClick={() => toggleTag(tag)}>
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
-              <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout || loadingAction === "checkout"}>
-                {loadingAction === "checkout" ? "Aguarde..." : "Finalizar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </main>
+
+      <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isReceptionist unidadeId={unidadeId} />
+      <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+
+      <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Dispensar: {dispensarLead?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Motivo da dispensa <span className="text-destructive">*</span></Label>
+              <Textarea value={dispensarMotivo} onChange={(e) => setDispensarMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim() || loadingAction === "dispensar"}>
+              {loadingAction === "dispensar" ? "Aguarde..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5 text-success" />
+              Check-out: {checkoutLead?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Status de Saída</Label>
+              <Select value={checkoutStatus} onValueChange={(v) => setCheckoutStatus(v as any)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="concluido">Serviço Concluído</SelectItem>
+                  <SelectItem value="perdido">Perdido</SelectItem>
+                  <SelectItem value="desqualificado">Desqualificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {checkoutNeedsMotivo && (
+              <div>
+                <Label>Motivo <span className="text-destructive">*</span></Label>
+                <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
+              </div>
+            )}
+            <div>
+              <Label>Tags de Serviço</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {SERVICOS_TAGS.map((tag) => (
+                  <Badge key={tag} variant={tags.includes(tag) ? "default" : "outline"} className="cursor-pointer text-sm py-1 px-3" onClick={() => toggleTag(tag)}>
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout || loadingAction === "checkout"}>
+              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
