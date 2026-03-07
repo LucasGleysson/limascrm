@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriangle, Wrench, XCircle, RefreshCw } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, getToday, formatDateBR } from "@/lib/leadUtils";
+import { appendNota } from "@/lib/notasUtils";
 
 const SIDEBAR_TABS = [
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
