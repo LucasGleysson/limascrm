@@ -81,6 +81,7 @@ export type Database = {
           id_unidade: string | null
           is_porta: boolean | null
           nome: string
+          notas: string | null
           numero_os: string | null
           origem: string
           tags_servico: string[] | null
@@ -100,6 +101,7 @@ export type Database = {
           id_unidade?: string | null
           is_porta?: boolean | null
           nome: string
+          notas?: string | null
           numero_os?: string | null
           origem?: string
           tags_servico?: string[] | null
@@ -119,6 +121,7 @@ export type Database = {
           id_unidade?: string | null
           is_porta?: boolean | null
           nome?: string
+          notas?: string | null
           numero_os?: string | null
           origem?: string
           tags_servico?: string[] | null

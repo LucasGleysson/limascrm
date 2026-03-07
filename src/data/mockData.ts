@@ -36,6 +36,7 @@ export interface Lead {
   checkin?: string | null;
   checkout?: string | null;
   is_porta?: boolean | null;
+  notas?: string | null;
 }
 
 export interface Evento {
