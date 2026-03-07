@@ -175,6 +175,10 @@ export const SupervisorDashboard = () => {
           </>
         )}
 
+        {activeTab === "metas" && (
+          <MetasAgentesPanel profiles={profiles} />
+        )}
+
         {activeTab === "agentes" && (
           <>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
