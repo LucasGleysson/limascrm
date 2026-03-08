@@ -265,12 +265,13 @@ function mapEvento(row: any): Evento {
   return {
     id: row.id,
     id_lead: row.id_lead,
-    tipo: row.tipo as "followup",
+    tipo: row.tipo as "followup" | "lembrete",
     numero: row.numero,
     data_prevista: row.data_prevista,
     concluido: row.concluido,
     data_conclusao: row.data_conclusao,
     descricao_conclusao: row.descricao_conclusao,
+    descricao: row.descricao,
     id_usuario: row.id_usuario,
   };
 }
