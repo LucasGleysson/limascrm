@@ -9,6 +9,7 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid
 } from "recharts";
 import type { Lead, Unidade } from "@/data/mockData";
+import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 interface Props {
   filteredLeads: Lead[];
@@ -24,6 +25,8 @@ const COLORS = {
   perdido: "hsl(280, 65%, 60%)",
   naLoja: "hsl(190, 80%, 45%)",
   noShow: "hsl(0, 50%, 65%)",
+  desqNovo: "hsl(0, 0%, 60%)",
+  desqAgendado: "hsl(0, 40%, 55%)",
 };
 
 const BRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -39,15 +42,12 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
 
   // === 1. Vehicle Flow Stats ===
   const flowStats = useMemo(() => {
-    // "Passed through" = had a checkin or reached na_loja/concluido/dispensado
-    const passaram = filteredLeads.filter(
-      (l) => l.checkin || ["na_loja", "concluido", "dispensado"].includes(l.etapa)
-    );
-    const portaPassaram = passaram.filter((l) => l.is_porta);
-    const telePassaram = passaram.filter((l) => !l.is_porta);
+    const foramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa));
+    const portaPassaram = foramNaLoja.filter((l) => l.is_porta);
+    const telePassaram = foramNaLoja.filter((l) => !l.is_porta);
 
     return {
-      totalPassaram: passaram.length,
+      totalPassaram: foramNaLoja.length,
       portaPassaram: portaPassaram.length,
       telePassaram: telePassaram.length,
     };
@@ -76,107 +76,114 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
     };
   }, [filteredLeads]);
 
-  // === 3. Conversion / Utilization ===
+  // === 3. Loss analysis ===
+  const lossAnalysis = useMemo(() => {
+    const perdidosAntesLoja = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa));
+    const perdidosDepoisLoja = filteredLeads.filter((l) => isPerdidoDepoisLoja(l.etapa));
+    const desqNovo = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const desqAgendado = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
+    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
+
+    return {
+      totalAntesLoja: perdidosAntesLoja.length,
+      totalDepoisLoja: perdidosDepoisLoja.length,
+      desqNovo,
+      desqAgendado,
+      dispensados,
+      perdidos,
+    };
+  }, [filteredLeads]);
+
+  // === 4. Conversion metrics ===
   const conversion = useMemo(() => {
-    // Tele: agendados enviados para loja
     const teleEnviados = tele.length;
-    const teleCheckin = tele.filter((l) => l.checkin).length;
-    const teleNoShow = tele.filter(
-      (l) => l.data_agendamento && !l.checkin && ["desqualificado", "perdido"].includes(l.etapa)
-    ).length;
+    const teleCheckin = tele.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const teleNoShow = tele.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const teleConcluidos = tele.filter((l) => l.etapa === "concluido").length;
     const teleDispensados = tele.filter((l) => l.etapa === "dispensado").length;
     const telePerdidos = tele.filter((l) => l.etapa === "perdido").length;
-    const teleEmServico = tele.filter((l) => ["na_loja", "concluido"].includes(l.etapa)).length;
 
-    // Porta
     const portaTotal = porta.length;
     const portaConcluidos = porta.filter((l) => l.etapa === "concluido").length;
     const portaDispensados = porta.filter((l) => l.etapa === "dispensado").length;
     const portaPerdidos = porta.filter((l) => l.etapa === "perdido").length;
     const portaEmServico = porta.filter((l) => ["na_loja", "concluido"].includes(l.etapa)).length;
 
-    // Dispensados que nunca voltaram (dispensados sem novo checkin posterior e not concluido)
-    const dispensadosTotal = filteredLeads.filter((l) => l.etapa === "dispensado").length;
-
     return {
-      teleEnviados, teleCheckin, teleNoShow, teleConcluidos, teleDispensados, telePerdidos, teleEmServico,
+      teleEnviados, teleCheckin, teleNoShow, teleConcluidos, teleDispensados, telePerdidos,
       portaTotal, portaConcluidos, portaDispensados, portaPerdidos, portaEmServico,
-      dispensadosTotal,
       taxaAprovPorta: pct(portaEmServico, portaTotal),
-      taxaAprovTele: pct(teleEmServico, teleCheckin || teleEnviados),
+      taxaAprovTele: pct(teleConcluidos, teleCheckin || teleEnviados),
     };
   }, [filteredLeads, porta, tele]);
 
-  // === 4. Per-unit vehicle flow ===
+  // === 5. Per-unit vehicle flow ===
   const unitFlow = useMemo(() => {
     return unidades.map((u) => {
       const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
-      const passaram = unitLeads.filter(
-        (l) => l.checkin || ["na_loja", "concluido", "dispensado"].includes(l.etapa)
-      );
-      const portaUnit = passaram.filter((l) => l.is_porta).length;
-      const teleUnit = passaram.filter((l) => !l.is_porta).length;
+      const foramNaLoja = unitLeads.filter((l) => isCarroDoAgente(l.etapa));
+      const portaUnit = foramNaLoja.filter((l) => l.is_porta).length;
+      const teleUnit = foramNaLoja.filter((l) => !l.is_porta).length;
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
       const receita = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
       const dispensados = unitLeads.filter((l) => l.etapa === "dispensado").length;
-      const aproveitamento = passaram.length > 0 ? pct(concluidos.length, passaram.length) : 0;
+      const perdidosAntes = unitLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+      const aproveitamento = foramNaLoja.length > 0 ? pct(concluidos.length, foramNaLoja.length) : 0;
 
       return {
         nome: u.nome,
-        total: passaram.length,
+        total: foramNaLoja.length,
         porta: portaUnit,
         tele: teleUnit,
         concluidos: concluidos.length,
         dispensados,
+        perdidosAntes,
         receita,
         aproveitamento,
       };
     }).sort((a, b) => b.total - a.total);
   }, [filteredLeads, unidades]);
 
-  // === 5. Revenue pie data ===
+  // === 6. Revenue pie data ===
   const revenuePie = useMemo(() => [
     { name: "Porta", value: revenue.porta, fill: COLORS.porta },
     { name: "Tele (Agendamento)", value: revenue.tele, fill: COLORS.tele },
   ].filter((d) => d.value > 0), [revenue]);
 
-  // === 6. Conversion funnel data ===
-  const funnelData = useMemo(() => [
-    { name: "Agend. Enviados", tele: conversion.teleEnviados, porta: 0 },
-    { name: "Porta (chegaram)", tele: 0, porta: conversion.portaTotal },
-    { name: "Fizeram Check-in", tele: conversion.teleCheckin, porta: conversion.portaTotal },
-    { name: "Em Serviço", tele: conversion.teleEmServico, porta: conversion.portaEmServico },
-    { name: "Concluídos", tele: conversion.teleConcluidos, porta: conversion.portaConcluidos },
-    { name: "Dispensados", tele: conversion.teleDispensados, porta: conversion.portaDispensados },
-    { name: "Perdidos", tele: conversion.telePerdidos, porta: conversion.portaPerdidos },
-  ], [conversion]);
+  // === 7. Loss breakdown chart ===
+  const lossChartData = useMemo(() => [
+    { name: "Desq. Novo", value: lossAnalysis.desqNovo, fill: COLORS.desqNovo },
+    { name: "Desq. Agendado", value: lossAnalysis.desqAgendado, fill: COLORS.desqAgendado },
+    { name: "Dispensados", value: lossAnalysis.dispensados, fill: COLORS.dispensado },
+    { name: "Perdidos", value: lossAnalysis.perdidos, fill: COLORS.perdido },
+  ].filter((d) => d.value > 0), [lossAnalysis]);
 
-  // === 7. Agent productivity (tele only) ===
+  // === 8. Agent productivity ===
   const agentProductivity = useMemo(() => {
     const agents = profiles.filter((p) => p.cargo === "agente");
     return agents.map((a) => {
-      const aLeads = tele.filter((l) => l.id_agente === a.id);
-      const agendados = aLeads.length;
-      const checkins = aLeads.filter((l) => l.checkin).length;
+      const aLeads = filteredLeads.filter((l) => l.id_agente === a.id);
+      const total = aLeads.length;
+      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
-      const noShow = aLeads.filter(
-        (l) => l.data_agendamento && !l.checkin && ["desqualificado", "perdido"].includes(l.etapa)
-      ).length;
+      const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+      const perdidosDepois = aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
       const receita = aLeads.filter((l) => l.etapa === "concluido").reduce((s, l) => s + (l.valor_servico || 0), 0);
 
       return {
         nome: a.nome,
-        agendados,
-        checkins,
+        total,
+        carrosNaLoja,
         concluidos,
-        noShow,
+        perdidosAntes,
+        perdidosDepois,
         receita,
-        taxaConversao: pct(concluidos, agendados),
-        taxaNoShow: pct(noShow, agendados),
+        taxaLoja: pct(carrosNaLoja, total),
+        taxaConversao: pct(concluidos, total),
       };
-    }).filter((a) => a.agendados > 0).sort((a, b) => b.receita - a.receita);
-  }, [tele, profiles]);
+    }).filter((a) => a.total > 0).sort((a, b) => b.carrosNaLoja - a.carrosNaLoja);
+  }, [filteredLeads, profiles]);
 
   return (
     <div className="space-y-6">
@@ -197,17 +204,17 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
           variant="primary"
         />
         <StatsCard
-          title="Ticket Médio"
-          value={BRL(revenue.ticketGeral)}
-          subtitle={`Porta: ${BRL(revenue.ticketPorta)} · Tele: ${BRL(revenue.ticketTele)}`}
-          icon={TrendingUp}
-          variant="success"
+          title="Perdidos s/ Loja"
+          value={lossAnalysis.totalAntesLoja}
+          subtitle={`${lossAnalysis.desqNovo} novos · ${lossAnalysis.desqAgendado} agendados`}
+          icon={XCircle}
+          variant="destructive"
         />
         <StatsCard
-          title="Aproveitamento Geral"
-          value={`${pct(revenue.totalConcluidos, flowStats.totalPassaram)}%`}
-          subtitle={`${conversion.dispensadosTotal} dispensados · ${conversion.telePerdidos + conversion.portaPerdidos} perdidos`}
-          icon={Percent}
+          title="Perdidos c/ Loja"
+          value={lossAnalysis.totalDepoisLoja}
+          subtitle={`${lossAnalysis.dispensados} dispensados · ${lossAnalysis.perdidos} perdidos`}
+          icon={AlertTriangle}
           variant="warning"
         />
       </div>
@@ -226,8 +233,8 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
               <p className="text-2xl font-bold">{conversion.portaTotal}</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground">Em Serviço / Concluídos</p>
-              <p className="text-2xl font-bold text-success">{conversion.portaEmServico}</p>
+              <p className="text-muted-foreground">Concluídos</p>
+              <p className="text-2xl font-bold text-success">{conversion.portaConcluidos}</p>
               <p className="text-xs text-muted-foreground">{conversion.taxaAprovPorta}% aproveitamento</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
@@ -250,18 +257,18 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground">Enviados</p>
+              <p className="text-muted-foreground">Total de Leads</p>
               <p className="text-2xl font-bold">{conversion.teleEnviados}</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground">Check-in Feito</p>
-              <p className="text-2xl font-bold text-info">{conversion.teleCheckin}</p>
+              <p className="text-muted-foreground">Foram na Loja</p>
+              <p className="text-2xl font-bold text-warning">{conversion.teleCheckin}</p>
               <p className="text-xs text-muted-foreground">{pct(conversion.teleCheckin, conversion.teleEnviados)}% comparecimento</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
-              <p className="text-muted-foreground">No-Show</p>
-              <p className="text-2xl font-bold text-destructive">{conversion.teleNoShow}</p>
-              <p className="text-xs text-muted-foreground">{pct(conversion.teleNoShow, conversion.teleEnviados)}% não compareceram</p>
+              <p className="text-muted-foreground">Não Foram (Desq.)</p>
+              <p className="text-2xl font-bold text-muted-foreground">{conversion.teleNoShow}</p>
+              <p className="text-xs text-muted-foreground">{pct(conversion.teleNoShow, conversion.teleEnviados)}% perdidos s/ loja</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3">
               <p className="text-muted-foreground">Faturamento</p>
@@ -272,27 +279,34 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
         </div>
       </div>
 
-      {/* === CONVERSION FUNNEL CHART === */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold mb-4">Funil de Aproveitamento: Porta vs Tele</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={funnelData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 90%)" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{ backgroundColor: "hsl(0, 0%, 100%)", border: "1px solid hsl(220, 13%, 90%)", borderRadius: 8 }}
-            />
-            <Legend />
-            <Bar dataKey="tele" name="Tele (Agendamento)" fill={COLORS.tele} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="porta" name="Porta (Walk-in)" fill={COLORS.porta} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* === REVENUE PIE + UNIT FLOW === */}
+      {/* === LOSS BREAKDOWN + REVENUE PIE === */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Pie */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h2 className="text-lg font-semibold mb-4">Análise de Perdas</h2>
+          {lossChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={lossChartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {lossChartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sem perdas no período.</p>
+          )}
+        </div>
+
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="text-lg font-semibold mb-4">Composição do Faturamento</h2>
           {revenuePie.length > 0 ? (
@@ -318,60 +332,64 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
             <p className="text-sm text-muted-foreground">Sem dados de faturamento no período.</p>
           )}
         </div>
+      </div>
 
-        {/* Unit-level vehicle flow */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold mb-4">Fluxo por Unidade</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 font-medium text-muted-foreground">UNIDADE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">TOTAL</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">PORTA</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">TELE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">APROV.</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">RECEITA</th>
+      {/* === UNIT FLOW TABLE === */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h2 className="text-lg font-semibold mb-4">Fluxo por Unidade</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 font-medium text-muted-foreground">UNIDADE</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">PORTA</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">TELE</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
+                <th className="text-center py-2 font-medium text-muted-foreground">APROV.</th>
+                <th className="text-right py-2 font-medium text-muted-foreground">RECEITA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unitFlow.map((u) => (
+                <tr key={u.nome} className="border-b border-border/50 hover:bg-muted/30">
+                  <td className="py-3 font-medium">{u.nome}</td>
+                  <td className="py-3 text-center font-bold">{u.total}</td>
+                  <td className="py-3 text-center">{u.porta}</td>
+                  <td className="py-3 text-center">{u.tele}</td>
+                  <td className="py-3 text-center text-success">{u.concluidos}</td>
+                  <td className="py-3 text-center text-destructive">{u.dispensados}</td>
+                  <td className="py-3 text-center text-muted-foreground">{u.perdidosAntes}</td>
+                  <td className="py-3 text-center">{u.aproveitamento}%</td>
+                  <td className="py-3 text-right font-semibold text-primary">{BRL(u.receita)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {unitFlow.map((u) => (
-                  <tr key={u.nome} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-3 font-medium">{u.nome}</td>
-                    <td className="py-3 text-center font-bold">{u.total}</td>
-                    <td className="py-3 text-center">{u.porta}</td>
-                    <td className="py-3 text-center">{u.tele}</td>
-                    <td className="py-3 text-center text-success">{u.concluidos}</td>
-                    <td className="py-3 text-center text-destructive">{u.dispensados}</td>
-                    <td className="py-3 text-center">{u.aproveitamento}%</td>
-                    <td className="py-3 text-right font-semibold text-primary">{BRL(u.receita)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* === AGENT PRODUCTIVITY (TELE) === */}
+      {/* === AGENT PRODUCTIVITY === */}
       {agentProductivity.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-info" />
-            <h2 className="text-lg font-semibold">Produtividade da Central (Tele)</h2>
+            <h2 className="text-lg font-semibold">Produtividade dos Agentes</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CHECK-IN</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERD. c/L</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">% LOJA</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">% CONV.</th>
                   <th className="text-right py-2 font-medium text-muted-foreground">RECEITA</th>
                 </tr>
               </thead>
@@ -379,13 +397,12 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
                 {agentProductivity.map((a) => (
                   <tr key={a.nome} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{a.nome}</td>
-                    <td className="py-3 text-center">{a.agendados}</td>
-                    <td className="py-3 text-center text-info">{a.checkins}</td>
+                    <td className="py-3 text-center">{a.total}</td>
+                    <td className="py-3 text-center text-warning font-semibold">{a.carrosNaLoja}</td>
                     <td className="py-3 text-center text-success">{a.concluidos}</td>
-                    <td className="py-3 text-center text-destructive">
-                      {a.noShow}
-                      {a.taxaNoShow > 0 && <span className="text-xs ml-1">({a.taxaNoShow}%)</span>}
-                    </td>
+                    <td className="py-3 text-center text-muted-foreground">{a.perdidosAntes}</td>
+                    <td className="py-3 text-center text-destructive">{a.perdidosDepois}</td>
+                    <td className="py-3 text-center font-semibold">{a.taxaLoja}%</td>
                     <td className="py-3 text-center font-semibold">{a.taxaConversao}%</td>
                     <td className="py-3 text-right font-semibold text-primary">{BRL(a.receita)}</td>
                   </tr>
@@ -407,29 +424,29 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
             icon={CheckCircle2}
             iconColor="text-success"
             title="Taxa de Aproveitamento"
-            value={`${pct(revenue.totalConcluidos, filteredLeads.length)}%`}
-            detail={`${revenue.totalConcluidos} de ${filteredLeads.length} leads convertidos em serviço`}
+            value={`${pct(revenue.totalConcluidos, flowStats.totalPassaram)}%`}
+            detail={`${revenue.totalConcluidos} concluídos de ${flowStats.totalPassaram} que foram na loja`}
           />
           <InsightCard
-            icon={AlertTriangle}
+            icon={Car}
             iconColor="text-warning"
-            title="Taxa de No-Show (Tele)"
-            value={`${pct(conversion.teleNoShow, conversion.teleEnviados)}%`}
-            detail={`${conversion.teleNoShow} agendados não compareceram`}
+            title="Carros dos Agentes"
+            value={`${flowStats.totalPassaram}`}
+            detail={`${pct(flowStats.totalPassaram, filteredLeads.length)}% dos leads chegaram na loja`}
           />
           <InsightCard
             icon={XCircle}
-            iconColor="text-destructive"
-            title="Taxa de Dispensados"
-            value={`${pct(conversion.dispensadosTotal, flowStats.totalPassaram)}%`}
-            detail={`${conversion.dispensadosTotal} clientes dispensados de ${flowStats.totalPassaram} que passaram`}
+            iconColor="text-muted-foreground"
+            title="Perdas Antes da Loja"
+            value={`${lossAnalysis.totalAntesLoja}`}
+            detail={`${lossAnalysis.desqNovo} nunca agendaram · ${lossAnalysis.desqAgendado} agendaram e não foram`}
           />
           <InsightCard
-            icon={ArrowDownRight}
+            icon={AlertTriangle}
             iconColor="text-destructive"
-            title="Perdas Totais"
-            value={`${conversion.telePerdidos + conversion.portaPerdidos}`}
-            detail={`Tele: ${conversion.telePerdidos} · Porta: ${conversion.portaPerdidos}`}
+            title="Perdas Depois da Loja"
+            value={`${lossAnalysis.totalDepoisLoja}`}
+            detail={`${lossAnalysis.dispensados} dispensados · ${lossAnalysis.perdidos} perdidos definitivamente`}
           />
           <InsightCard
             icon={DollarSign}

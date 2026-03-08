@@ -34,7 +34,6 @@ export const ReceptionistDashboard = () => {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLead, setCheckoutLead] = useState<Lead | null>(null);
-  const [checkoutStatus, setCheckoutStatus] = useState<"concluido" | "perdido" | "desqualificado">("concluido");
   const [checkoutMotivo, setCheckoutMotivo] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -61,7 +60,7 @@ export const ReceptionistDashboard = () => {
 
   const unitLeads = useMemo(() => leads.filter((l) => l.id_unidade === unidadeId), [leads, unidadeId]);
 
-  const agendados = useMemo(() => unitLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
+  const agendados = useMemo(() => unitLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
   const agendadosAtrasados = agendados.filter((l) => l.data_agendamento! < today);
 
@@ -126,32 +125,28 @@ export const ReceptionistDashboard = () => {
     }
   };
 
+  // Checkout = service concluded
   const handleCheckoutSubmit = async () => {
     if (!checkoutLead || loadingAction) return;
-    if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
       const updates: Partial<Lead> = {
-        etapa: checkoutStatus, checkout: now,
+        etapa: "concluido", checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
+        valor_servico: checkoutLead.valor_servico,
       };
       if (checkoutMotivo.trim()) {
-        const label = checkoutStatus === "perdido" ? "Perdido" : checkoutStatus === "desqualificado" ? "Desqualificado" : "Check-out";
-        updates.notas = appendNota(checkoutLead.notas, label, checkoutMotivo.trim());
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim());
       }
       await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
-      setCheckoutStatus("concluido");
     } finally {
       setLoadingAction(null);
     }
   };
-
-  const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
-  const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
 
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
     if (e.key === "Enter" && !e.shiftKey && !disabled) { e.preventDefault(); action(); }
@@ -260,7 +255,7 @@ export const ReceptionistDashboard = () => {
                           <Wrench className="h-4 w-4" /> {loadingAction === `servico-${lead.id}` ? "Aguarde..." : "Em Serviço"}
                         </Button>
                         <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
-                          <XCircle className="h-4 w-4" /> Dispensado
+                          <XCircle className="h-4 w-4" /> Dispensar
                         </Button>
                       </div>
                     </div>
@@ -284,9 +279,14 @@ export const ReceptionistDashboard = () => {
                         </div>
                         <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                       </div>
-                      <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setCheckoutOpen(true); }}>
-                        <LogOut className="h-4 w-4" /> Check-out
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutOpen(true); }}>
+                          <LogOut className="h-4 w-4" /> Check-out
+                        </Button>
+                        <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
+                          <XCircle className="h-4 w-4" /> Dispensar
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -345,7 +345,7 @@ export const ReceptionistDashboard = () => {
                           <TableCell>{lead.numero_os || "—"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>
-                              {etapa?.label}
+                              {etapa?.label || lead.etapa}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">{formatDateBR(lead.data_entrada)}</TableCell>
@@ -387,7 +387,7 @@ export const ReceptionistDashboard = () => {
       </Dialog>
 
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, !canSubmitCheckout || loadingAction === "checkout")}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, loadingAction === "checkout")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5 text-success" />
@@ -396,22 +396,9 @@ export const ReceptionistDashboard = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Status de Saída</Label>
-              <Select value={checkoutStatus} onValueChange={(v) => setCheckoutStatus(v as any)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="concluido">Serviço Concluído</SelectItem>
-                  <SelectItem value="perdido">Perdido</SelectItem>
-                  <SelectItem value="desqualificado">Desqualificado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Observações (opcional)</Label>
+              <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Alguma observação sobre o serviço..." className="mt-1" />
             </div>
-            {checkoutNeedsMotivo && (
-              <div>
-                <Label>Motivo <span className="text-destructive">*</span></Label>
-                <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
-              </div>
-            )}
             <div>
               <Label>Tags de Serviço</Label>
               <div className="flex flex-wrap gap-2 mt-2">
@@ -425,8 +412,8 @@ export const ReceptionistDashboard = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout || loadingAction === "checkout"}>
-              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar"}
+            <Button onClick={handleCheckoutSubmit} disabled={loadingAction === "checkout"}>
+              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar Serviço"}
             </Button>
           </DialogFooter>
         </DialogContent>
