@@ -206,6 +206,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       data_prevista: evento.data_prevista,
       concluido: evento.concluido,
       id_usuario: evento.id_usuario || null,
+      descricao: evento.descricao || null,
     }).select("*").single();
     if (error) {
       console.error("addEvento error:", error);
@@ -265,12 +266,13 @@ function mapEvento(row: any): Evento {
   return {
     id: row.id,
     id_lead: row.id_lead,
-    tipo: row.tipo as "followup",
+    tipo: row.tipo as "followup" | "lembrete",
     numero: row.numero,
     data_prevista: row.data_prevista,
     concluido: row.concluido,
     data_conclusao: row.data_conclusao,
     descricao_conclusao: row.descricao_conclusao,
+    descricao: row.descricao,
     id_usuario: row.id_usuario,
   };
 }

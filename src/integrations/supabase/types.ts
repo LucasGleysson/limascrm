@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           data_conclusao: string | null
           data_prevista: string
+          descricao: string | null
           descricao_conclusao: string | null
           id: string
           id_lead: string
@@ -32,6 +33,7 @@ export type Database = {
           created_at?: string
           data_conclusao?: string | null
           data_prevista: string
+          descricao?: string | null
           descricao_conclusao?: string | null
           id?: string
           id_lead: string
@@ -44,6 +46,7 @@ export type Database = {
           created_at?: string
           data_conclusao?: string | null
           data_prevista?: string
+          descricao?: string | null
           descricao_conclusao?: string | null
           id?: string
           id_lead?: string
