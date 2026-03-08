@@ -206,6 +206,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       data_prevista: evento.data_prevista,
       concluido: evento.concluido,
       id_usuario: evento.id_usuario || null,
+      descricao: evento.descricao || null,
     }).select("*").single();
     if (error) {
       console.error("addEvento error:", error);

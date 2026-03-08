@@ -51,12 +51,13 @@ export interface Lead {
 export interface Evento {
   id: string;
   id_lead: string;
-  tipo: "followup";
+  tipo: "followup" | "lembrete";
   numero: number;
   data_prevista: string;
   concluido: boolean;
   data_conclusao?: string | null;
   descricao_conclusao?: string | null;
+  descricao?: string | null;
   id_usuario?: string | null;
 }
 
