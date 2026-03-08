@@ -27,14 +27,14 @@ export const AgentSchedulePanel = () => {
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const agendamentosDoDia = useMemo(
-    () => myLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento === selectedDateStr),
+    () => myLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento === selectedDateStr),
     [myLeads, selectedDateStr]
   );
 
   const proximosAgendamentos = useMemo(
     () =>
       myLeads
-        .filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento > selectedDateStr)
+        .filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento > selectedDateStr)
         .sort((a, b) => (a.data_agendamento || "").localeCompare(b.data_agendamento || "")),
     [myLeads, selectedDateStr]
   );
@@ -42,7 +42,7 @@ export const AgentSchedulePanel = () => {
   const pendentes = useMemo(
     () =>
       myLeads
-        .filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento < todayStr)
+        .filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr)
         .sort((a, b) => (a.data_agendamento || "").localeCompare(b.data_agendamento || "")),
     [myLeads, todayStr]
   );
