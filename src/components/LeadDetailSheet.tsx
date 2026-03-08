@@ -87,8 +87,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
     if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
 
-    if (lead.etapa === "dispensado") {
-      updates.etapa = "agendado";
+    // Rescue: dispensado/perdido → reagendado
+    if (["dispensado", "perdido"].includes(lead.etapa)) {
+      updates.etapa = "reagendado";
+    }
+    // desqualificado_agendado can also be rescued
+    if (lead.etapa === "desqualificado_agendado") {
+      updates.etapa = "reagendado";
     }
 
     if (Object.keys(updates).length > 0) {
@@ -102,15 +107,25 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const canSchedule = lead.etapa === "novo";
-  const isAgendado = lead.etapa === "agendado";
+  const isAgendado = ["agendado", "reagendado"].includes(lead.etapa);
   const isDispensado = lead.etapa === "dispensado";
-  const canEditSchedule = isAgendado || isDispensado;
-  const canDisqualify = ["novo", "agendado"].includes(lead.etapa);
+  const isPerdido = lead.etapa === "perdido";
+  const isDesqAgendado = lead.etapa === "desqualificado_agendado";
+  const canEditSchedule = isAgendado || isDispensado || isPerdido || isDesqAgendado;
+  const canDisqualify = ["novo", "agendado", "reagendado"].includes(lead.etapa);
+
+  // Smart disqualification: use correct status based on current etapa
+  const getDisqualifyStatus = () => {
+    if (lead.etapa === "novo") return "desqualificado_novo";
+    return "desqualificado_agendado";
+  };
 
   const handleDisqualify = async () => {
     if (!disqualifyMotivo.trim()) return;
-    const notas = appendNota(lead.notas, "Desqualificado", disqualifyMotivo.trim());
-    await updateLead(lead.id, { etapa: "desqualificado", notas });
+    const status = getDisqualifyStatus();
+    const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
+    const notas = appendNota(lead.notas, label, disqualifyMotivo.trim());
+    await updateLead(lead.id, { etapa: status, notas });
     setDisqualifyMotivo("");
     setDisqualifyOpen(false);
   };
@@ -275,8 +290,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
                 {/* Status & tags */}
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={lead.etapa === "novo" ? "secondary" : ["dispensado", "perdido", "desqualificado"].includes(lead.etapa) ? "destructive" : "default"}>
-                    {etapa?.label}
+                  <Badge variant={lead.etapa === "novo" ? "secondary" : ["dispensado", "perdido", "desqualificado_novo", "desqualificado_agendado", "desqualificado"].includes(lead.etapa) ? "destructive" : "default"}>
+                    {etapa?.label || lead.etapa}
                   </Badge>
                   {lead.is_porta && <Badge variant="outline">Porta</Badge>}
                   {lead.data_agendamento && (
@@ -329,7 +344,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
                 {canEditSchedule && (
                   <Button size="lg" variant="outline" className="w-full gap-2 text-base" onClick={startEditSchedule}>
-                    <Calendar className="h-5 w-5" /> Editar Agendamento
+                    <Calendar className="h-5 w-5" /> {isDispensado || isPerdido || isDesqAgendado ? "Reagendar Cliente" : "Editar Agendamento"}
                   </Button>
                 )}
               </>

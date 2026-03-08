@@ -1,14 +1,13 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
-import { SERVICOS_TAGS, Lead, ETAPAS_FUNIL } from "@/data/mockData";
+import { SERVICOS_TAGS, Lead } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
@@ -21,7 +20,6 @@ export const AgentReceptionPanel = () => {
 
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLead, setCheckoutLead] = useState<Lead | null>(null);
-  const [checkoutStatus, setCheckoutStatus] = useState<"concluido" | "perdido" | "desqualificado">("concluido");
   const [checkoutMotivo, setCheckoutMotivo] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -37,7 +35,7 @@ export const AgentReceptionPanel = () => {
 
   const myLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser?.id), [leads, currentUser?.id]);
 
-  const agendados = useMemo(() => myLeads.filter((l) => l.etapa === "agendado" && l.data_agendamento && l.data_agendamento <= today), [myLeads, today]);
+  const agendados = useMemo(() => myLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento <= today), [myLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
   const agendadosAtrasados = agendados.filter((l) => l.data_agendamento! < today);
 
@@ -88,32 +86,28 @@ export const AgentReceptionPanel = () => {
     }
   };
 
+  // Checkout is only for concluido (service done)
   const handleCheckoutSubmit = async () => {
     if (!checkoutLead || loadingAction) return;
-    if ((checkoutStatus === "perdido" || checkoutStatus === "desqualificado") && !checkoutMotivo.trim()) return;
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
       const updates: Partial<Lead> = {
-        etapa: checkoutStatus, checkout: now,
+        etapa: "concluido", checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
       };
       if (checkoutMotivo.trim()) {
-        const label = checkoutStatus === "perdido" ? "Perdido" : checkoutStatus === "desqualificado" ? "Desqualificado" : "Check-out";
-        updates.notas = appendNota(checkoutLead.notas, label, checkoutMotivo.trim());
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim());
       }
       await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
-      setCheckoutStatus("concluido");
     } finally {
       setLoadingAction(null);
     }
   };
 
-  const checkoutNeedsMotivo = checkoutStatus === "perdido" || checkoutStatus === "desqualificado";
-  const canSubmitCheckout = checkoutNeedsMotivo ? !!checkoutMotivo.trim() : true;
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
     if (e.key === "Enter" && !e.shiftKey && !disabled) { e.preventDefault(); action(); }
   };
@@ -201,7 +195,7 @@ export const AgentReceptionPanel = () => {
                     <Wrench className="h-4 w-4" /> {loadingAction === `servico-${lead.id}` ? "Aguarde..." : "Em Serviço"}
                   </Button>
                   <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
-                    <XCircle className="h-4 w-4" /> Dispensado
+                    <XCircle className="h-4 w-4" /> Dispensar
                   </Button>
                 </div>
               </div>
@@ -225,9 +219,14 @@ export const AgentReceptionPanel = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                 </div>
-                <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setCheckoutOpen(true); }}>
-                  <LogOut className="h-4 w-4" /> Check-out
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutOpen(true); }}>
+                    <LogOut className="h-4 w-4" /> Check-out
+                  </Button>
+                  <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
+                    <XCircle className="h-4 w-4" /> Dispensar
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -260,7 +259,7 @@ export const AgentReceptionPanel = () => {
       </Dialog>
 
       <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, !canSubmitCheckout || loadingAction === "checkout")}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, loadingAction === "checkout")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5 text-success" />
@@ -269,22 +268,9 @@ export const AgentReceptionPanel = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Status de Saída</Label>
-              <Select value={checkoutStatus} onValueChange={(v) => setCheckoutStatus(v as any)}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="concluido">Serviço Concluído</SelectItem>
-                  <SelectItem value="perdido">Perdido</SelectItem>
-                  <SelectItem value="desqualificado">Desqualificado</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Observações (opcional)</Label>
+              <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Alguma observação sobre o serviço..." className="mt-1" />
             </div>
-            {checkoutNeedsMotivo && (
-              <div>
-                <Label>Motivo <span className="text-destructive">*</span></Label>
-                <Textarea value={checkoutMotivo} onChange={(e) => setCheckoutMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
-              </div>
-            )}
             <div>
               <Label>Tags de Serviço</Label>
               <div className="flex flex-wrap gap-2 mt-2">
@@ -298,8 +284,8 @@ export const AgentReceptionPanel = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCheckoutOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCheckoutSubmit} disabled={!canSubmitCheckout || loadingAction === "checkout"}>
-              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar"}
+            <Button onClick={handleCheckoutSubmit} disabled={loadingAction === "checkout"}>
+              {loadingAction === "checkout" ? "Aguarde..." : "Finalizar Serviço"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -17,11 +17,15 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    // Fetch leads eligible for followup generation
+    // Three followup scenarios:
+    // 1. novo: lead never scheduled → followup to get them to schedule
+    // 2. agendado/reagendado: scheduled but didn't show up (no-show) → followup
+    // 3. dispensado: went to store but was dispensed → rescue followup
+
     const { data: leads, error: leadsErr } = await supabase
       .from("leads")
       .select("id, etapa, data_entrada, data_agendamento, checkin, id_agente")
-      .or(`etapa.eq.novo,etapa.eq.agendado`);
+      .or("etapa.eq.novo,etapa.eq.agendado,etapa.eq.reagendado,etapa.eq.dispensado");
 
     if (leadsErr) throw leadsErr;
     if (!leads || leads.length === 0) {
@@ -30,10 +34,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter eligible leads
+    // Filter eligible leads based on their scenario
     const eligible = leads.filter((lead) => {
+      // Scenario 1: novo lead, at least 1 day old
       if (lead.etapa === "novo" && lead.data_entrada < today) return true;
-      if (lead.etapa === "agendado" && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) return true;
+      // Scenario 2: agendado/reagendado, appointment date passed, no checkin
+      if (["agendado", "reagendado"].includes(lead.etapa) && lead.data_agendamento && lead.data_agendamento < today && !lead.checkin) return true;
+      // Scenario 3: dispensado, needs rescue followup
+      if (lead.etapa === "dispensado") return true;
       return false;
     });
 
@@ -53,7 +61,7 @@ Deno.serve(async (req) => {
     if (eventosErr) throw eventosErr;
 
     let generated = 0;
-    let desqualified = 0;
+    let statusChanged = 0;
 
     for (const lead of eligible) {
       const leadEventos = (eventos || []).filter((e) => e.id_lead === lead.id);
@@ -65,19 +73,35 @@ Deno.serve(async (req) => {
         : 0;
 
       if (maxExisting >= 7) {
+        // After 7 followups, mark as final status based on scenario
         if (lead.etapa === "novo") {
-          await supabase.from("leads").update({ etapa: "desqualificado" }).eq("id", lead.id);
-          desqualified++;
+          await supabase.from("leads").update({ etapa: "desqualificado_novo" }).eq("id", lead.id);
+          statusChanged++;
+        } else if (["agendado", "reagendado"].includes(lead.etapa)) {
+          await supabase.from("leads").update({ etapa: "desqualificado_agendado" }).eq("id", lead.id);
+          statusChanged++;
+        } else if (lead.etapa === "dispensado") {
+          await supabase.from("leads").update({ etapa: "perdido" }).eq("id", lead.id);
+          statusChanged++;
         }
         continue;
       }
 
       const nextNum = maxExisting + 1;
-
       let eventDateStr: string;
 
       if (nextNum === 1) {
-        const entryDate = new Date(lead.data_entrada + "T00:00:00");
+        // First followup: 1 day after the triggering event
+        let refDate: string;
+        if (lead.etapa === "novo") {
+          refDate = lead.data_entrada;
+        } else if (["agendado", "reagendado"].includes(lead.etapa)) {
+          refDate = lead.data_agendamento || lead.data_entrada;
+        } else {
+          // dispensado: use today as reference for first rescue followup
+          refDate = today;
+        }
+        const entryDate = new Date(refDate + "T00:00:00");
         const nextDay = new Date(entryDate);
         nextDay.setDate(nextDay.getDate() + 1);
         eventDateStr = nextDay.toISOString().split("T")[0];
@@ -110,7 +134,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ message: "Done", generated, desqualified, eligible: eligible.length }),
+      JSON.stringify({ message: "Done", generated, statusChanged, eligible: eligible.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

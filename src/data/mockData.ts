@@ -5,13 +5,22 @@ export const ORIGENS = ["WhatsApp", "Instagram", "Facebook", "Site", "Indicaçã
 export const ETAPAS_FUNIL = [
   { id: "novo", label: "Novo Lead", color: "info" },
   { id: "agendado", label: "Agendado", color: "purple" },
+  { id: "reagendado", label: "Reagendado", color: "purple" },
   { id: "confirmado", label: "Confirmado", color: "info" },
   { id: "na_loja", label: "Na Loja", color: "warning" },
   { id: "concluido", label: "Serviço Concluído", color: "success" },
   { id: "dispensado", label: "Dispensado", color: "destructive" },
+  { id: "desqualificado_novo", label: "Desqualificado (Novo)", color: "destructive" },
+  { id: "desqualificado_agendado", label: "Desqualificado (Agendado)", color: "destructive" },
   { id: "perdido", label: "Perdido", color: "destructive" },
-  { id: "desqualificado", label: "Desqualificado", color: "destructive" },
 ] as const;
+
+// Helper sets for metric grouping
+export const ETAPAS_ANTES_LOJA = ["novo", "agendado", "reagendado"] as const;
+export const ETAPAS_NA_LOJA = ["confirmado", "na_loja", "concluido"] as const;
+export const ETAPAS_EVASAO_ANTES = ["desqualificado_novo", "desqualificado_agendado"] as const;
+export const ETAPAS_EVASAO_DEPOIS = ["dispensado", "perdido"] as const;
+export const ETAPAS_CARRO_AGENTE = ["confirmado", "na_loja", "concluido", "dispensado", "perdido"] as const;
 
 export const SERVICOS_TAGS = [
   "Troca de Óleo", "Alinhamento", "Balanceamento", "Freios", "Suspensão",

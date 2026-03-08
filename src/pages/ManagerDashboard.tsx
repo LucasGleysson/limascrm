@@ -8,11 +8,11 @@ import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/Per
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, ArrowRight, Lightbulb, RefreshCw } from "lucide-react";
+import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, Lightbulb, RefreshCw, Car, AlertTriangle, XCircle } from "lucide-react";
 import { ManagerIntelligencePanel } from "@/components/ManagerIntelligencePanel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
-import { formatDateBR } from "@/lib/leadUtils";
+import { formatDateBR, isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { usePagination } from "@/hooks/usePagination";
 import { TablePagination } from "@/components/TablePagination";
 
@@ -61,10 +61,11 @@ export const ManagerDashboard = () => {
   const stats = useMemo(() => {
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido");
     const faturamentoTotal = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
-    const agendados = filteredLeads.filter((l) => ["agendado", "na_loja", "concluido"].includes(l.etapa)).length;
-    const perdidos = filteredLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
+    const carrosNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+    const perdidosDepois = filteredLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
     const taxaConversao = filteredLeads.length > 0 ? Math.round((concluidos.length / filteredLeads.length) * 100) : 0;
-    return { totalLeads: filteredLeads.length, agendados, concluidos: concluidos.length, perdidos, receita: faturamentoTotal, taxaConversao };
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos: concluidos.length, perdidosAntes, perdidosDepois, receita: faturamentoTotal, taxaConversao };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -87,9 +88,10 @@ export const ManagerDashboard = () => {
     return unidades.map((u) => {
       const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
-      const perdidos = unitLeads.filter((l) => ["perdido", "dispensado", "desqualificado"].includes(l.etapa)).length;
+      const perdidosAntes = unitLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+      const perdidosDepois = unitLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
       const receita = concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0);
-      return { ...u, total: unitLeads.length, concluidos: concluidos.length, perdidos, receita };
+      return { ...u, total: unitLeads.length, concluidos: concluidos.length, perdidosAntes, perdidosDepois, receita };
     });
   }, [filteredLeads, unidades]);
 
@@ -99,15 +101,16 @@ export const ManagerDashboard = () => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
       const concluidos = aLeads.filter((l) => l.etapa === "concluido");
+      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       return {
         nome: agente.nome,
         unidade: unidade?.nome || "—",
         novo: aLeads.filter((l) => l.etapa === "novo").length,
-        agendado: aLeads.filter((l) => l.etapa === "agendado").length,
-        na_loja: aLeads.filter((l) => l.etapa === "na_loja").length,
-        dispensado: aLeads.filter((l) => l.etapa === "dispensado").length,
+        agendado: aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
+        carrosNaLoja,
         concluido: concluidos.length,
-        perdido: aLeads.filter((l) => ["perdido", "desqualificado"].includes(l.etapa)).length,
+        perdidosAntes: aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
+        perdidosDepois: aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length,
         total: aLeads.length,
         receita: concluidos.reduce((s, l) => s + (l.valor_servico || 0), 0),
         taxa: aLeads.length > 0 ? Math.round((concluidos.length / aLeads.length) * 100) : 0,
@@ -118,7 +121,7 @@ export const ManagerDashboard = () => {
   const todayStr = new Date().toISOString().split("T")[0];
   const agendamentos = useMemo(() => {
     return filteredLeads
-      .filter((l) => ["agendado", "na_loja"].includes(l.etapa) && l.data_agendamento)
+      .filter((l) => ["agendado", "reagendado", "na_loja"].includes(l.etapa) && l.data_agendamento)
       .sort((a, b) => (a.data_agendamento || "").localeCompare(b.data_agendamento || ""));
   }, [filteredLeads]);
 
@@ -126,7 +129,6 @@ export const ManagerDashboard = () => {
   const agendFuturos = agendamentos.filter((l) => l.data_agendamento! > todayStr);
   const agendAtrasados = agendamentos.filter((l) => l.data_agendamento! < todayStr);
 
-  // Pagination for agendamentos
   const atrasadosPag = usePagination(agendAtrasados, { pageSize: 10 });
   const hojePag = usePagination(agendHoje, { pageSize: 10 });
   const futurosPag = usePagination(agendFuturos, { pageSize: 10 });
@@ -176,21 +178,23 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
               <StatsCard title="Total de Leads" value={stats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendados" value={stats.agendados} icon={CalendarCheck} variant="warning" />
+              <StatsCard title="Foram na Loja" value={stats.carrosNaLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={stats.concluidos} icon={TrendingUp} variant="success" />
-              <StatsCard title="Taxa de Conversão" value={`${stats.taxaConversao}%`} icon={Percent} variant="primary" />
+              <StatsCard title="Conversão" value={`${stats.taxaConversao}%`} icon={Percent} variant="primary" />
+              <StatsCard title="Perdidos s/ Loja" value={stats.perdidosAntes} icon={XCircle} variant="destructive" />
+              <StatsCard title="Perdidos c/ Loja" value={stats.perdidosDepois} icon={AlertTriangle} variant="warning" />
               <StatsCard title="Faturamento" value={`R$ ${stats.receita.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} icon={DollarSign} variant="primary" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Funil de Vendas</h2>
-                <ResponsiveContainer width="100%" height={260}>
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={funnelData} layout="vertical">
                     <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} />
+                    <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Bar dataKey="value" fill="hsl(38, 92%, 50%)" radius={[0, 6, 6, 0]} />
                   </BarChart>
@@ -199,7 +203,7 @@ export const ManagerDashboard = () => {
 
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Distribuição por Origem</h2>
-                <ResponsiveContainer width="100%" height={260}>
+                <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie data={origemPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, value }) => `${name}: ${value}`}>
                       {origemPieData.map((entry, i) => (
@@ -214,7 +218,7 @@ export const ManagerDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="text-lg font-semibold mb-4">Faturamento por Unidade</h2>
+                <h2 className="text-lg font-semibold mb-4">Desempenho por Unidade</h2>
                 <div className="space-y-3">
                   {porUnidade.map((u) => (
                     <div key={u.id} className="flex items-center gap-3">
@@ -222,10 +226,11 @@ export const ManagerDashboard = () => {
                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="text-sm font-medium">{u.nome}</span>
                       </div>
-                      <div className="flex gap-4 text-sm flex-1 justify-end">
+                      <div className="flex gap-3 text-sm flex-1 justify-end">
                         <span>{u.total} leads</span>
                         <span className="text-success">{u.concluidos} ✓</span>
-                        <span className="text-destructive">{u.perdidos} ✗</span>
+                        <span className="text-muted-foreground">{u.perdidosAntes} s/loja</span>
+                        <span className="text-destructive">{u.perdidosDepois} c/loja</span>
                         <span className="font-semibold text-primary">R$ {u.receita.toLocaleString("pt-BR")}</span>
                       </div>
                     </div>
@@ -236,11 +241,12 @@ export const ManagerDashboard = () => {
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Top Agentes</h2>
                 <div className="space-y-3">
-                  {[...agenteTable].sort((a, b) => b.receita - a.receita).map((a) => (
+                  {[...agenteTable].sort((a, b) => b.carrosNaLoja - a.carrosNaLoja).map((a) => (
                     <div key={a.nome} className="flex items-center gap-3">
                       <span className="text-sm font-medium w-32 shrink-0">{a.nome}</span>
-                      <div className="flex gap-4 text-sm flex-1 justify-end">
+                      <div className="flex gap-3 text-sm flex-1 justify-end">
                         <span>{a.total} leads</span>
+                        <span className="text-warning">{a.carrosNaLoja} loja</span>
                         <span className="text-success">{a.taxa}% conv.</span>
                         <span className="font-semibold text-primary">R$ {a.receita.toLocaleString("pt-BR")}</span>
                       </div>
@@ -320,10 +326,11 @@ export const ManagerDashboard = () => {
                       <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                       <th className="text-left py-2 font-medium text-muted-foreground">UNIDADE</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NOVO</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">AGENDADO</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDO</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">PERDIDO</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD. c/L</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">TOTAL</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
                       <th className="text-right py-2 font-medium text-muted-foreground">RECEITA</th>
@@ -336,9 +343,10 @@ export const ManagerDashboard = () => {
                         <td className="py-3 text-muted-foreground">{a.unidade}</td>
                         <td className="py-3 text-center">{a.novo}</td>
                         <td className="py-3 text-center">{a.agendado}</td>
-                        <td className="py-3 text-center">{a.na_loja}</td>
+                        <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
                         <td className="py-3 text-center text-success">{a.concluido}</td>
-                        <td className="py-3 text-center text-destructive">{a.perdido}</td>
+                        <td className="py-3 text-center text-muted-foreground">{a.perdidosAntes}</td>
+                        <td className="py-3 text-center text-destructive">{a.perdidosDepois}</td>
                         <td className="py-3 text-center font-bold">{a.total}</td>
                         <td className="py-3 text-center">{a.taxa}%</td>
                         <td className="py-3 text-right font-semibold text-primary">R$ {a.receita.toLocaleString("pt-BR")}</td>
@@ -387,7 +395,7 @@ export const ManagerDashboard = () => {
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs border-destructive/30 text-destructive">
-                          {l.etapa === "na_loja" ? "Na Loja" : "Atrasado"}
+                          Atrasado
                         </Badge>
                       </div>
                     );
