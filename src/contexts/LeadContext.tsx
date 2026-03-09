@@ -211,6 +211,20 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteLead = async (id: string) => {
+    // Optimistic removal
+    setLeads((prev) => prev.filter((l) => l.id !== id));
+    setEventos((prev) => prev.filter((e) => e.id_lead !== id));
+    lastFetchRef.current = 0;
+    // Delete related eventos first, then the lead
+    await supabase.from("eventos").delete().eq("id_lead", id);
+    const { error } = await supabase.from("leads").delete().eq("id", id);
+    if (error) {
+      console.error("deleteLead error:", error);
+      fetchAll(true);
+    }
+  };
+
   const addEvento = async (evento: Omit<Evento, "id">) => {
     const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
