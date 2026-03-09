@@ -21,6 +21,7 @@ const SIDEBAR_TABS = [
   { id: "inteligencia", label: "Inteligência", icon: Lightbulb },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
+  { id: "pesquisa", label: "Pesquisa", icon: Search },
   { id: "usuarios", label: "Usuários", icon: Users },
 ];
 
