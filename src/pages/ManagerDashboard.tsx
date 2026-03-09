@@ -8,8 +8,9 @@ import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/Per
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, Lightbulb, RefreshCw, Car, AlertTriangle, XCircle } from "lucide-react";
+import { Users, CalendarCheck, TrendingUp, DollarSign, LayoutDashboard, BarChart3, MapPin, Percent, Lightbulb, RefreshCw, Car, AlertTriangle, XCircle, Search } from "lucide-react";
 import { ManagerIntelligencePanel } from "@/components/ManagerIntelligencePanel";
+import { LeadSearchPanel } from "@/components/LeadSearchPanel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { formatPhone } from "@/lib/phoneUtils";
 import { formatDateBR, isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
