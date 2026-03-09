@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDateBR } from "@/lib/leadUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -291,7 +292,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   )}
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 shrink-0" />
-                    <span>Criado: {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}</span>
+                    <span>Criado: {formatDateBR(lead.data_entrada)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground pl-8">
                     Agente: {agente?.nome || "—"}
@@ -307,7 +308,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   {lead.data_agendamento && (
                     <Badge variant="outline" className="gap-1">
                       <CalendarCheck className="h-3 w-3" />
-                      {lead.data_agendamento}
+                      {formatDateBR(lead.data_agendamento)}
                     </Badge>
                   )}
                 </div>

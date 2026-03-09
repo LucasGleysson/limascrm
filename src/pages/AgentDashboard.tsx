@@ -51,12 +51,12 @@ export const AgentDashboard = () => {
       .filter((l) => !search || l.nome.toLowerCase().includes(search.toLowerCase()) || l.telefone.includes(search))
       .filter((l) => {
         if (!dateStart) return true;
-        const d = new Date(l.data_entrada);
+        const d = new Date(l.data_entrada + "T12:00:00");
         return d >= dateStart;
       })
       .filter((l) => {
         if (!dateEnd) return true;
-        const d = new Date(l.data_entrada);
+        const d = new Date(l.data_entrada + "T12:00:00");
         const end = new Date(dateEnd);
         end.setHours(23, 59, 59);
         return d <= end;
