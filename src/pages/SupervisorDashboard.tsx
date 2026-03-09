@@ -6,9 +6,10 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin, RefreshCw, Target, Car, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin, RefreshCw, Target, Car, AlertTriangle, CheckCircle2, Search } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { MetasAgentesPanel } from "@/components/MetasAgentesPanel";
+import { LeadSearchPanel } from "@/components/LeadSearchPanel";
 import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
@@ -16,6 +17,7 @@ const SIDEBAR_TABS = [
   { id: "metas", label: "Metas", icon: Target },
   { id: "agentes", label: "Agentes", icon: Users },
   { id: "unidades", label: "Unidades", icon: MapPin },
+  { id: "pesquisa", label: "Pesquisa", icon: Search },
 ];
 
 export const SupervisorDashboard = () => {
