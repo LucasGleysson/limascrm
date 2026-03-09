@@ -220,7 +220,7 @@ export const AgentReceptionPanel = () => {
                   <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutOpen(true); }}>
+                  <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutMotivo(""); setCheckoutOpen(true); }}>
                     <LogOut className="h-4 w-4" /> Check-out
                   </Button>
                   <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
