@@ -392,6 +392,8 @@ export const SupervisorDashboard = () => {
             })()}
           </>
         )}
+
+        {activeTab === "pesquisa" && <LeadSearchPanel />}
       </main>
     </div>
   );

@@ -462,6 +462,8 @@ export const ManagerDashboard = () => {
           </>
         )}
 
+        {activeTab === "pesquisa" && <LeadSearchPanel />}
+
         {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>
