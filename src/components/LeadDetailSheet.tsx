@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editUnidadeAgendamento, setEditUnidadeAgendamento] = useState("");
 
   const [newNota, setNewNota] = useState("");
+
+  // Reset all form state when the lead changes
+  useEffect(() => {
+    setEditing(false);
+    setEditingSchedule(false);
+    setScheduleOpen(false);
+    setDisqualifyOpen(false);
+    setDisqualifyMotivo("");
+    setNewNota("");
+  }, [lead?.id]);
 
   if (!lead) return null;
 

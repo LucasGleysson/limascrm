@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,15 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
+
+  // Reset form when modal opens or lead changes
+  useEffect(() => {
+    if (open) {
+      setUnidade("");
+      setData("");
+      setOs("");
+    }
+  }, [open, leadId]);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
