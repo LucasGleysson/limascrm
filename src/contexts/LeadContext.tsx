@@ -199,8 +199,15 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateLead = async (id: string, updates: Partial<Lead>) => {
+    // Optimistic update
+    setLeads((prev) => prev.map((l) => l.id === id ? { ...l, ...updates } : l));
+    lastFetchRef.current = 0; // invalidate cache
     const { error } = await supabase.from("leads").update(updates).eq("id", id);
-    if (error) console.error("updateLead error:", error);
+    if (error) {
+      console.error("updateLead error:", error);
+      // Revert on error by refetching
+      fetchAll(true);
+    }
   };
 
   const addEvento = async (evento: Omit<Evento, "id">) => {
