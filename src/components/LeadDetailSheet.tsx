@@ -308,7 +308,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   {lead.data_agendamento && (
                     <Badge variant="outline" className="gap-1">
                       <CalendarCheck className="h-3 w-3" />
-                      {lead.data_agendamento}
+                      {formatDateBR(lead.data_agendamento)}
                     </Badge>
                   )}
                 </div>

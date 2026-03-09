@@ -147,7 +147,7 @@ export const EventoPanel = () => {
                     <p className="text-sm text-foreground mt-1">{evento.descricao}</p>
                   )}
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    Previsto: {new Date(evento.data_prevista).toLocaleDateString("pt-BR")}
+                    Previsto: {new Date(evento.data_prevista + "T12:00:00").toLocaleDateString("pt-BR")}
                   </p>
                 </div>
                 <Button
