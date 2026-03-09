@@ -155,6 +155,7 @@ export const EventoPanel = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedEvento(evento);
+                    setDescricao("");
                     setConcludeOpen(true);
                   }}
                   className="gap-2"
