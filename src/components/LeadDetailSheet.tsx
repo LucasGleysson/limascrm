@@ -292,7 +292,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   )}
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 shrink-0" />
-                    <span>Criado: {new Date(lead.data_entrada).toLocaleDateString("pt-BR")}</span>
+                    <span>Criado: {formatDateBR(lead.data_entrada)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground pl-8">
                     Agente: {agente?.nome || "—"}
