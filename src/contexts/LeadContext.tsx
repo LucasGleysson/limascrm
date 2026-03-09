@@ -211,7 +211,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addEvento = async (evento: Omit<Evento, "id">) => {
-    const { error } = await supabase.from("eventos").insert({
+    const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
       tipo: evento.tipo,
       numero: evento.numero,
@@ -222,19 +222,27 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }).select("*").single();
     if (error) {
       console.error("addEvento error:", error);
+    } else if (data) {
+      const newEvento = mapEvento(data);
+      setEventos((prev) => [...prev, newEvento].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista)));
     }
   };
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
     const now = new Date().toISOString();
+    // Optimistic update
+    setEventos((prev) => prev.map((e) => e.id === eventoId ? { ...e, concluido: true, data_conclusao: now, descricao_conclusao: descricao, id_usuario: userId } : e));
     const { error } = await supabase.from("eventos").update({
       concluido: true,
       data_conclusao: now,
       descricao_conclusao: descricao,
       id_usuario: userId,
     }).eq("id", eventoId);
-    if (error) { console.error("concluirEvento error:", error); }
-  }, []);
+    if (error) {
+      console.error("concluirEvento error:", error);
+      fetchAll(true);
+    }
+  }, [fetchAll]);
 
   return (
     <LeadContext.Provider value={{
