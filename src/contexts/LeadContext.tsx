@@ -11,6 +11,7 @@ interface LeadContextType {
   loading: boolean;
   addLead: (lead: Omit<Lead, "id">) => Promise<string | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
   addEvento: (evento: Omit<Evento, "id">) => Promise<void>;
   concluirEvento: (eventoId: string, descricao: string, userId: string) => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -210,6 +211,20 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteLead = async (id: string) => {
+    // Optimistic removal
+    setLeads((prev) => prev.filter((l) => l.id !== id));
+    setEventos((prev) => prev.filter((e) => e.id_lead !== id));
+    lastFetchRef.current = 0;
+    // Delete related eventos first, then the lead
+    await supabase.from("eventos").delete().eq("id_lead", id);
+    const { error } = await supabase.from("leads").delete().eq("id", id);
+    if (error) {
+      console.error("deleteLead error:", error);
+      fetchAll(true);
+    }
+  };
+
   const addEvento = async (evento: Omit<Evento, "id">) => {
     const { data, error } = await supabase.from("eventos").insert({
       id_lead: evento.id_lead,
@@ -247,7 +262,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   return (
     <LeadContext.Provider value={{
       leads, eventos, unidades, profiles, loading,
-      addLead, updateLead, addEvento, concluirEvento,
+      addLead, updateLead, deleteLead, addEvento, concluirEvento,
       refreshAll: () => isRecepcionista ? Promise.resolve() : fetchAll(true),
     }}>
       {children}
