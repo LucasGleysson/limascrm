@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadDetailSheet } from "./LeadDetailSheet";
-import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX } from "lucide-react";
 import { Evento, Lead } from "@/data/mockData";
+import { formatDateBR } from "@/lib/leadUtils";
 
 export const EventoPanel = () => {
   const { eventos, leads, addEvento, concluirEvento } = useLeads();
@@ -32,20 +33,58 @@ export const EventoPanel = () => {
     [leads, currentUser.id]
   );
 
+  const myLeadIds = useMemo(() => new Set(myLeads.map((l) => l.id)), [myLeads]);
+
   const myEvents = useMemo(() => {
-    const myLeadIds = myLeads.map((l) => l.id);
     return eventos
-      .filter((e) => myLeadIds.includes(e.id_lead))
+      .filter((e) => myLeadIds.has(e.id_lead))
       .sort((a, b) => {
         if (a.concluido !== b.concluido) return a.concluido ? 1 : -1;
         return a.data_prevista.localeCompare(b.data_prevista);
       });
-  }, [eventos, myLeads]);
+  }, [eventos, myLeadIds]);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  // Categorize pending events
   const pendentes = myEvents.filter((e) => !e.concluido);
   const concluidos = myEvents.filter((e) => e.concluido);
 
-  const today = new Date().toISOString().split("T")[0];
+  // Lembretes (manually created events)
+  const lembretes = pendentes.filter((e) => e.tipo === "lembrete");
+
+  // Followups subdivided
+  const followups = pendentes.filter((e) => e.tipo === "followup");
+
+  // Categorize followups by lead status
+  const categorizeFollowup = (evento: Evento) => {
+    const lead = myLeads.find((l) => l.id === evento.id_lead);
+    if (!lead) return "other";
+    if (lead.etapa === "dispensado") return "dispensado";
+    if (["agendado", "reagendado"].includes(lead.etapa)) {
+      if (lead.data_agendamento && lead.data_agendamento < today) return "agendado_atrasado";
+      if (lead.data_agendamento === today) return "agendado_hoje";
+      return "agendado_futuro";
+    }
+    if (["novo"].includes(lead.etapa)) return "novo";
+    return "other";
+  };
+
+  const followupsByCategory = useMemo(() => {
+    const cats: Record<string, Evento[]> = {
+      novo: [],
+      agendado_hoje: [],
+      agendado_atrasado: [],
+      dispensado: [],
+      agendado_futuro: [],
+      other: [],
+    };
+    followups.forEach((e) => {
+      const cat = categorizeFollowup(e);
+      cats[cat].push(e);
+    });
+    return cats;
+  }, [followups, myLeads, today]);
 
   const handleConclude = async () => {
     if (!selectedEvento || !descricao.trim()) return;
@@ -90,18 +129,69 @@ export const EventoPanel = () => {
     return `Follow-up ${evento.numero}`;
   };
 
-  const getEventBadge = (evento: Evento, concluded: boolean) => {
-    if (evento.tipo === "lembrete") {
-      return (
-        <Badge variant="outline" className={`text-xs ${concluded ? "bg-success/10 text-success border-success/30" : "bg-accent/50 text-accent-foreground border-accent"}`}>
-          <StickyNote className="h-3 w-3 mr-1" /> Lembrete {concluded && "✓"}
-        </Badge>
-      );
-    }
+  const renderEventCard = (evento: Evento, concluded = false) => (
+    <div
+      key={evento.id}
+      className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer hover:bg-muted/50 ${
+        !concluded && isOverdue(evento.data_prevista) ? "border-destructive/30" : "border-border"
+      } ${concluded ? "opacity-70" : ""}`}
+      onClick={() => openLeadDetail(evento.id_lead)}
+    >
+      <div className="flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`${concluded ? "font-medium" : "font-semibold"} hover:underline`}>{getLeadName(evento.id_lead)}</span>
+          {evento.tipo === "lembrete" ? (
+            <Badge variant="outline" className={`text-xs ${concluded ? "bg-success/10 text-success border-success/30" : "bg-accent/50 text-accent-foreground border-accent"}`}>
+              <StickyNote className="h-3 w-3 mr-1" /> Lembrete {concluded && "✓"}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className={`text-xs ${concluded ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}`}>
+              Follow-up {evento.numero} {concluded && "✓"}
+            </Badge>
+          )}
+          {!concluded && isOverdue(evento.data_prevista) && (
+            <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+              <AlertCircle className="h-3 w-3 mr-1" /> Atrasado
+            </Badge>
+          )}
+        </div>
+        {evento.descricao && (
+          <p className={`text-sm mt-0.5 ${concluded ? "text-foreground/70" : "text-foreground"}`}>{evento.descricao}</p>
+        )}
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {concluded ? evento.descricao_conclusao : `Previsto: ${formatDateBR(evento.data_prevista)}`}
+        </p>
+      </div>
+      {!concluded && (
+        <Button
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedEvento(evento);
+            setDescricao("");
+            setConcludeOpen(true);
+          }}
+          className="gap-2"
+        >
+          <CheckCircle2 className="h-4 w-4" /> Concluir
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderSection = (title: string, icon: React.ReactNode, events: Evento[], emptyMsg?: string) => {
+    if (events.length === 0 && !emptyMsg) return null;
     return (
-      <Badge variant="outline" className={`text-xs ${concluded ? "bg-success/10 text-success border-success/30" : "bg-warning/10 text-warning border-warning/30"}`}>
-        Follow-up {evento.numero} {concluded && "✓"}
-      </Badge>
+      <div>
+        <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
+          {icon} {title} ({events.length})
+        </h3>
+        {events.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-2 pl-6">{emptyMsg}</p>
+        ) : (
+          <div className="space-y-2">{events.map((e) => renderEventCard(e))}</div>
+        )}
+      </div>
     );
   };
 
@@ -112,61 +202,64 @@ export const EventoPanel = () => {
           <h1 className="text-2xl font-bold">Eventos</h1>
           <p className="text-muted-foreground text-sm">Follow-ups, lembretes e tarefas</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
+        <Button onClick={() => { setCreateOpen(true); setNewLeadId(""); setNewDate(""); setNewDescricao(""); }} className="gap-2">
           <Plus className="h-4 w-4" /> Novo Evento
         </Button>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <Clock className="h-5 w-5 text-warning" /> Pendentes ({pendentes.length})
-        </h2>
-        {pendentes.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">Nenhum evento pendente. 🎉</p>
-        ) : (
-          <div className="space-y-2">
-            {pendentes.map((evento) => (
-              <div
-                key={evento.id}
-                className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer hover:bg-muted/50 ${
-                  isOverdue(evento.data_prevista) ? "border-destructive/30" : "border-border"
-                }`}
-                onClick={() => openLeadDetail(evento.id_lead)}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold hover:underline">{getLeadName(evento.id_lead)}</span>
-                    {getEventBadge(evento, false)}
-                    {isOverdue(evento.data_prevista) && (
-                      <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
-                        <AlertCircle className="h-3 w-3 mr-1" /> Atrasado
-                      </Badge>
-                    )}
-                  </div>
-                  {evento.tipo === "lembrete" && evento.descricao && (
-                    <p className="text-sm text-foreground mt-1">{evento.descricao}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    Previsto: {new Date(evento.data_prevista + "T12:00:00").toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEvento(evento);
-                    setDescricao("");
-                    setConcludeOpen(true);
-                  }}
-                  className="gap-2"
-                >
-                  <CheckCircle2 className="h-4 w-4" /> Concluir
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Lembretes (manual) */}
+      {renderSection(
+        "Lembretes Criados",
+        <StickyNote className="h-4 w-4 text-accent-foreground" />,
+        lembretes,
+        "Nenhum lembrete pendente."
+      )}
+
+      {/* Follow-ups for new leads */}
+      {renderSection(
+        "Follow-ups — Novos Leads",
+        <PhoneIcon className="h-4 w-4 text-primary" />,
+        followupsByCategory.novo
+      )}
+
+      {/* Follow-ups for today's scheduled */}
+      {renderSection(
+        "Follow-ups — Agendados de Hoje",
+        <CalendarCheck className="h-4 w-4 text-success" />,
+        followupsByCategory.agendado_hoje
+      )}
+
+      {/* Follow-ups for no-shows (past scheduled) */}
+      {renderSection(
+        "Follow-ups — Agendados que Não Foram",
+        <AlertCircle className="h-4 w-4 text-destructive" />,
+        followupsByCategory.agendado_atrasado
+      )}
+
+      {/* Follow-ups for dispensed */}
+      {renderSection(
+        "Ligar — Dispensados",
+        <UserX className="h-4 w-4 text-warning" />,
+        followupsByCategory.dispensado
+      )}
+
+      {/* Follow-ups for future scheduled */}
+      {renderSection(
+        "Follow-ups — Agendados Futuros",
+        <CalendarPlus className="h-4 w-4 text-muted-foreground" />,
+        followupsByCategory.agendado_futuro
+      )}
+
+      {/* Other follow-ups */}
+      {renderSection(
+        "Outros Follow-ups",
+        <Clock className="h-4 w-4 text-muted-foreground" />,
+        followupsByCategory.other
+      )}
+
+      {pendentes.length === 0 && (
+        <p className="text-sm text-muted-foreground py-4 text-center">Nenhum evento pendente. 🎉</p>
+      )}
 
       {concluidos.length > 0 && (
         <div>
@@ -174,26 +267,7 @@ export const EventoPanel = () => {
             <CheckCircle2 className="h-5 w-5 text-success" /> Concluídos ({concluidos.length})
           </h2>
           <div className="space-y-2">
-            {concluidos.map((evento) => (
-              <div
-                key={evento.id}
-                className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border opacity-70 cursor-pointer hover:opacity-90"
-                onClick={() => openLeadDetail(evento.id_lead)}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium hover:underline">{getLeadName(evento.id_lead)}</span>
-                    {getEventBadge(evento, true)}
-                  </div>
-                  {evento.tipo === "lembrete" && evento.descricao && (
-                    <p className="text-sm text-foreground/70 mt-0.5">{evento.descricao}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {evento.descricao_conclusao}
-                  </p>
-                </div>
-              </div>
-            ))}
+            {concluidos.map((evento) => renderEventCard(evento, true))}
           </div>
         </div>
       )}
