@@ -11,6 +11,7 @@ interface LeadContextType {
   loading: boolean;
   addLead: (lead: Omit<Lead, "id">) => Promise<string | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
   addEvento: (evento: Omit<Evento, "id">) => Promise<void>;
   concluirEvento: (eventoId: string, descricao: string, userId: string) => Promise<void>;
   refreshAll: () => Promise<void>;
