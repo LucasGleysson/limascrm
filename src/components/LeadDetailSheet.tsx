@@ -41,6 +41,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const [newNota, setNewNota] = useState("");
 
+  // Reset all form state when the lead changes
+  useEffect(() => {
+    setEditing(false);
+    setEditingSchedule(false);
+    setScheduleOpen(false);
+    setDisqualifyOpen(false);
+    setDisqualifyMotivo("");
+    setNewNota("");
+  }, [lead?.id]);
+
   if (!lead) return null;
 
   const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);

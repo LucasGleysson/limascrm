@@ -20,6 +20,15 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
 
+  // Reset form when modal opens or lead changes
+  useEffect(() => {
+    if (open) {
+      setUnidade("");
+      setData("");
+      setOs("");
+    }
+  }, [open, leadId]);
+
   const todayStr = new Date().toISOString().split("T")[0];
 
   const handleSubmit = async () => {
