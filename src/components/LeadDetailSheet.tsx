@@ -11,9 +11,10 @@ import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   lead: Lead | null;
@@ -21,14 +22,26 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
+// Status transitions allowed for agents
+const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string; label: string }[] }> = {
+  agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }] },
+  reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }] },
+  desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }] },
+  desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+  dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+  perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+};
+
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, unidades, profiles } = useLeads();
+  const { updateLead, addEvento, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [disqualifyOpen, setDisqualifyOpen] = useState(false);
   const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
+  const [disqualifyOutraCidade, setDisqualifyOutraCidade] = useState(false);
+  const [statusChangeOpen, setStatusChangeOpen] = useState(false);
 
   const [editNome, setEditNome] = useState("");
   const [editTelefone, setEditTelefone] = useState("");
@@ -42,6 +55,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const [newNota, setNewNota] = useState("");
 
+  // Create event inline state
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [eventDate, setEventDate] = useState("");
+  const [eventDescricao, setEventDescricao] = useState("");
+
   // Reset all form state when the lead changes
   useEffect(() => {
     setEditing(false);
@@ -49,7 +67,12 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setScheduleOpen(false);
     setDisqualifyOpen(false);
     setDisqualifyMotivo("");
+    setDisqualifyOutraCidade(false);
     setNewNota("");
+    setCreateEventOpen(false);
+    setEventDate("");
+    setEventDescricao("");
+    setStatusChangeOpen(false);
   }, [lead?.id]);
 
   if (!lead) return null;
@@ -102,7 +125,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (["dispensado", "perdido"].includes(lead.etapa)) {
       updates.etapa = "reagendado";
     }
-    // desqualificado_agendado can also be rescued
     if (lead.etapa === "desqualificado_agendado") {
       updates.etapa = "reagendado";
     }
@@ -124,8 +146,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const isDesqAgendado = lead.etapa === "desqualificado_agendado";
   const canEditSchedule = isAgendado || isDispensado || isPerdido || isDesqAgendado;
   const canDisqualify = ["novo", "agendado", "reagendado"].includes(lead.etapa);
+  const canChangeStatus = !!STATUS_TRANSITIONS[lead.etapa];
 
-  // Smart disqualification: use correct status based on current etapa
   const getDisqualifyStatus = () => {
     if (lead.etapa === "novo") return "desqualificado_novo";
     return "desqualificado_agendado";
@@ -135,10 +157,31 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (!disqualifyMotivo.trim()) return;
     const status = getDisqualifyStatus();
     const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
-    const notas = appendNota(lead.notas, label, disqualifyMotivo.trim());
+    let motivo = disqualifyMotivo.trim();
+    if (disqualifyOutraCidade) {
+      motivo = `[Outra Cidade] ${motivo}`;
+    }
+    const notas = appendNota(lead.notas, label, motivo);
     await updateLead(lead.id, { etapa: status, notas });
     setDisqualifyMotivo("");
+    setDisqualifyOutraCidade(false);
     setDisqualifyOpen(false);
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    const oldLabel = etapa?.label || lead.etapa;
+    const newLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
+    const notas = appendNota(lead.notas, "Mudança de Status", `${oldLabel} → ${newLabel}`);
+    const updates: Partial<Lead> = { etapa: newStatus, notas };
+    // If moving back to novo, clear scheduling fields
+    if (newStatus === "novo") {
+      updates.data_agendamento = null;
+      updates.numero_os = null;
+      updates.checkin = null;
+      updates.checkout = null;
+    }
+    await updateLead(lead.id, updates);
+    setStatusChangeOpen(false);
   };
 
   const handleAddNota = async () => {
@@ -147,6 +190,22 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     const notas = appendNota(lead.notas, userName, newNota.trim());
     await updateLead(lead.id, { notas });
     setNewNota("");
+  };
+
+  const handleCreateEvent = async () => {
+    if (!eventDate || !eventDescricao.trim()) return;
+    await addEvento({
+      id_lead: lead.id,
+      tipo: "lembrete",
+      numero: 0,
+      data_prevista: eventDate,
+      concluido: false,
+      id_usuario: currentUser.id,
+      descricao: eventDescricao.trim(),
+    });
+    setCreateEventOpen(false);
+    setEventDate("");
+    setEventDescricao("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
@@ -167,6 +226,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               <span>{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}</span>
               {!isEditMode && (
                 <div className="flex items-center gap-1">
+                  {canChangeStatus && (
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setStatusChangeOpen(true)} title="Alterar Status">
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={startEdit} title="Editar ficha">
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -347,6 +411,38 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </Button>
                 </div>
 
+                {/* Create event button */}
+                {!createEventOpen ? (
+                  <Button variant="outline" size="sm" onClick={() => { setCreateEventOpen(true); setEventDate(""); setEventDescricao(""); }} className="w-full gap-2">
+                    <CalendarPlus className="h-4 w-4" /> Criar Evento / Lembrete
+                  </Button>
+                ) : (
+                  <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
+                    <p className="text-sm font-semibold flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /> Novo Evento</p>
+                    <div>
+                      <Label>Data prevista</Label>
+                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={todayStr} className="mt-1" />
+                    </div>
+                    <div>
+                      <Label>Descrição</Label>
+                      <Textarea
+                        value={eventDescricao}
+                        onChange={(e) => setEventDescricao(e.target.value)}
+                        placeholder="Ex: Ligar para confirmar interesse..."
+                        rows={2}
+                        className="mt-1 text-sm"
+                        onKeyDown={(e) => handleKeyDown(e, handleCreateEvent, !eventDate || !eventDescricao.trim())}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setCreateEventOpen(false)}>Cancelar</Button>
+                      <Button size="sm" onClick={handleCreateEvent} disabled={!eventDate || !eventDescricao.trim()} className="gap-2">
+                        <Check className="h-3 w-3" /> Criar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {canSchedule && (
                   <Button size="lg" className="w-full gap-2 text-base" onClick={() => setScheduleOpen(true)}>
                     <CalendarCheck className="h-5 w-5" /> Concluir Agendamento
@@ -368,7 +464,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={lead.id} leadNome={lead.nome} />
       )}
 
-      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) setDisqualifyMotivo(""); setDisqualifyOpen(v); }}>
+      {/* Disqualify modal */}
+      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
         <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim())}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -380,11 +477,45 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
             <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo da desqualificação..." rows={3} />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="outra-cidade"
+                checked={disqualifyOutraCidade}
+                onCheckedChange={(checked) => setDisqualifyOutraCidade(!!checked)}
+              />
+              <label htmlFor="outra-cidade" className="text-sm font-medium leading-none cursor-pointer">
+                Outra Cidade
+              </label>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOpen(false); }}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status change modal */}
+      <Dialog open={statusChangeOpen} onOpenChange={setStatusChangeOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5 text-primary" /> Alterar Status
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Status atual: <strong>{etapa?.label || lead.etapa}</strong>
+            </p>
+            <p className="text-sm text-muted-foreground">Mover para:</p>
+            <div className="flex flex-col gap-2">
+              {STATUS_TRANSITIONS[lead.etapa]?.targets.map((target) => (
+                <Button key={target.id} variant="outline" className="justify-start gap-2" onClick={() => handleStatusChange(target.id)}>
+                  {target.label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
