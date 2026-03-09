@@ -188,8 +188,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       checkout: lead.checkout || null,
       is_porta: lead.is_porta || false,
       notas: (lead as any).notas || null,
-    }).select("id").single();
+    }).select("*").single();
     if (error) { console.error("addLead error:", error); return null; }
+    if (data) {
+      const newLead = mapLead(data);
+      setLeads((prev) => [newLead, ...prev]);
+      lastFetchRef.current = 0; // invalidate cache
+    }
     return data?.id || null;
   };
 
