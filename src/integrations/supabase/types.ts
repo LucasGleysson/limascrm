@@ -184,6 +184,41 @@ export type Database = {
           },
         ]
       }
+      metas_unidades: {
+        Row: {
+          created_at: string
+          id: string
+          id_unidade: string
+          mes_ref: string
+          meta_carros: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_unidade: string
+          mes_ref: string
+          meta_carros?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_unidade?: string
+          mes_ref?: string
+          meta_carros?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_unidades_id_unidade_fkey"
+            columns: ["id_unidade"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cargo: Database["public"]["Enums"]["app_role"]
