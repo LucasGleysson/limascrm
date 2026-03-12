@@ -8,11 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
-  RefreshCw, Target, Car, AlertTriangle, CheckCircle2, Search, FileText, Calendar, ClipboardList, Eye,
+  RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
-import { LeadSearchPanel } from "@/components/LeadSearchPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
@@ -26,7 +25,6 @@ const SIDEBAR_TABS = [
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
   { id: "metas", label: "Metas", icon: Target },
-  { id: "pesquisa", label: "Pesquisa", icon: Search },
 ];
 
 export const SupervisorDashboard = () => {
@@ -52,7 +50,6 @@ export const SupervisorDashboard = () => {
   }, [leads, periodRange]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
-  const today = new Date().toISOString().split("T")[0];
 
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
@@ -67,7 +64,6 @@ export const SupervisorDashboard = () => {
       const perdidosDepois = aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
       const taxaConversao = aLeads.length > 0 ? Math.round((carrosNaLoja / aLeads.length) * 100) : 0;
 
-      // Follow-up stats
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
       const fupPendentes = agFollowUps.filter((e) => !e.concluido).length;
@@ -235,6 +231,59 @@ export const SupervisorDashboard = () => {
                 </table>
               </div>
             </div>
+
+            {/* Desqualificados report */}
+            {(() => {
+              const desq = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa));
+              const desqNovo = desq.filter((l) => l.etapa === "desqualificado_novo").length;
+              const desqAgendado = desq.filter((l) => l.etapa === "desqualificado_agendado").length;
+              if (desq.length === 0) return null;
+              return (
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="text-lg font-semibold mb-4">Relatório de Desqualificados</h2>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold">{desq.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Desqualificados</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-warning">{desqNovo}</p>
+                      <p className="text-xs text-muted-foreground">Na etapa Novo</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-destructive">{desqAgendado}</p>
+                      <p className="text-xs text-muted-foreground">Na etapa Agendado</p>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">DESQ. NOVO</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">DESQ. AGENDADO</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">TOTAL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {agentes.map((ag) => {
+                          const agDesq = desq.filter((l) => l.id_agente === ag.id);
+                          if (agDesq.length === 0) return null;
+                          return (
+                            <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
+                              <td className="py-3 font-medium">{ag.nome}</td>
+                              <td className="py-3 text-center text-warning">{agDesq.filter((l) => l.etapa === "desqualificado_novo").length}</td>
+                              <td className="py-3 text-center text-destructive">{agDesq.filter((l) => l.etapa === "desqualificado_agendado").length}</td>
+                              <td className="py-3 text-center font-medium">{agDesq.length}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -377,7 +426,6 @@ export const SupervisorDashboard = () => {
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
-        {activeTab === "pesquisa" && <LeadSearchPanel />}
       </main>
     </div>
   );

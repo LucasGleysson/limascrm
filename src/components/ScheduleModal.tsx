@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,27 +19,33 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
+  const submittingRef = useRef(false);
 
-  // Reset form when modal opens or lead changes
   useEffect(() => {
     if (open) {
       setUnidade("");
       setData("");
       setOs("");
+      submittingRef.current = false;
     }
   }, [open, leadId]);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
   const handleSubmit = async () => {
-    if (!unidade || !data || !os) return;
-    await updateLead(leadId, {
-      etapa: "agendado",
-      id_unidade: unidade,
-      data_agendamento: data,
-      numero_os: os,
-    });
-    onOpenChange(false);
+    if (!unidade || !data || !os || submittingRef.current) return;
+    submittingRef.current = true;
+    try {
+      await updateLead(leadId, {
+        etapa: "agendado",
+        id_unidade: unidade,
+        data_agendamento: data,
+        numero_os: os,
+      });
+      onOpenChange(false);
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   return (
@@ -74,7 +80,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!unidade || !data || !os}>Confirmar Agendamento</Button>
+          <Button onClick={handleSubmit} disabled={!unidade || !data || !os || submittingRef.current}>Confirmar Agendamento</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

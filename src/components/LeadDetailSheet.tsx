@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatDateBR } from "@/lib/leadUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,6 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
-// Status transitions allowed for agents
 const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string; label: string }[] }> = {
   agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }] },
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }] },
@@ -48,19 +47,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editOrigem, setEditOrigem] = useState("");
   const [editUnidade, setEditUnidade] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
-
-  const [editDataAgendamento, setEditDataAgendamento] = useState("");
   const [editNumeroOs, setEditNumeroOs] = useState("");
-  const [editUnidadeAgendamento, setEditUnidadeAgendamento] = useState("");
+  const [editDataAgendamento, setEditDataAgendamento] = useState("");
+
+  const [editSchedDataAgendamento, setEditSchedDataAgendamento] = useState("");
+  const [editSchedNumeroOs, setEditSchedNumeroOs] = useState("");
+  const [editSchedUnidade, setEditSchedUnidade] = useState("");
 
   const [newNota, setNewNota] = useState("");
 
-  // Create event inline state
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [eventDate, setEventDate] = useState("");
   const [eventDescricao, setEventDescricao] = useState("");
+  const creatingEventRef = useRef(false);
 
-  // Reset all form state when the lead changes
   useEffect(() => {
     setEditing(false);
     setEditingSchedule(false);
@@ -73,6 +73,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEventDate("");
     setEventDescricao("");
     setStatusChangeOpen(false);
+    creatingEventRef.current = false;
   }, [lead?.id]);
 
   if (!lead) return null;
@@ -88,6 +89,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEditOrigem(lead.origem);
     setEditUnidade(lead.id_unidade || "");
     setEditTags(lead.tags_servico || []);
+    setEditNumeroOs(lead.numero_os || "");
+    setEditDataAgendamento(lead.data_agendamento || "");
     setEditing(true);
   };
 
@@ -99,6 +102,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editTelefone !== lead.telefone) updates.telefone = formatPhone(editTelefone);
     if (editOrigem !== lead.origem) updates.origem = editOrigem;
     if (editUnidade !== (lead.id_unidade || "")) updates.id_unidade = editUnidade || undefined;
+    if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs || null;
+    if (editDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editDataAgendamento || null;
     const currentTags = lead.tags_servico || [];
     if (JSON.stringify(editTags.sort()) !== JSON.stringify([...currentTags].sort())) updates.tags_servico = editTags;
 
@@ -109,25 +114,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const startEditSchedule = () => {
-    setEditDataAgendamento(lead.data_agendamento || "");
-    setEditNumeroOs(lead.numero_os || "");
-    setEditUnidadeAgendamento(lead.id_unidade || "");
+    setEditSchedDataAgendamento(lead.data_agendamento || "");
+    setEditSchedNumeroOs(lead.numero_os || "");
+    setEditSchedUnidade(lead.id_unidade || "");
     setEditingSchedule(true);
   };
 
   const saveScheduleEdit = async () => {
     const updates: Partial<Lead> = {};
-    if (editDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editDataAgendamento;
-    if (editNumeroOs !== (lead.numero_os || "")) updates.numero_os = editNumeroOs;
-    if (editUnidadeAgendamento !== (lead.id_unidade || "")) updates.id_unidade = editUnidadeAgendamento;
+    if (editSchedDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editSchedDataAgendamento;
+    if (editSchedNumeroOs !== (lead.numero_os || "")) updates.numero_os = editSchedNumeroOs;
+    if (editSchedUnidade !== (lead.id_unidade || "")) updates.id_unidade = editSchedUnidade;
 
-    // Rescue: dispensado/perdido → reagendado
-    if (["dispensado", "perdido"].includes(lead.etapa)) {
-      updates.etapa = "reagendado";
-    }
-    if (lead.etapa === "desqualificado_agendado") {
-      updates.etapa = "reagendado";
-    }
+    if (["dispensado", "perdido"].includes(lead.etapa)) updates.etapa = "reagendado";
+    if (lead.etapa === "desqualificado_agendado") updates.etapa = "reagendado";
 
     if (Object.keys(updates).length > 0) {
       await updateLead(lead.id, updates);
@@ -158,9 +158,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     const status = getDisqualifyStatus();
     const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
     let motivo = disqualifyMotivo.trim();
-    if (disqualifyOutraCidade) {
-      motivo = `[Outra Cidade] ${motivo}`;
-    }
+    if (disqualifyOutraCidade) motivo = `[Outra Cidade] ${motivo}`;
     const notas = appendNota(lead.notas, label, motivo);
     await updateLead(lead.id, { etapa: status, notas });
     setDisqualifyMotivo("");
@@ -173,7 +171,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     const newLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
     const notas = appendNota(lead.notas, "Mudança de Status", `${oldLabel} → ${newLabel}`);
     const updates: Partial<Lead> = { etapa: newStatus, notas };
-    // If moving back to novo, clear scheduling fields
     if (newStatus === "novo") {
       updates.data_agendamento = null;
       updates.numero_os = null;
@@ -193,19 +190,29 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const handleCreateEvent = async () => {
-    if (!eventDate || !eventDescricao.trim()) return;
-    await addEvento({
-      id_lead: lead.id,
-      tipo: "lembrete",
-      numero: 0,
-      data_prevista: eventDate,
-      concluido: false,
-      id_usuario: currentUser.id,
-      descricao: eventDescricao.trim(),
-    });
-    setCreateEventOpen(false);
-    setEventDate("");
-    setEventDescricao("");
+    if (!eventDate || !eventDescricao.trim() || creatingEventRef.current) return;
+    creatingEventRef.current = true;
+    try {
+      // Also append to lead notes
+      const notas = appendNota(lead.notas, "Evento Criado", eventDescricao.trim());
+      await Promise.all([
+        addEvento({
+          id_lead: lead.id,
+          tipo: "lembrete",
+          numero: 0,
+          data_prevista: eventDate,
+          concluido: false,
+          id_usuario: currentUser.id,
+          descricao: eventDescricao.trim(),
+        }),
+        updateLead(lead.id, { notas }),
+      ]);
+      setCreateEventOpen(false);
+      setEventDate("");
+      setEventDescricao("");
+    } finally {
+      creatingEventRef.current = false;
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
@@ -260,9 +267,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editOrigem} onValueChange={setEditOrigem}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {ORIGENS.map((o) => (
-                        <SelectItem key={o} value={o}>{o}</SelectItem>
-                      ))}
+                      {ORIGENS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -271,11 +276,17 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editUnidade} onValueChange={setEditUnidade}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {unidades.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
-                      ))}
+                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Número da OS</Label>
+                  <Input value={editNumeroOs} onChange={(e) => setEditNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Data do Agendamento</Label>
+                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} className="mt-1" />
                 </div>
                 <div>
                   <Label>Tags de Serviço</Label>
@@ -297,38 +308,35 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 </div>
               </div>
             ) : editingSchedule ? (
-              <div className="space-y-4" onKeyDown={(e) => handleKeyDown(e, saveScheduleEdit, !editDataAgendamento || !editNumeroOs || !editUnidadeAgendamento)}>
+              <div className="space-y-4" onKeyDown={(e) => handleKeyDown(e, saveScheduleEdit, !editSchedDataAgendamento || !editSchedNumeroOs || !editSchedUnidade)}>
                 <div>
                   <Label>Unidade / Cidade</Label>
-                  <Select value={editUnidadeAgendamento} onValueChange={setEditUnidadeAgendamento}>
+                  <Select value={editSchedUnidade} onValueChange={setEditSchedUnidade}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {unidades.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
-                      ))}
+                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} min={todayStr} className="mt-1" />
+                  <Input type="date" value={editSchedDataAgendamento} onChange={(e) => setEditSchedDataAgendamento(e.target.value)} min={todayStr} className="mt-1" />
                 </div>
                 <div>
                   <Label>Número da OS</Label>
-                  <Input value={editNumeroOs} onChange={(e) => setEditNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
+                  <Input value={editSchedNumeroOs} onChange={(e) => setEditSchedNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" size="sm" onClick={() => setEditingSchedule(false)} className="gap-2">
                     <X className="h-4 w-4" /> Cancelar
                   </Button>
-                  <Button size="sm" onClick={saveScheduleEdit} disabled={!editDataAgendamento || !editNumeroOs || !editUnidadeAgendamento} className="gap-2">
+                  <Button size="sm" onClick={saveScheduleEdit} disabled={!editSchedDataAgendamento || !editSchedNumeroOs || !editSchedUnidade} className="gap-2">
                     <Check className="h-4 w-4" /> Salvar
                   </Button>
                 </div>
               </div>
             ) : (
               <>
-                {/* Client info */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -363,7 +371,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </p>
                 </div>
 
-                {/* Status & tags */}
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={lead.etapa === "novo" ? "secondary" : ["dispensado", "perdido", "desqualificado_novo", "desqualificado_agendado", "desqualificado"].includes(lead.etapa) ? "destructive" : "default"}>
                     {etapa?.label || lead.etapa}
@@ -436,7 +443,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => setCreateEventOpen(false)}>Cancelar</Button>
-                      <Button size="sm" onClick={handleCreateEvent} disabled={!eventDate || !eventDescricao.trim()} className="gap-2">
+                      <Button size="sm" onClick={handleCreateEvent} disabled={!eventDate || !eventDescricao.trim() || creatingEventRef.current} className="gap-2">
                         <Check className="h-3 w-3" /> Criar
                       </Button>
                     </div>

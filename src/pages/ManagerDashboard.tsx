@@ -10,10 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
-  RefreshCw, Car, AlertTriangle, XCircle, Search, FileText, Calendar,
+  RefreshCw, Car, XCircle, FileText, Calendar,
   ClipboardList, Target, CheckCircle2,
 } from "lucide-react";
-import { LeadSearchPanel } from "@/components/LeadSearchPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
@@ -27,7 +26,6 @@ const SIDEBAR_TABS = [
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
   { id: "metas", label: "Metas", icon: Target },
-  { id: "pesquisa", label: "Pesquisa", icon: Search },
   { id: "usuarios", label: "Usuários", icon: Users },
 ];
 
@@ -58,9 +56,8 @@ export const ManagerDashboard = () => {
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-    const perdidosDepois = filteredLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
     const taxaConversao = filteredLeads.length > 0 ? Math.round((carrosNaLoja / filteredLeads.length) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, perdidosAntes, perdidosDepois, taxaConversao };
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, perdidosAntes, taxaConversao };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -85,8 +82,6 @@ export const ManagerDashboard = () => {
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         concluidos: uLeads.filter((l) => l.etapa === "concluido").length,
         dispensados: uLeads.filter((l) => l.etapa === "dispensado").length,
-        perdidosAntes: uLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
-        perdidosDepois: uLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length,
       };
     });
   }, [filteredLeads, unidades]);
@@ -189,7 +184,6 @@ export const ManagerDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Per unit */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Desempenho por Loja</h2>
                 <div className="space-y-3">
@@ -210,7 +204,6 @@ export const ManagerDashboard = () => {
                 </div>
               </div>
 
-              {/* Per agent */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Top Agentes</h2>
                 <div className="space-y-3">
@@ -229,7 +222,6 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            {/* Agent detail table */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Desempenho Detalhado por Agente</h2>
               <div className="overflow-x-auto">
@@ -274,7 +266,6 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            {/* Origin table */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Performance por Origem</h2>
               <div className="overflow-x-auto">
@@ -307,7 +298,6 @@ export const ManagerDashboard = () => {
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
-        {activeTab === "pesquisa" && <LeadSearchPanel />}
         {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>
