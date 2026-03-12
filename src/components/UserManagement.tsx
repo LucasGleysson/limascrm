@@ -8,16 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Users, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Shield, X } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 type AppRole = "agente" | "recepcionista" | "supervisor" | "gestor";
@@ -55,7 +49,6 @@ export const UserManagement = () => {
   const [deletingUser, setDeletingUser] = useState<Profile | null>(null);
   const { toast } = useToast();
 
-  // Form state
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,38 +60,23 @@ export const UserManagement = () => {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
-    const res = await supabase.functions.invoke("manage-users", {
-      body: { action: "list" },
-    });
-
-    if (res.data?.profiles) {
-      setProfiles(res.data.profiles);
-    }
+    const res = await supabase.functions.invoke("manage-users", { body: { action: "list" } });
+    if (res.data?.profiles) setProfiles(res.data.profiles);
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchProfiles();
-  }, [fetchProfiles]);
+  useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
   const openCreate = () => {
     setEditingUser(null);
-    setNome("");
-    setEmail("");
-    setPassword("");
-    setCargo("agente");
-    setUnidadePadrao("");
+    setNome(""); setEmail(""); setPassword(""); setCargo("agente"); setUnidadePadrao("");
     setModalOpen(true);
   };
 
   const openEdit = (profile: Profile) => {
     setEditingUser(profile);
-    setNome(profile.nome);
-    setEmail(profile.email);
-    setPassword("");
-    setCargo(profile.cargo);
-    setUnidadePadrao(profile.unidade_padrao || "");
+    setNome(profile.nome); setEmail(profile.email); setPassword("");
+    setCargo(profile.cargo); setUnidadePadrao(profile.unidade_padrao || "");
     setModalOpen(true);
   };
 
@@ -111,47 +89,32 @@ export const UserManagement = () => {
       toast({ title: "Defina uma senha para o novo usuário", variant: "destructive" });
       return;
     }
-
     setSaving(true);
 
     if (editingUser) {
       const res = await supabase.functions.invoke("manage-users", {
         body: {
-          action: "update",
-          user_id: editingUser.id,
-          nome,
+          action: "update", user_id: editingUser.id, nome,
           email: email !== editingUser.email ? email : undefined,
-          cargo,
-          unidade_padrao: unidadePadrao || null,
+          cargo, unidade_padrao: unidadePadrao || null,
           password: password || undefined,
         },
       });
-
       if (res.error) {
         toast({ title: "Erro ao atualizar", description: String(res.error), variant: "destructive" });
       } else {
         toast({ title: "Usuário atualizado com sucesso" });
-        setModalOpen(false);
-        fetchProfiles();
+        setModalOpen(false); fetchProfiles();
       }
     } else {
       const res = await supabase.functions.invoke("manage-users", {
-        body: {
-          action: "create",
-          nome,
-          email,
-          password,
-          cargo,
-          unidade_padrao: unidadePadrao || null,
-        },
+        body: { action: "create", nome, email, password, cargo, unidade_padrao: unidadePadrao || null },
       });
-
       if (res.error || res.data?.error) {
         toast({ title: "Erro ao criar usuário", description: res.data?.error || String(res.error), variant: "destructive" });
       } else {
         toast({ title: "Usuário criado com sucesso" });
-        setModalOpen(false);
-        fetchProfiles();
+        setModalOpen(false); fetchProfiles();
       }
     }
     setSaving(false);
@@ -159,21 +122,17 @@ export const UserManagement = () => {
 
   const handleDelete = async () => {
     if (!deletingUser) return;
-    const res = await supabase.functions.invoke("manage-users", {
-      body: { action: "delete", user_id: deletingUser.id },
-    });
-
+    const res = await supabase.functions.invoke("manage-users", { body: { action: "delete", user_id: deletingUser.id } });
     if (res.error) {
       toast({ title: "Erro ao excluir", variant: "destructive" });
     } else {
-      toast({ title: "Usuário excluído" });
-      fetchProfiles();
+      toast({ title: "Usuário excluído" }); fetchProfiles();
     }
-    setDeleteDialogOpen(false);
-    setDeletingUser(null);
+    setDeleteDialogOpen(false); setDeletingUser(null);
   };
 
-  const needsUnidade = cargo === "recepcionista";
+  // Show unidade field for recepcionista (required) and always for agents (optional)
+  const showUnidade = cargo === "recepcionista" || cargo === "agente";
 
   return (
     <div className="space-y-6">
@@ -182,13 +141,9 @@ export const UserManagement = () => {
           <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
           <p className="text-muted-foreground text-sm">Crie, edite e gerencie os perfis do sistema</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Usuário
-        </Button>
+        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Usuário</Button>
       </div>
 
-      {/* Users list */}
       {loading ? (
         <p className="text-muted-foreground">Carregando...</p>
       ) : profiles.length === 0 ? (
@@ -201,10 +156,7 @@ export const UserManagement = () => {
           {profiles.map((profile) => {
             const unidade = unidades.find((u) => u.id === profile.unidade_padrao);
             return (
-              <div
-                key={profile.id}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow"
-              >
+              <div key={profile.id} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow">
                 <div className="rounded-full bg-muted h-10 w-10 flex items-center justify-center text-sm font-bold">
                   {profile.nome.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
@@ -213,24 +165,12 @@ export const UserManagement = () => {
                   <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
                 </div>
                 <Badge variant="outline" className={`text-xs ${CARGO_COLORS[profile.cargo]}`}>
-                  <Shield className="h-3 w-3 mr-1" />
-                  {CARGO_LABELS[profile.cargo]}
+                  <Shield className="h-3 w-3 mr-1" />{CARGO_LABELS[profile.cargo]}
                 </Badge>
-                {unidade && (
-                  <Badge variant="outline" className="text-xs">
-                    {unidade.nome}
-                  </Badge>
-                )}
+                {unidade && <Badge variant="outline" className="text-xs">{unidade.nome}</Badge>}
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(profile)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => { setDeletingUser(profile); setDeleteDialogOpen(true); }}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(profile)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeletingUser(profile); setDeleteDialogOpen(true); }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -240,7 +180,6 @@ export const UserManagement = () => {
         </div>
       )}
 
-      {/* Create/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -255,28 +194,18 @@ export const UserManagement = () => {
               <Label>Nome de exibição</Label>
               <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo" />
             </div>
-
             <div className="space-y-2">
               <Label>Email (login)</Label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@empresa.com" />
             </div>
-
             <div className="space-y-2">
               <Label>{editingUser ? "Nova senha (deixe em branco para manter)" : "Senha"}</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={editingUser ? "••••••••" : "Mínimo 6 caracteres"}
-              />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={editingUser ? "••••••••" : "Mínimo 6 caracteres"} />
             </div>
-
             <div className="space-y-2">
               <Label>Cargo / Função</Label>
               <Select value={cargo} onValueChange={(v) => setCargo(v as AppRole)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="agente">Agente</SelectItem>
                   <SelectItem value="recepcionista">Recepcionista</SelectItem>
@@ -286,19 +215,25 @@ export const UserManagement = () => {
               </Select>
             </div>
 
-            {(needsUnidade || unidadePadrao) && (
+            {showUnidade && (
               <div className="space-y-2">
-                <Label>Unidade padrão {needsUnidade && <span className="text-destructive">*</span>}</Label>
-                <Select value={unidadePadrao} onValueChange={setUnidadePadrao}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidades.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>
+                  Loja padrão {cargo === "recepcionista" && <span className="text-destructive">*</span>}
+                  {cargo === "agente" && <span className="text-xs text-muted-foreground ml-1">(opcional)</span>}
+                </Label>
+                <div className="flex gap-2">
+                  <Select value={unidadePadrao} onValueChange={setUnidadePadrao}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                    <SelectContent>
+                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {unidadePadrao && cargo === "agente" && (
+                    <Button variant="outline" size="icon" onClick={() => setUnidadePadrao("")} title="Limpar">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -312,7 +247,6 @@ export const UserManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -323,9 +257,7 @@ export const UserManagement = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

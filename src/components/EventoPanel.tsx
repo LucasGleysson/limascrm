@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,19 @@ import { LeadDetailSheet } from "./LeadDetailSheet";
 import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX } from "lucide-react";
 import { Evento, Lead } from "@/data/mockData";
 import { formatDateBR } from "@/lib/leadUtils";
+import { appendNota } from "@/lib/notasUtils";
 
 export const EventoPanel = () => {
-  const { eventos, leads, addEvento, concluirEvento } = useLeads();
+  const { eventos, leads, addEvento, concluirEvento, updateLead } = useLeads();
   const { currentUser } = useRole();
   const [concludeOpen, setConcludeOpen] = useState(false);
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
   const [descricao, setDescricao] = useState("");
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const concludingRef = useRef(false);
+  const creatingRef = useRef(false);
 
-  // Create event modal state
   const [createOpen, setCreateOpen] = useState(false);
   const [newLeadId, setNewLeadId] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -46,17 +48,12 @@ export const EventoPanel = () => {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Categorize pending events
   const pendentes = myEvents.filter((e) => !e.concluido);
   const concluidos = myEvents.filter((e) => e.concluido);
 
-  // Lembretes (manually created events)
   const lembretes = pendentes.filter((e) => e.tipo === "lembrete");
-
-  // Followups subdivided
   const followups = pendentes.filter((e) => e.tipo === "followup");
 
-  // Categorize followups by lead status
   const categorizeFollowup = (evento: Evento) => {
     const lead = myLeads.find((l) => l.id === evento.id_lead);
     if (!lead) return "other";
@@ -87,46 +84,60 @@ export const EventoPanel = () => {
   }, [followups, myLeads, today]);
 
   const handleConclude = async () => {
-    if (!selectedEvento || !descricao.trim()) return;
-    await concluirEvento(selectedEvento.id, descricao.trim(), currentUser.id);
-    setConcludeOpen(false);
-    setDescricao("");
-    setSelectedEvento(null);
+    if (!selectedEvento || !descricao.trim() || concludingRef.current) return;
+    concludingRef.current = true;
+    try {
+      // Append to lead notes
+      const lead = leads.find((l) => l.id === selectedEvento.id_lead);
+      const label = selectedEvento.tipo === "lembrete" ? "Lembrete Concluído" : `Follow-up ${selectedEvento.numero} Concluído`;
+      if (lead) {
+        const notas = appendNota(lead.notas, label, descricao.trim());
+        await updateLead(lead.id, { notas });
+      }
+      await concluirEvento(selectedEvento.id, descricao.trim(), currentUser.id);
+      setConcludeOpen(false);
+      setDescricao("");
+      setSelectedEvento(null);
+    } finally {
+      concludingRef.current = false;
+    }
   };
 
   const handleCreate = async () => {
-    if (!newLeadId || !newDate || !newDescricao.trim()) return;
-    await addEvento({
-      id_lead: newLeadId,
-      tipo: "lembrete",
-      numero: 0,
-      data_prevista: newDate,
-      concluido: false,
-      id_usuario: currentUser.id,
-      descricao: newDescricao.trim(),
-    });
-    setCreateOpen(false);
-    setNewLeadId("");
-    setNewDate("");
-    setNewDescricao("");
+    if (!newLeadId || !newDate || !newDescricao.trim() || creatingRef.current) return;
+    creatingRef.current = true;
+    try {
+      // Append to lead notes
+      const lead = leads.find((l) => l.id === newLeadId);
+      if (lead) {
+        const notas = appendNota(lead.notas, "Evento Criado", newDescricao.trim());
+        await updateLead(lead.id, { notas });
+      }
+      await addEvento({
+        id_lead: newLeadId,
+        tipo: "lembrete",
+        numero: 0,
+        data_prevista: newDate,
+        concluido: false,
+        id_usuario: currentUser.id,
+        descricao: newDescricao.trim(),
+      });
+      setCreateOpen(false);
+      setNewLeadId("");
+      setNewDate("");
+      setNewDescricao("");
+    } finally {
+      creatingRef.current = false;
+    }
   };
 
   const getLeadName = (leadId: string) => leads.find((l) => l.id === leadId)?.nome || "";
   const getLead = (leadId: string) => leads.find((l) => l.id === leadId) || null;
-
   const isOverdue = (dataPrevista: string) => dataPrevista < today;
 
   const openLeadDetail = (leadId: string) => {
     const lead = getLead(leadId);
-    if (lead) {
-      setDetailLead(lead);
-      setDetailOpen(true);
-    }
-  };
-
-  const getEventLabel = (evento: Evento) => {
-    if (evento.tipo === "lembrete") return evento.descricao || "Lembrete";
-    return `Follow-up ${evento.numero}`;
+    if (lead) { setDetailLead(lead); setDetailOpen(true); }
   };
 
   const renderEventCard = (evento: Evento, concluded = false) => (
@@ -207,55 +218,13 @@ export const EventoPanel = () => {
         </Button>
       </div>
 
-      {/* Lembretes (manual) */}
-      {renderSection(
-        "Lembretes Criados",
-        <StickyNote className="h-4 w-4 text-accent-foreground" />,
-        lembretes,
-        "Nenhum lembrete pendente."
-      )}
-
-      {/* Follow-ups for new leads */}
-      {renderSection(
-        "Follow-ups — Novos Leads",
-        <PhoneIcon className="h-4 w-4 text-primary" />,
-        followupsByCategory.novo
-      )}
-
-      {/* Follow-ups for today's scheduled */}
-      {renderSection(
-        "Follow-ups — Agendados de Hoje",
-        <CalendarCheck className="h-4 w-4 text-success" />,
-        followupsByCategory.agendado_hoje
-      )}
-
-      {/* Follow-ups for no-shows (past scheduled) */}
-      {renderSection(
-        "Follow-ups — Agendados que Não Foram",
-        <AlertCircle className="h-4 w-4 text-destructive" />,
-        followupsByCategory.agendado_atrasado
-      )}
-
-      {/* Follow-ups for dispensed */}
-      {renderSection(
-        "Ligar — Dispensados",
-        <UserX className="h-4 w-4 text-warning" />,
-        followupsByCategory.dispensado
-      )}
-
-      {/* Follow-ups for future scheduled */}
-      {renderSection(
-        "Follow-ups — Agendados Futuros",
-        <CalendarPlus className="h-4 w-4 text-muted-foreground" />,
-        followupsByCategory.agendado_futuro
-      )}
-
-      {/* Other follow-ups */}
-      {renderSection(
-        "Outros Follow-ups",
-        <Clock className="h-4 w-4 text-muted-foreground" />,
-        followupsByCategory.other
-      )}
+      {renderSection("Lembretes Criados", <StickyNote className="h-4 w-4 text-accent-foreground" />, lembretes, "Nenhum lembrete pendente.")}
+      {renderSection("Follow-ups — Novos Leads", <PhoneIcon className="h-4 w-4 text-primary" />, followupsByCategory.novo)}
+      {renderSection("Follow-ups — Agendados de Hoje", <CalendarCheck className="h-4 w-4 text-success" />, followupsByCategory.agendado_hoje)}
+      {renderSection("Follow-ups — Agendados que Não Foram", <AlertCircle className="h-4 w-4 text-destructive" />, followupsByCategory.agendado_atrasado)}
+      {renderSection("Ligar — Dispensados", <UserX className="h-4 w-4 text-warning" />, followupsByCategory.dispensado)}
+      {renderSection("Follow-ups — Agendados Futuros", <CalendarPlus className="h-4 w-4 text-muted-foreground" />, followupsByCategory.agendado_futuro)}
+      {renderSection("Outros Follow-ups", <Clock className="h-4 w-4 text-muted-foreground" />, followupsByCategory.other)}
 
       {pendentes.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center">Nenhum evento pendente. 🎉</p>
@@ -266,9 +235,7 @@ export const EventoPanel = () => {
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-success" /> Concluídos ({concluidos.length})
           </h2>
-          <div className="space-y-2">
-            {concluidos.map((evento) => renderEventCard(evento, true))}
-          </div>
+          <div className="space-y-2">{concluidos.map((evento) => renderEventCard(evento, true))}</div>
         </div>
       )}
 
@@ -294,17 +261,14 @@ export const EventoPanel = () => {
                 className="mt-1"
                 rows={4}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && descricao.trim()) {
-                    e.preventDefault();
-                    handleConclude();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey && descricao.trim()) { e.preventDefault(); handleConclude(); }
                 }}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConcludeOpen(false)}>Cancelar</Button>
-            <Button onClick={handleConclude} disabled={!descricao.trim()}>Concluir Evento</Button>
+            <Button onClick={handleConclude} disabled={!descricao.trim() || concludingRef.current}>Concluir Evento</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -322,27 +286,15 @@ export const EventoPanel = () => {
             <div>
               <Label>Cliente</Label>
               <Select value={newLeadId} onValueChange={setNewLeadId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione o cliente" />
-                </SelectTrigger>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                 <SelectContent>
-                  {myLeads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {lead.nome}
-                    </SelectItem>
-                  ))}
+                  {myLeads.map((lead) => <SelectItem key={lead.id} value={lead.id}>{lead.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Data prevista</Label>
-              <Input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                min={today}
-                className="mt-1"
-              />
+              <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} min={today} className="mt-1" />
             </div>
             <div>
               <Label>Descrição</Label>
@@ -353,17 +305,14 @@ export const EventoPanel = () => {
                 className="mt-1"
                 rows={3}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && newLeadId && newDate && newDescricao.trim()) {
-                    e.preventDefault();
-                    handleCreate();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey && newLeadId && newDate && newDescricao.trim()) { e.preventDefault(); handleCreate(); }
                 }}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={!newLeadId || !newDate || !newDescricao.trim()} className="gap-2">
+            <Button onClick={handleCreate} disabled={!newLeadId || !newDate || !newDescricao.trim() || creatingRef.current} className="gap-2">
               <Plus className="h-4 w-4" /> Criar Evento
             </Button>
           </DialogFooter>

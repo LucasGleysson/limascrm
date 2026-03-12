@@ -53,25 +53,18 @@ export const AgentReceptionPanel = () => {
     try {
       const now = new Date().toISOString();
       await updateLead(lead.id, { etapa: "confirmado", checkin: now });
-    } finally {
-      setLoadingAction(null);
-    }
+    } finally { setLoadingAction(null); }
   };
 
   const handleEmServico = async (lead: Lead) => {
     if (loadingAction) return;
     setLoadingAction(`servico-${lead.id}`);
-    try {
-      await updateLead(lead.id, { etapa: "na_loja" });
-    } finally {
-      setLoadingAction(null);
-    }
+    try { await updateLead(lead.id, { etapa: "na_loja" }); }
+    finally { setLoadingAction(null); }
   };
 
   const handleDispensarOpen = (lead: Lead) => {
-    setDispensarLead(lead);
-    setDispensarMotivo("");
-    setDispensarOpen(true);
+    setDispensarLead(lead); setDispensarMotivo(""); setDispensarOpen(true);
   };
 
   const handleDispensarSubmit = async () => {
@@ -81,12 +74,9 @@ export const AgentReceptionPanel = () => {
       const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
       await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
       setDispensarOpen(false);
-    } finally {
-      setLoadingAction(null);
-    }
+    } finally { setLoadingAction(null); }
   };
 
-  // Checkout is only for concluido (service done)
   const handleCheckoutSubmit = async () => {
     if (!checkoutLead || loadingAction) return;
     setLoadingAction("checkout");
@@ -100,12 +90,8 @@ export const AgentReceptionPanel = () => {
         updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim());
       }
       await updateLead(checkoutLead.id, updates);
-      setCheckoutOpen(false);
-      setTags([]);
-      setCheckoutMotivo("");
-    } finally {
-      setLoadingAction(null);
-    }
+      setCheckoutOpen(false); setTags([]); setCheckoutMotivo("");
+    } finally { setLoadingAction(null); }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void, disabled?: boolean) => {
@@ -129,31 +115,9 @@ export const AgentReceptionPanel = () => {
         <StatsCard title="Dispensados" value={dispensados.length} icon={XCircle} variant="destructive" />
       </div>
 
-      {agendadosAtrasados.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" /> Agendamentos Pendentes (Dias Anteriores)
-          </h2>
-          <div className="space-y-2">
-            {agendadosAtrasados.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-destructive/20">
-                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
-                  <span className="font-semibold">{lead.nome}</span>
-                  <p className="text-sm text-muted-foreground">
-                    {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agendado: {lead.data_agendamento ? new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR") : "—"} · {getUnidadeNome(lead.id_unidade)}
-                  </p>
-                </div>
-                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
-                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* 1. Aguardando Chegada (hoje) */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">Aguardando Chegada</h2>
+        <h2 className="text-lg font-semibold mb-3">Aguardando Chegada — Hoje</h2>
         {agendadosHoje.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum agendamento pendente para hoje.</p>
         ) : (
@@ -175,6 +139,31 @@ export const AgentReceptionPanel = () => {
         )}
       </div>
 
+      {/* 2. Pendentes (dias anteriores) */}
+      {agendadosAtrasados.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" /> Pendentes — Dias Anteriores
+          </h2>
+          <div className="space-y-2">
+            {agendadosAtrasados.map((lead) => (
+              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-destructive/20">
+                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
+                  <span className="font-semibold">{lead.nome}</span>
+                  <p className="text-sm text-muted-foreground">
+                    {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agendado: {lead.data_agendamento ? new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR") : "—"} · {getUnidadeNome(lead.id_unidade)}
+                  </p>
+                </div>
+                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
+                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Confirmados */}
       {confirmados.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-3">Confirmados — Aguardando Serviço</h2>
@@ -204,6 +193,7 @@ export const AgentReceptionPanel = () => {
         </div>
       )}
 
+      {/* 4. Em Serviço */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Em Serviço</h2>
         {presentes.length === 0 ? (
@@ -239,8 +229,7 @@ export const AgentReceptionPanel = () => {
         <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, !dispensarMotivo.trim() || loadingAction === "dispensar")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-destructive" />
-              Dispensar: {dispensarLead?.nome}
+              <XCircle className="h-5 w-5 text-destructive" /> Dispensar: {dispensarLead?.nome}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -262,8 +251,7 @@ export const AgentReceptionPanel = () => {
         <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleCheckoutSubmit, loadingAction === "checkout")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LogOut className="h-5 w-5 text-success" />
-              Check-out: {checkoutLead?.nome}
+              <LogOut className="h-5 w-5 text-success" /> Check-out: {checkoutLead?.nome}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
