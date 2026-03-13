@@ -24,11 +24,16 @@ export const EventoPanel = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const concludingRef = useRef(false);
   const creatingRef = useRef(false);
+  const concludingProcessRef = useRef(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newLeadId, setNewLeadId] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newDescricao, setNewDescricao] = useState("");
+
+  const [concludeProcessOpen, setConcludeProcessOpen] = useState(false);
+  const [concludeProcessLead, setConcludeProcessLead] = useState<Lead | null>(null);
+  const [concludeProcessMotivo, setConcludeProcessMotivo] = useState("");
 
   const myLeads = useMemo(
     () => leads.filter((l) => l.id_agente === currentUser.id),
