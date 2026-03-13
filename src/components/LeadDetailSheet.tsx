@@ -376,6 +376,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     {etapa?.label || lead.etapa}
                   </Badge>
                   {lead.is_porta && <Badge variant="outline">Porta</Badge>}
+                  {lead.fup_concluido && (
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
+                      FUP Concluído {lead.fup_concluido_numero ? `(F${lead.fup_concluido_numero})` : ""}
+                    </Badge>
+                  )}
                   {lead.data_agendamento && (
                     <Badge variant="outline" className="gap-1">
                       <CalendarCheck className="h-3 w-3" />
@@ -383,6 +388,12 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     </Badge>
                   )}
                 </div>
+
+                {lead.fup_motivo_conclusao && (
+                  <p className="text-xs text-muted-foreground italic bg-success/5 rounded-md p-2">
+                    Motivo conclusão FUP: "{lead.fup_motivo_conclusao}"
+                  </p>
+                )}
 
                 {lead.tags_servico && lead.tags_servico.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
