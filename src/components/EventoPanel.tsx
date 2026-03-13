@@ -136,6 +136,35 @@ export const EventoPanel = () => {
     }
   };
 
+  const handleConcludeProcess = async () => {
+    if (!concludeProcessLead || !concludeProcessMotivo.trim() || concludingProcessRef.current) return;
+    concludingProcessRef.current = true;
+    try {
+      const lead = concludeProcessLead;
+      const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lead.id);
+      const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
+      const notas = appendNota(lead.notas, "Processo FUP Concluído", concludeProcessMotivo.trim());
+      await updateLead(lead.id, {
+        fup_concluido: true,
+        fup_concluido_em: new Date().toISOString(),
+        fup_concluido_numero: maxFup,
+        fup_motivo_conclusao: concludeProcessMotivo.trim(),
+        notas,
+      });
+      setConcludeProcessOpen(false);
+      setConcludeProcessMotivo("");
+      setConcludeProcessLead(null);
+    } finally {
+      concludingProcessRef.current = false;
+    }
+  };
+
+  // Leads with active FUP processes (not concluded)
+  const leadsWithActiveFup = useMemo(() => {
+    const fupLeadIds = new Set(eventos.filter((e) => e.tipo === "followup").map((e) => e.id_lead));
+    return myLeads.filter((l) => fupLeadIds.has(l.id) && !l.fup_concluido);
+  }, [eventos, myLeads]);
+
   const getLeadName = (leadId: string) => leads.find((l) => l.id === leadId)?.nome || "";
   const getLead = (leadId: string) => leads.find((l) => l.id === leadId) || null;
   const isOverdue = (dataPrevista: string) => dataPrevista < today;
