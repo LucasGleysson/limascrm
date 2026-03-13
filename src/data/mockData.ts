@@ -46,6 +46,10 @@ export interface Lead {
   checkout?: string | null;
   is_porta?: boolean | null;
   notas?: string | null;
+  fup_concluido?: boolean;
+  fup_concluido_em?: string | null;
+  fup_concluido_numero?: number | null;
+  fup_motivo_conclusao?: string | null;
 }
 
 export interface Evento {

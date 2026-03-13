@@ -79,6 +79,10 @@ export type Database = {
           data_agendamento: string | null
           data_entrada: string
           etapa: string
+          fup_concluido: boolean
+          fup_concluido_em: string | null
+          fup_concluido_numero: number | null
+          fup_motivo_conclusao: string | null
           id: string
           id_agente: string
           id_unidade: string | null
@@ -99,6 +103,10 @@ export type Database = {
           data_agendamento?: string | null
           data_entrada?: string
           etapa?: string
+          fup_concluido?: boolean
+          fup_concluido_em?: string | null
+          fup_concluido_numero?: number | null
+          fup_motivo_conclusao?: string | null
           id?: string
           id_agente: string
           id_unidade?: string | null
@@ -119,6 +127,10 @@ export type Database = {
           data_agendamento?: string | null
           data_entrada?: string
           etapa?: string
+          fup_concluido?: boolean
+          fup_concluido_em?: string | null
+          fup_concluido_numero?: number | null
+          fup_motivo_conclusao?: string | null
           id?: string
           id_agente?: string
           id_unidade?: string | null

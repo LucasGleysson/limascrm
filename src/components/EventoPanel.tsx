@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadDetailSheet } from "./LeadDetailSheet";
-import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX } from "lucide-react";
-import { Evento, Lead } from "@/data/mockData";
-import { formatDateBR } from "@/lib/leadUtils";
+import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag } from "lucide-react";
+import { Evento, Lead, ETAPAS_FUNIL } from "@/data/mockData";
+import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
 
 export const EventoPanel = () => {
@@ -24,11 +24,16 @@ export const EventoPanel = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const concludingRef = useRef(false);
   const creatingRef = useRef(false);
+  const concludingProcessRef = useRef(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newLeadId, setNewLeadId] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newDescricao, setNewDescricao] = useState("");
+
+  const [concludeProcessOpen, setConcludeProcessOpen] = useState(false);
+  const [concludeProcessLead, setConcludeProcessLead] = useState<Lead | null>(null);
+  const [concludeProcessMotivo, setConcludeProcessMotivo] = useState("");
 
   const myLeads = useMemo(
     () => leads.filter((l) => l.id_agente === currentUser.id),
@@ -131,6 +136,35 @@ export const EventoPanel = () => {
     }
   };
 
+  const handleConcludeProcess = async () => {
+    if (!concludeProcessLead || !concludeProcessMotivo.trim() || concludingProcessRef.current) return;
+    concludingProcessRef.current = true;
+    try {
+      const lead = concludeProcessLead;
+      const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lead.id);
+      const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
+      const notas = appendNota(lead.notas, "Processo FUP Concluído", concludeProcessMotivo.trim());
+      await updateLead(lead.id, {
+        fup_concluido: true,
+        fup_concluido_em: new Date().toISOString(),
+        fup_concluido_numero: maxFup,
+        fup_motivo_conclusao: concludeProcessMotivo.trim(),
+        notas,
+      });
+      setConcludeProcessOpen(false);
+      setConcludeProcessMotivo("");
+      setConcludeProcessLead(null);
+    } finally {
+      concludingProcessRef.current = false;
+    }
+  };
+
+  // Leads with active FUP processes (not concluded)
+  const leadsWithActiveFup = useMemo(() => {
+    const fupLeadIds = new Set(eventos.filter((e) => e.tipo === "followup").map((e) => e.id_lead));
+    return myLeads.filter((l) => fupLeadIds.has(l.id) && !l.fup_concluido);
+  }, [eventos, myLeads]);
+
   const getLeadName = (leadId: string) => leads.find((l) => l.id === leadId)?.nome || "";
   const getLead = (leadId: string) => leads.find((l) => l.id === leadId) || null;
   const isOverdue = (dataPrevista: string) => dataPrevista < today;
@@ -226,7 +260,49 @@ export const EventoPanel = () => {
       {renderSection("Follow-ups — Agendados Futuros", <CalendarPlus className="h-4 w-4 text-muted-foreground" />, followupsByCategory.agendado_futuro)}
       {renderSection("Outros Follow-ups", <Clock className="h-4 w-4 text-muted-foreground" />, followupsByCategory.other)}
 
-      {pendentes.length === 0 && (
+      {/* Concluir Processo FUP section */}
+      {leadsWithActiveFup.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
+            <Flag className="h-4 w-4 text-primary" /> Concluir Processo de Follow-up ({leadsWithActiveFup.length})
+          </h3>
+          <p className="text-xs text-muted-foreground mb-2 pl-6">Conclua o processo antes dos 7 FUPs se o cliente não vai mais retornar.</p>
+          <div className="space-y-2">
+            {leadsWithActiveFup.map((lead) => {
+              const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lead.id);
+              const done = fups.filter((e) => e.concluido).length;
+              const total = fups.length;
+              const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
+              return (
+                <div key={lead.id} className="flex items-center gap-4 p-3 rounded-xl bg-card border border-border">
+                  <div className="flex-1 cursor-pointer hover:underline" onClick={() => openLeadDetail(lead.id)}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{lead.nome}</span>
+                      <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>{etapa?.label || lead.etapa}</Badge>
+                      <Badge variant="secondary" className="text-xs">{done}/{total} FUPs</Badge>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConcludeProcessLead(lead);
+                      setConcludeProcessMotivo("");
+                      setConcludeProcessOpen(true);
+                    }}
+                    className="gap-1 text-xs"
+                  >
+                    <Flag className="h-3 w-3" /> Concluir Processo
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {pendentes.length === 0 && leadsWithActiveFup.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center">Nenhum evento pendente. 🎉</p>
       )}
 
@@ -239,7 +315,7 @@ export const EventoPanel = () => {
         </div>
       )}
 
-      {/* Conclude modal */}
+      {/* Conclude event modal */}
       <Dialog open={concludeOpen} onOpenChange={setConcludeOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -269,6 +345,45 @@ export const EventoPanel = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setConcludeOpen(false)}>Cancelar</Button>
             <Button onClick={handleConclude} disabled={!descricao.trim() || concludingRef.current}>Concluir Evento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Conclude FUP Process modal */}
+      <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) setConcludeProcessMotivo(""); setConcludeProcessOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-primary" />
+              Concluir Processo de Follow-up
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Cliente: <strong>{concludeProcessLead?.nome}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Ao concluir o processo, nenhum novo follow-up será gerado para este cliente.
+            </p>
+            <div>
+              <Label>Motivo da conclusão</Label>
+              <Textarea
+                value={concludeProcessMotivo}
+                onChange={(e) => setConcludeProcessMotivo(e.target.value)}
+                placeholder="Ex: Cliente fez serviço em outro lugar, não tem mais interesse..."
+                className="mt-1"
+                rows={3}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && concludeProcessMotivo.trim()) { e.preventDefault(); handleConcludeProcess(); }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConcludeProcessMotivo(""); setConcludeProcessOpen(false); }}>Cancelar</Button>
+            <Button onClick={handleConcludeProcess} disabled={!concludeProcessMotivo.trim() || concludingProcessRef.current} className="gap-2">
+              <Flag className="h-4 w-4" /> Concluir Processo
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
