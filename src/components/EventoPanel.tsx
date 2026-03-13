@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag } from "lucide-react";
-import { Evento, Lead } from "@/data/mockData";
-import { formatDateBR } from "@/lib/leadUtils";
+import { Evento, Lead, ETAPAS_FUNIL } from "@/data/mockData";
+import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
 
 export const EventoPanel = () => {
