@@ -15,6 +15,7 @@ import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
+import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
