@@ -427,6 +427,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "fichas" && <FichasPanel />}
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
+        {activeTab === "dispensa_relatorio" && <DispensaReportPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
       </main>
     </div>
