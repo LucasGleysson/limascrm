@@ -274,8 +274,8 @@ export const FollowUpTrackingPanel = () => {
             </thead>
             <tbody>
               {agentFupBreakdown.map((a) => (
-                <>
-                  <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedAgent(expandedAgent === a.id ? null : a.id)}>
+                <Fragment key={a.id}>
+                  <tr className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedAgent(expandedAgent === a.id ? null : a.id)}>
                     <td className="py-3">
                       {expandedAgent === a.id ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     </td>
@@ -301,6 +301,7 @@ export const FollowUpTrackingPanel = () => {
                       ) : <span className="text-success">0</span>}
                     </td>
                     <td className="py-3 text-center text-primary font-semibold">{a.totalFupsDone}</td>
+                    <td className="py-3 text-center text-primary font-semibold">{a.totalFupsDoneToday}</td>
                     <td className="py-3 text-center">
                       {a.carrosGanhosDispensado.length > 0 ? (
                         <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
@@ -310,8 +311,8 @@ export const FollowUpTrackingPanel = () => {
                     </td>
                   </tr>
                   {expandedAgent === a.id && (
-                    <tr key={`${a.id}-detail`}>
-                      <td colSpan={13} className="p-0">
+                    <tr>
+                      <td colSpan={14} className="p-0">
                         <div className="bg-muted/20 p-4">
                           <Tabs defaultValue="concluidos" className="w-full">
                             <TabsList className="mb-3">
