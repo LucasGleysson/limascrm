@@ -196,7 +196,7 @@ export const FollowUpTrackingPanel = () => {
       </div>
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <p className="text-2xl font-bold">{globalTotals.totalProcesses}</p>
           <p className="text-xs text-muted-foreground">Processos</p>
@@ -212,6 +212,10 @@ export const FollowUpTrackingPanel = () => {
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <p className="text-2xl font-bold text-primary">{globalTotals.totalDone}</p>
           <p className="text-xs text-muted-foreground">FUPs Feitos</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className="text-2xl font-bold text-primary">{globalTotals.totalDoneToday}</p>
+          <p className="text-xs text-muted-foreground">FUPs Feitos Hoje</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <p className="text-2xl font-bold text-destructive">{globalTotals.totalPending}</p>
