@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { Badge } from "@/components/ui/badge";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
@@ -6,7 +6,7 @@ import { Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatPhone } from "@/lib/phoneUtils";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, XCircle, Flag } from "lucide-react";
+import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const FollowUpTrackingPanel = () => {
@@ -17,11 +17,12 @@ export const FollowUpTrackingPanel = () => {
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const isConcludedOnDay = (iso?: string | null) => !!iso && iso.slice(0, 10) === today;
 
   const allFollowUps = useMemo(() => eventos.filter((e) => e.tipo === "followup"), [eventos]);
 
-  // Categorize leads by FUP scenario
   const categorizeLead = (lead: Lead): string => {
     if (lead.etapa === "novo" || lead.etapa === "desqualificado_novo") return "novo";
     if (["agendado", "reagendado", "desqualificado_agendado"].includes(lead.etapa)) return "agendado";
@@ -30,55 +31,55 @@ export const FollowUpTrackingPanel = () => {
     return "outro";
   };
 
-  // Per-agent detailed FUP breakdown
   const agentFupBreakdown = useMemo(() => {
-    return agentes.map((ag) => {
-      const agLeads = leads.filter((l) => l.id_agente === ag.id);
-      const agLeadIds = new Set(agLeads.map((l) => l.id));
-      const agFups = allFollowUps.filter((e) => agLeadIds.has(e.id_lead));
+    return agentes
+      .map((ag) => {
+        const agLeads = leads.filter((l) => l.id_agente === ag.id);
+        const agLeadIds = new Set(agLeads.map((l) => l.id));
+        const agFups = allFollowUps.filter((e) => agLeadIds.has(e.id_lead));
 
-      // Per-number breakdown
-      const byNumber: Record<number, { pending: number; completed: number }> = {};
-      for (let i = 1; i <= 7; i++) {
-        const nFups = agFups.filter((e) => e.numero === i);
-        byNumber[i] = {
-          pending: nFups.filter((e) => !e.concluido).length,
-          completed: nFups.filter((e) => e.concluido).length,
+        const byNumber: Record<number, { pending: number; completed: number }> = {};
+        for (let i = 1; i <= 7; i++) {
+          const nFups = agFups.filter((e) => e.numero === i);
+          byNumber[i] = {
+            pending: nFups.filter((e) => !e.concluido).length,
+            completed: nFups.filter((e) => e.concluido).length,
+          };
+        }
+
+        const leadIdsWithFup = new Set(agFups.map((e) => e.id_lead));
+        const leadsWithFup = agLeads.filter((l) => leadIdsWithFup.has(l.id));
+        const processesConcluidosFull = leadsWithFup.filter((l) => l.fup_concluido);
+        const processesPending = leadsWithFup.filter((l) => !l.fup_concluido);
+
+        const dispensaLeadIds = new Set<string>();
+        agLeads.forEach((lead) => {
+          if (["dispensado", "perdido"].includes(lead.etapa)) dispensaLeadIds.add(lead.id);
+        });
+        agFups.forEach((fup) => {
+          const descricao = (fup.descricao || "").toLowerCase();
+          if (descricao.includes("dispensado")) dispensaLeadIds.add(fup.id_lead);
+        });
+
+        const carrosGanhosDispensado = processesConcluidosFull.filter((l) => dispensaLeadIds.has(l.id));
+
+        return {
+          ...ag,
+          byNumber,
+          processesConcluidosFull,
+          processesPending,
+          totalProcesses: leadsWithFup.length,
+          totalFupsDone: agFups.filter((e) => e.concluido).length,
+          totalFupsPending: agFups.filter((e) => !e.concluido).length,
+          totalFupsDoneToday: agFups.filter((e) => e.concluido && isConcludedOnDay(e.data_conclusao)).length,
+          carrosGanhosDispensado,
+          leadsWithFup,
         };
-      }
+      })
+      .filter((a) => a.totalProcesses > 0)
+      .sort((a, b) => b.totalFupsDone - a.totalFupsDone);
+  }, [agentes, leads, allFollowUps, today]);
 
-      // Unique leads with followups
-      const leadIdsWithFup = new Set(agFups.map((e) => e.id_lead));
-      const leadsWithFup = agLeads.filter((l) => leadIdsWithFup.has(l.id));
-
-      // Process-level stats
-      // A process is "concluded" if fup_concluido=true on the lead
-      const processesConcluidosFull = leadsWithFup.filter((l) => l.fup_concluido);
-      const processesPending = leadsWithFup.filter((l) => !l.fup_concluido && leadIdsWithFup.has(l.id));
-
-      // "Carros ganhos" = dispensados com processo concluído
-      const carrosGanhosDispensado = processesConcluidosFull.filter((l) =>
-        ["dispensado", "perdido"].includes(l.etapa) || l.fup_motivo_conclusao
-      );
-
-      const totalFupsDone = agFups.filter((e) => e.concluido).length;
-      const totalFupsPending = agFups.filter((e) => !e.concluido).length;
-
-      return {
-        ...ag,
-        byNumber,
-        processesConcluidosFull,
-        processesPending,
-        totalProcesses: leadsWithFup.length,
-        totalFupsDone,
-        totalFupsPending,
-        carrosGanhosDispensado,
-        leadsWithFup,
-      };
-    }).filter((a) => a.totalProcesses > 0).sort((a, b) => b.totalFupsDone - a.totalFupsDone);
-  }, [agentes, leads, allFollowUps]);
-
-  // Global metrics
   const globalByNumber = useMemo(() => {
     const result: Record<number, { pending: number; completed: number }> = {};
     for (let i = 1; i <= 7; i++) {
@@ -96,18 +97,29 @@ export const FollowUpTrackingPanel = () => {
     const relevantLeads = leads.filter((l) => leadsWithFup.has(l.id));
     const concluded = relevantLeads.filter((l) => l.fup_concluido);
     const pending = relevantLeads.filter((l) => !l.fup_concluido);
+
+    const dispensaLeadIds = new Set<string>();
+    relevantLeads.forEach((lead) => {
+      if (["dispensado", "perdido"].includes(lead.etapa)) dispensaLeadIds.add(lead.id);
+    });
+    allFollowUps.forEach((fup) => {
+      const descricao = (fup.descricao || "").toLowerCase();
+      if (descricao.includes("dispensado")) dispensaLeadIds.add(fup.id_lead);
+    });
+
     return {
       totalProcesses: relevantLeads.length,
       complete: concluded.length,
       pending: pending.length,
       totalDone: allFollowUps.filter((e) => e.concluido).length,
+      totalDoneToday: allFollowUps.filter((e) => e.concluido && isConcludedOnDay(e.data_conclusao)).length,
       totalPending: allFollowUps.filter((e) => !e.concluido).length,
-      carrosDispensadoConcluido: concluded.filter((l) => ["dispensado", "perdido"].includes(l.etapa)).length,
+      carrosDispensadoConcluido: concluded.filter((l) => dispensaLeadIds.has(l.id)).length,
     };
-  }, [allFollowUps, leads]);
+  }, [allFollowUps, leads, today]);
 
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
-  const getUnitName = (id?: string | null) => id ? unidades.find((u) => u.id === id)?.nome || "—" : "—";
+  const getUnitName = (id?: string | null) => (id ? unidades.find((u) => u.id === id)?.nome || "—" : "—");
 
   // Filtered leads list
   const filteredLeadsList = useMemo(() => {
