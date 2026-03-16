@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatPhone } from "@/lib/phoneUtils";
-import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
+import { getStatusBadgeClass } from "@/lib/leadUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
