@@ -25,6 +25,7 @@ const SIDEBAR_TABS = [
   { id: "fichas", label: "Fichas", icon: FileText },
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
+  { id: "dispensa_relatorio", label: "Relatório de dispensa", icon: XCircle },
   { id: "metas", label: "Metas", icon: Target },
 ];
 
