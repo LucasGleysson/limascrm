@@ -268,6 +268,7 @@ export const FollowUpTrackingPanel = () => {
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ✓</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ⏳</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">FUPs ✓</th>
+                <th className="text-center py-2 font-medium text-muted-foreground text-xs">FUPs HOJE</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">🚗 GANHOS</th>
               </tr>
             </thead>
