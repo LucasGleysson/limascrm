@@ -15,6 +15,7 @@ import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
+import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
@@ -24,6 +25,7 @@ const SIDEBAR_TABS = [
   { id: "fichas", label: "Fichas", icon: FileText },
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
+  { id: "dispensa_relatorio", label: "Relatório de dispensa", icon: XCircle },
   { id: "metas", label: "Metas", icon: Target },
 ];
 
@@ -425,6 +427,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "fichas" && <FichasPanel />}
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
+        {activeTab === "dispensa_relatorio" && <DispensaReportPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
       </main>
     </div>

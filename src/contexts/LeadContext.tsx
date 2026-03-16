@@ -54,8 +54,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (user?.cargo === "agente") {
       query = query.eq("id_usuario", user.id);
     }
-    // Only fetch pending eventos for non-agent roles to reduce reads
-    if (user?.cargo === "gestor" || user?.cargo === "supervisor" || user?.cargo === "recepcionista") {
+    // Recepcionista only needs pending events view
+    if (user?.cargo === "recepcionista") {
       query = query.eq("concluido", false);
     }
     return query;
