@@ -413,7 +413,7 @@ export const FollowUpTrackingPanel = () => {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
