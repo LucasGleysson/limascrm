@@ -12,7 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatPhone } from "@/lib/phoneUtils";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
-import { Search, Trash2, Filter } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Search, Trash2, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -32,6 +37,13 @@ export const FichasPanel = () => {
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Date range pickers for data_entrada
+  const [entradaStart, setEntradaStart] = useState<Date | undefined>();
+  const [entradaEnd, setEntradaEnd] = useState<Date | undefined>();
+  // Date range pickers for data_agendamento
+  const [agendStart, setAgendStart] = useState<Date | undefined>();
+  const [agendEnd, setAgendEnd] = useState<Date | undefined>();
+
   const filtered = useMemo(() => {
     let result = leads;
     if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
@@ -41,10 +53,36 @@ export const FichasPanel = () => {
       const q = search.toLowerCase();
       result = result.filter((l) => l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (l.numero_os && l.numero_os.toLowerCase().includes(q)));
     }
-    const { from } = getDateRangeForPeriod(period);
-    if (from) result = result.filter((l) => l.data_entrada >= from);
+
+    // If date range pickers are used, they override the period filter
+    const hasDateRangeFilter = entradaStart || entradaEnd || agendStart || agendEnd;
+
+    if (!hasDateRangeFilter) {
+      const { from } = getDateRangeForPeriod(period);
+      if (from) result = result.filter((l) => l.data_entrada >= from);
+    }
+
+    // Data de Entrada range
+    if (entradaStart) {
+      const s = format(entradaStart, "yyyy-MM-dd");
+      result = result.filter((l) => l.data_entrada >= s);
+    }
+    if (entradaEnd) {
+      const e = format(entradaEnd, "yyyy-MM-dd");
+      result = result.filter((l) => l.data_entrada <= e);
+    }
+    // Data de Agendamento range
+    if (agendStart) {
+      const s = format(agendStart, "yyyy-MM-dd");
+      result = result.filter((l) => l.data_agendamento && l.data_agendamento >= s);
+    }
+    if (agendEnd) {
+      const e = format(agendEnd, "yyyy-MM-dd");
+      result = result.filter((l) => l.data_agendamento && l.data_agendamento <= e);
+    }
+
     return result;
-  }, [leads, unidadeFilter, agenteFilter, etapaFilter, search, period]);
+  }, [leads, unidadeFilter, agenteFilter, etapaFilter, search, period, entradaStart, entradaEnd, agendStart, agendEnd]);
 
   const pagination = usePagination(filtered, { pageSize: 20 });
 
@@ -62,6 +100,29 @@ export const FichasPanel = () => {
     }
   };
 
+  const hasDateRangeFilter = entradaStart || entradaEnd || agendStart || agendEnd;
+
+  const clearDateFilters = () => {
+    setEntradaStart(undefined);
+    setEntradaEnd(undefined);
+    setAgendStart(undefined);
+    setAgendEnd(undefined);
+  };
+
+  const DatePickerButton = ({ label, date, onSelect }: { label: string; date?: Date; onSelect: (d: Date | undefined) => void }) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs h-8", date && "border-primary text-primary")}>
+          <CalendarIcon className="h-3 w-3" />
+          {date ? format(date, "dd/MM/yy") : label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar mode="single" selected={date} onSelect={onSelect} locale={ptBR} className="p-3 pointer-events-auto" />
+      </PopoverContent>
+    </Popover>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -69,7 +130,7 @@ export const FichasPanel = () => {
           <h1 className="text-2xl font-bold">Fichas dos Clientes</h1>
           <p className="text-muted-foreground text-sm">Visão completa — {filtered.length} fichas</p>
         </div>
-        <PeriodFilter value={period} onChange={setPeriod} />
+        {!hasDateRangeFilter && <PeriodFilter value={period} onChange={setPeriod} />}
       </div>
 
       {/* Filters */}
@@ -99,6 +160,19 @@ export const FichasPanel = () => {
             {ETAPAS_FUNIL.map((e) => <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Date range pickers */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground font-medium">Entrada:</span>
+        <DatePickerButton label="De" date={entradaStart} onSelect={setEntradaStart} />
+        <DatePickerButton label="Até" date={entradaEnd} onSelect={setEntradaEnd} />
+        <span className="text-xs text-muted-foreground font-medium ml-2">Agendamento:</span>
+        <DatePickerButton label="De" date={agendStart} onSelect={setAgendStart} />
+        <DatePickerButton label="Até" date={agendEnd} onSelect={setAgendEnd} />
+        {hasDateRangeFilter && (
+          <Button variant="ghost" size="sm" className="text-xs h-8" onClick={clearDateFilters}>Limpar datas</Button>
+        )}
       </div>
 
       {/* Table */}

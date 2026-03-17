@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { formatDateBR } from "@/lib/leadUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +32,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
 };
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, addEvento, unidades, profiles } = useLeads();
+  const { updateLead, addEvento, unidades, profiles, eventos } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -41,6 +41,9 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
   const [disqualifyOutraCidade, setDisqualifyOutraCidade] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
+  const [lossOpen, setLossOpen] = useState(false);
+  const [lossMotivo, setLossMotivo] = useState("");
+  const markingLossRef = useRef(false);
 
   const [editNome, setEditNome] = useState("");
   const [editTelefone, setEditTelefone] = useState("");
@@ -73,8 +76,32 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEventDate("");
     setEventDescricao("");
     setStatusChangeOpen(false);
+    setLossOpen(false);
+    setLossMotivo("");
     creatingEventRef.current = false;
+    markingLossRef.current = false;
   }, [lead?.id]);
+
+  // Build timeline from eventos + notas
+  const timeline = useMemo(() => {
+    if (!lead) return [];
+    const entries: { date: string; label: string; text: string }[] = [];
+
+    // Add concluded evento descriptions to timeline
+    const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
+    leadEventos.forEach((ev) => {
+      if (ev.concluido && ev.descricao_conclusao) {
+        const typeLabel = ev.tipo === "lembrete" ? "Lembrete" : `Follow-up ${ev.numero}`;
+        entries.push({
+          date: ev.data_conclusao ? new Date(ev.data_conclusao).toLocaleDateString("pt-BR") : "",
+          label: `${typeLabel} Concluído`,
+          text: ev.descricao_conclusao,
+        });
+      }
+    });
+
+    return entries;
+  }, [lead, eventos]);
 
   if (!lead) return null;
 
@@ -147,6 +174,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const canEditSchedule = isAgendado || isDispensado || isPerdido || isDesqAgendado;
   const canDisqualify = ["novo", "agendado", "reagendado"].includes(lead.etapa);
   const canChangeStatus = !!STATUS_TRANSITIONS[lead.etapa];
+  const canMarkLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
 
   const getDisqualifyStatus = () => {
     if (lead.etapa === "novo") return "desqualificado_novo";
@@ -181,6 +209,19 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setStatusChangeOpen(false);
   };
 
+  const handleMarkLoss = async () => {
+    if (!lossMotivo.trim() || markingLossRef.current) return;
+    markingLossRef.current = true;
+    try {
+      const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
+      await updateLead(lead.id, { etapa: "perdido", notas });
+      setLossOpen(false);
+      setLossMotivo("");
+    } finally {
+      markingLossRef.current = false;
+    }
+  };
+
   const handleAddNota = async () => {
     if (!newNota.trim()) return;
     const userName = currentUser?.nome || "Sistema";
@@ -193,7 +234,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (!eventDate || !eventDescricao.trim() || creatingEventRef.current) return;
     creatingEventRef.current = true;
     try {
-      // Also append to lead notes
       const notas = appendNota(lead.notas, "Evento Criado", eventDescricao.trim());
       await Promise.all([
         addEvento({
@@ -241,6 +281,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={startEdit} title="Editar ficha">
                     <Pencil className="h-4 w-4" />
                   </Button>
+                  {canMarkLoss && (
+                    <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Marcar como Perda">
+                      <Skull className="h-4 w-4" />
+                    </Button>
+                  )}
                   {canDisqualify && (
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDisqualifyOpen(true)} title="Desqualificar">
                       <Ban className="h-4 w-4" />
@@ -403,12 +448,26 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </div>
                 )}
 
-                {/* Notas section */}
+                {/* Notas + Timeline section */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-semibold">Notas</Label>
+                    <Label className="text-sm font-semibold">Notas & Histórico</Label>
                   </div>
+
+                  {/* Timeline from eventos */}
+                  {timeline.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {timeline.map((entry, i) => (
+                        <div key={i} className="text-xs bg-primary/5 rounded-md p-2 border border-primary/10">
+                          <span className="font-medium text-primary">{entry.label}</span>
+                          {entry.date && <span className="text-muted-foreground ml-1">({entry.date})</span>}
+                          <p className="text-foreground/80 mt-0.5">{entry.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {lead.notas && (
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-md p-3 max-h-40 overflow-y-auto font-sans">
                       {lead.notas}
@@ -509,6 +568,39 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
             <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Loss modal */}
+      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Skull className="h-5 w-5 text-destructive" /> Marcar como Perda
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              O lead <strong>{lead?.nome}</strong> será marcado como "Perdido".
+            </p>
+            <div>
+              <Label>Motivo da perda</Label>
+              <Textarea
+                value={lossMotivo}
+                onChange={(e) => setLossMotivo(e.target.value)}
+                placeholder="Ex: Fez serviço em concorrente, desistiu..."
+                rows={3}
+                className="mt-1"
+                onKeyDown={(e) => handleKeyDown(e, handleMarkLoss, !lossMotivo.trim())}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
+              <Skull className="h-4 w-4" /> Confirmar Perda
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

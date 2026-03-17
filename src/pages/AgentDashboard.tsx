@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin, Trophy, Award, Star } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
@@ -24,6 +25,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
@@ -50,9 +52,10 @@ export const AgentDashboard = () => {
 
   const today = getToday();
 
+  const allMyLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser.id), [leads, currentUser.id]);
+
   const myLeads = useMemo(() => {
-    return leads
-      .filter((l) => l.id_agente === currentUser.id)
+    return allMyLeads
       .filter((l) => etapaFilter === "todos" || l.etapa === etapaFilter)
       .filter((l) => !search || l.nome.toLowerCase().includes(search.toLowerCase()) || l.telefone.includes(search))
       .filter((l) => {
@@ -67,18 +70,17 @@ export const AgentDashboard = () => {
         end.setHours(23, 59, 59);
         return d <= end;
       });
-  }, [leads, currentUser.id, etapaFilter, search, dateStart, dateEnd]);
+  }, [allMyLeads, etapaFilter, search, dateStart, dateEnd]);
 
   const pagination = usePagination(myLeads, { pageSize: 15 });
 
   const etapaCounts = useMemo(() => {
-    const mine = leads.filter((l) => l.id_agente === currentUser.id);
-    const counts: Record<string, number> = { todos: mine.length };
+    const counts: Record<string, number> = { todos: allMyLeads.length };
     ETAPAS_FUNIL.forEach((e) => {
-      counts[e.id] = mine.filter((l) => l.etapa === e.id).length;
+      counts[e.id] = allMyLeads.filter((l) => l.etapa === e.id).length;
     });
     return counts;
-  }, [leads, currentUser.id]);
+  }, [allMyLeads]);
 
   const handleMoveEtapa = async (lead: Lead, novaEtapa: string) => {
     if (novaEtapa === "agendado") {
@@ -93,15 +95,61 @@ export const AgentDashboard = () => {
 
   // Daily stats for "Meu Dia"
   const dailyStats = useMemo(() => {
-    const allMine = leads.filter((l) => l.id_agente === currentUser.id);
-    const todayLeads = allMine.filter((l) => l.data_entrada === today);
-    const todayAgendados = allMine.filter((l) => l.data_agendamento === today);
+    const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
+    const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
     const carrosHoje = todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
-    const pendingEvents = eventos.filter((e) => !e.concluido && e.data_prevista <= today && allMine.some((l) => l.id === e.id_lead)).length;
-    return { novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje, concluidos: concluidosHoje, dispensados: dispensadosHoje, eventosPendentes: pendingEvents };
-  }, [leads, eventos, currentUser.id, today]);
+    const pendingEvents = eventos.filter((e) => !e.concluido && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead)).length;
+    const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
+    return {
+      novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje,
+      concluidos: concluidosHoje, dispensados: dispensadosHoje, eventosPendentes: pendingEvents,
+      fupsDoneToday,
+    };
+  }, [allMyLeads, eventos, today]);
+
+  // Gamification: conversion chart data
+  const conversionChart = useMemo(() => {
+    const totalLeads = allMyLeads.length;
+    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
+    const naLoja = allMyLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const concluidos = allMyLeads.filter((l) => l.etapa === "concluido").length;
+    return [
+      { name: "Recebidos", value: totalLeads },
+      { name: "Agendados", value: agendados },
+      { name: "Na Loja", value: naLoja },
+      { name: "Concluídos", value: concluidos },
+    ];
+  }, [allMyLeads]);
+
+  const conversionRate = useMemo(() => {
+    const total = allMyLeads.length;
+    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
+    return total > 0 ? Math.round((agendados / total) * 100) : 0;
+  }, [allMyLeads]);
+
+  // Store meta progress
+  const storeMetaProgress = useMemo(() => {
+    if (!currentUser.unidade_padrao) return null;
+    const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
+    const carrosNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    // We don't have metas_unidades loaded here easily, so just show progress as count
+    return { carros: carrosNaLoja, total: storeLeads.length };
+  }, [leads, currentUser.unidade_padrao]);
+
+  // Top 3 agents ranking by conversion
+  const top3Ranking = useMemo(() => {
+    const agentes = profiles.filter((p) => p.cargo === "agente");
+    return agentes.map((ag) => {
+      const agLeads = leads.filter((l) => l.id_agente === ag.id);
+      const total = agLeads.length;
+      const agendados = agLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
+      const rate = total > 0 ? Math.round((agendados / total) * 100) : 0;
+      const concluidos = agLeads.filter((l) => l.etapa === "concluido").length;
+      return { id: ag.id, nome: ag.nome, rate, total, agendados, concluidos };
+    }).sort((a, b) => b.rate - a.rate).slice(0, 3);
+  }, [leads, profiles]);
 
   // Store stats for "Minha Loja"
   const storeStats = useMemo(() => {
@@ -109,18 +157,28 @@ export const AgentDashboard = () => {
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
     const storeName = unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || "—";
     const todayAgendados = storeLeads.filter((l) => l.data_agendamento === today);
+    const passaramNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const concluidos = storeLeads.filter((l) => l.etapa === "concluido").length;
+    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
     return {
       nome: storeName,
       totalLeads: storeLeads.length,
       agendados: storeLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
       confirmados: storeLeads.filter((l) => l.etapa === "confirmado").length,
       naLoja: storeLeads.filter((l) => l.etapa === "na_loja").length,
-      concluidos: storeLeads.filter((l) => l.etapa === "concluido").length,
+      concluidos,
       dispensados: storeLeads.filter((l) => l.etapa === "dispensado").length,
+      perdidos: storeLeads.filter((l) => l.etapa === "perdido").length,
+      passaramNaLoja,
+      txConversao,
       agendadosHoje: todayAgendados.length,
       confirmadosHoje: todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length,
     };
   }, [leads, unidades, currentUser.unidade_padrao, today]);
+
+  const chartColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
+  const podiumIcons = [Trophy, Award, Star];
+  const podiumColors = ["text-warning", "text-muted-foreground", "text-warning/70"];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -172,7 +230,7 @@ export const AgentDashboard = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent mode="single" selected={dateStart} onSelect={setDateStart} locale={ptBR} />
+                  <CalendarComponent mode="single" selected={dateStart} onSelect={setDateStart} locale={ptBR} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
               <Popover>
@@ -183,7 +241,7 @@ export const AgentDashboard = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent mode="single" selected={dateEnd} onSelect={setDateEnd} locale={ptBR} />
+                  <CalendarComponent mode="single" selected={dateEnd} onSelect={setDateEnd} locale={ptBR} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
             </div>
@@ -254,21 +312,109 @@ export const AgentDashboard = () => {
               <h1 className="text-2xl font-bold">Meu Dia</h1>
               <p className="text-muted-foreground text-sm">Resumo do seu desempenho hoje</p>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard title="Novos Leads Hoje" value={dailyStats.novos} icon={Users} variant="info" />
               <StatsCard title="Agendados Hoje" value={dailyStats.agendados} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Foram na Loja" value={dailyStats.carros} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Dispensados" value={dailyStats.dispensados} icon={XCircle} variant="destructive" />
+              <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
 
-            {/* Quick status overview */}
+            {/* Conversion chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold mb-2">Aproveitamento Pessoal</h2>
+                <p className="text-xs text-muted-foreground mb-4">Leads Recebidos vs Agendados — Taxa: <span className="text-primary font-bold">{conversionRate}%</span></p>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={conversionChart}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                        {conversionChart.map((_, i) => <Cell key={i} fill={chartColors[i]} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Conquistas */}
+              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                <h2 className="text-lg font-semibold">Conquistas</h2>
+
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">FUPs Concluídos Hoje</span>
+                    <Badge variant={dailyStats.fupsDoneToday > 0 ? "default" : "secondary"} className="text-xs">
+                      {dailyStats.fupsDoneToday}
+                    </Badge>
+                  </div>
+                  {dailyStats.fupsDoneToday >= 5 && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Trophy className="h-4 w-4 text-warning" />
+                      <span className="text-xs text-warning font-medium">🔥 Excelente! +5 FUPs hoje!</span>
+                    </div>
+                  )}
+                </div>
+
+                {storeMetaProgress && (
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Carros na Loja</span>
+                      <span className="text-sm font-bold text-warning">{storeMetaProgress.carros}</span>
+                    </div>
+                    <Progress value={storeMetaProgress.total > 0 ? (storeMetaProgress.carros / storeMetaProgress.total) * 100 : 0} className="h-2" />
+                    <p className="text-xs text-muted-foreground mt-1">{storeMetaProgress.total > 0 ? Math.round((storeMetaProgress.carros / storeMetaProgress.total) * 100) : 0}% dos leads foram à loja</p>
+                  </div>
+                )}
+
+                {conversionRate >= 70 && (
+                  <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/20 p-3">
+                    <Award className="h-5 w-5 text-success" />
+                    <div>
+                      <p className="text-sm font-semibold text-success">Meta Batida! 🏆</p>
+                      <p className="text-xs text-success/80">Taxa de conversão acima de 70%</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top 3 Ranking */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-warning" /> Ranking Top 3 — Conversão
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {top3Ranking.map((ag, idx) => {
+                  const Icon = podiumIcons[idx] || Star;
+                  const isMe = ag.id === currentUser.id;
+                  return (
+                    <div key={ag.id} className={`rounded-xl border p-4 text-center space-y-2 ${isMe ? "border-primary bg-primary/5" : "border-border"}`}>
+                      <Icon className={`h-8 w-8 mx-auto ${podiumColors[idx]}`} />
+                      <p className="text-xl font-bold">{idx + 1}º</p>
+                      <p className={`font-semibold text-sm ${isMe ? "text-primary" : ""}`}>{ag.nome}{isMe ? " (Você)" : ""}</p>
+                      <p className="text-2xl font-bold text-primary">{ag.rate}%</p>
+                      <p className="text-xs text-muted-foreground">{ag.agendados}/{ag.total} agendados · {ag.concluidos} concluídos</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Minha Carteira */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 {ETAPAS_FUNIL.slice(0, 6).map((et) => {
-                  const count = leads.filter((l) => l.id_agente === currentUser.id && l.etapa === et.id).length;
+                  const count = allMyLeads.filter((l) => l.etapa === et.id).length;
                   return (
                     <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-2xl font-bold">{count}</p>
@@ -293,9 +439,15 @@ export const AgentDashboard = () => {
               <>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatsCard title="Total de Leads" value={storeStats.totalLeads} icon={Users} variant="info" />
-                  <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
+                  <StatsCard title="Passaram na Loja" value={storeStats.passaramNaLoja} icon={Car} variant="warning" />
                   <StatsCard title="Concluídos" value={storeStats.concluidos} icon={CheckCircle2} variant="success" />
+                  <StatsCard title="Taxa Conversão" value={`${storeStats.txConversao}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja → Concluído" />
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
                   <StatsCard title="Dispensados" value={storeStats.dispensados} icon={XCircle} variant="destructive" />
+                  <StatsCard title="Perdidos" value={storeStats.perdidos} icon={XCircle} variant="destructive" />
+                  <StatsCard title="Agendados Hoje" value={storeStats.agendadosHoje} icon={CalendarDays} variant="info" />
                 </div>
                 <div className="rounded-xl border border-border bg-card p-5">
                   <h2 className="text-lg font-semibold mb-4">Hoje na {storeStats.nome}</h2>
@@ -341,13 +493,13 @@ export const AgentDashboard = () => {
             )}
           </div>
         )}
-      </main>
 
-      <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} />
-      {scheduleLead && (
-        <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={scheduleLead.id} leadNome={scheduleLead.nome} />
-      )}
-      <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+        <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} />
+        {scheduleLead && (
+          <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={scheduleLead.id} leadNome={scheduleLead.nome} />
+        )}
+        <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+      </main>
     </div>
   );
 };
