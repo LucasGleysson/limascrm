@@ -2,9 +2,8 @@ import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, Wrench, MapPin } from "lucide-react";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja, formatDateBR } from "@/lib/leadUtils";
+import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle } from "lucide-react";
+import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -16,51 +15,65 @@ export const DailyReportPanel = () => {
 
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
-  const dayLeads = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
-
-  const globalStats = useMemo(() => ({
-    total: dayLeads.length,
-    agendados: dayLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-    confirmados: dayLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
-    dispensados: dayLeads.filter((l) => l.etapa === "dispensado").length,
-    concluidos: dayLeads.filter((l) => l.etapa === "concluido").length,
-    perdidosAntes: dayLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
-  }), [dayLeads]);
-
-  // Leads com agendamento para este dia (independente de data_entrada)
+  // ALL leads created on this date (regardless of current status)
+  const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
+  // All leads scheduled for this date
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
+
+  const globalStats = useMemo(() => {
+    // Leads linked to a unit (for unit-based reports use all leads)
+    const allLeads = leads;
+    return {
+      totalRegistros: createdToday.length, // Total NEW registrations today (regardless of current status)
+      totalLeads: allLeads.length,
+      naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+      agendados: createdToday.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
+      passaramNaLoja: createdToday.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length,
+      dispensados: createdToday.filter((l) => l.etapa === "dispensado").length,
+      concluidos: createdToday.filter((l) => l.etapa === "concluido").length,
+      perdidos: createdToday.filter((l) => l.etapa === "perdido").length,
+      perdidosAntes: createdToday.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
+    };
+  }, [createdToday, leads]);
 
   const unitStats = useMemo(() => {
     return unidades.map((u) => {
-      const uLeads = dayLeads.filter((l) => l.id_unidade === u.id);
-      const agendados = agendadosNoDia.filter((l) => l.id_unidade === u.id);
+      const uCreated = createdToday.filter((l) => l.id_unidade === u.id);
+      const uAgendados = agendadosNoDia.filter((l) => l.id_unidade === u.id);
+      const passaramNaLoja = uCreated.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length;
       return {
         ...u,
-        novos: uLeads.length,
-        agendados: agendados.length,
-        confirmados: agendados.filter((l) => isCarroDoAgente(l.etapa)).length,
-        dispensados: agendados.filter((l) => l.etapa === "dispensado").length,
-        concluidos: agendados.filter((l) => l.etapa === "concluido").length,
+        totalRegistros: uCreated.length,
+        naoAgendados: uCreated.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+        agendados: uAgendados.length,
+        passaramNaLoja,
+        dispensados: uCreated.filter((l) => l.etapa === "dispensado").length,
+        concluidos: uCreated.filter((l) => l.etapa === "concluido").length,
+        perdidos: uCreated.filter((l) => l.etapa === "perdido").length,
+        txConversao: passaramNaLoja > 0 ? Math.round((uCreated.filter((l) => l.etapa === "concluido").length / passaramNaLoja) * 100) : 0,
       };
-    }).filter((u) => u.novos > 0 || u.agendados > 0);
-  }, [dayLeads, agendadosNoDia, unidades]);
+    }).filter((u) => u.totalRegistros > 0 || u.agendados > 0);
+  }, [createdToday, agendadosNoDia, unidades]);
 
   const agentStats = useMemo(() => {
     return agentes.map((a) => {
-      const aLeads = dayLeads.filter((l) => l.id_agente === a.id);
+      const aCreated = createdToday.filter((l) => l.id_agente === a.id);
       const aAgendados = agendadosNoDia.filter((l) => l.id_agente === a.id);
       const unidade = unidades.find((u) => u.id === a.unidade_padrao);
+      const passaramNaLoja = aCreated.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length;
       return {
         ...a,
         unidadeNome: unidade?.nome || "—",
-        novos: aLeads.length,
+        totalRegistros: aCreated.length,
+        naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
         agendados: aAgendados.length,
-        confirmados: aAgendados.filter((l) => isCarroDoAgente(l.etapa)).length,
-        dispensados: aAgendados.filter((l) => l.etapa === "dispensado").length,
-        concluidos: aAgendados.filter((l) => l.etapa === "concluido").length,
+        passaramNaLoja,
+        dispensados: aCreated.filter((l) => l.etapa === "dispensado").length,
+        concluidos: aCreated.filter((l) => l.etapa === "concluido").length,
+        perdidos: aCreated.filter((l) => l.etapa === "perdido").length,
       };
-    }).filter((a) => a.novos > 0 || a.agendados > 0);
-  }, [dayLeads, agendadosNoDia, agentes, unidades]);
+    }).filter((a) => a.totalRegistros > 0 || a.agendados > 0);
+  }, [createdToday, agendadosNoDia, agentes, unidades]);
 
   const prevDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); };
   const nextDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); };
@@ -86,12 +99,16 @@ export const DailyReportPanel = () => {
       </div>
 
       {/* Global stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <StatsCard title="Novos Leads" value={globalStats.total} icon={Users} variant="info" />
-        <StatsCard title="Agendamentos" value={agendadosNoDia.length} icon={CalendarCheck} variant="primary" />
-        <StatsCard title="Confirmados" value={globalStats.confirmados} icon={Car} variant="warning" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard title="Registros Novos" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
+        <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
+        <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
+        <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
-        <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+        <StatsCard title="Serviço Concluído" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+        <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
         <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
       </div>
 
@@ -108,22 +125,28 @@ export const DailyReportPanel = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NOVOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONFIRMADOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">DISPENSADOS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
                 </tr>
               </thead>
               <tbody>
                 {unitStats.map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{u.nome}</td>
-                    <td className="py-3 text-center">{u.novos}</td>
+                    <td className="py-3 text-center">{u.totalRegistros}</td>
+                    <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{u.agendados}</td>
-                    <td className="py-3 text-center text-warning">{u.confirmados}</td>
+                    <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                     <td className="py-3 text-center text-destructive">{u.dispensados}</td>
                     <td className="py-3 text-center text-success">{u.concluidos}</td>
+                    <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                    <td className="py-3 text-center font-medium">{u.txConversao}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -146,11 +169,13 @@ export const DailyReportPanel = () => {
                 <tr className="border-b border-border">
                   <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                   <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NOVOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONFIRMADOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">DISPENSADOS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,11 +183,13 @@ export const DailyReportPanel = () => {
                   <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{a.nome}</td>
                     <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
-                    <td className="py-3 text-center">{a.novos}</td>
+                    <td className="py-3 text-center">{a.totalRegistros}</td>
+                    <td className="py-3 text-center text-warning">{a.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{a.agendados}</td>
-                    <td className="py-3 text-center text-warning">{a.confirmados}</td>
+                    <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
                     <td className="py-3 text-center text-destructive">{a.dispensados}</td>
                     <td className="py-3 text-center text-success">{a.concluidos}</td>
+                    <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                   </tr>
                 ))}
               </tbody>

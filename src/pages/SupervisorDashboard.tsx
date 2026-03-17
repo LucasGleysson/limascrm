@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
-  RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye,
+  RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
@@ -25,7 +25,7 @@ const SIDEBAR_TABS = [
   { id: "fichas", label: "Fichas", icon: FileText },
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
-  { id: "dispensa_relatorio", label: "Relatório de dispensa", icon: XCircle },
+  { id: "dispensa_relatorio", label: "Rel. Dispensa", icon: XCircle },
   { id: "metas", label: "Metas", icon: Target },
 ];
 
@@ -56,15 +56,14 @@ export const SupervisorDashboard = () => {
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
-      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const passaramNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
-      const confirmados = aLeads.filter((l) => l.etapa === "confirmado").length;
       const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
-      const naLoja = aLeads.filter((l) => l.etapa === "na_loja").length;
+      const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
+      const naoAgendados = aLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-      const perdidosDepois = aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
-      const taxaConversao = aLeads.length > 0 ? Math.round((carrosNaLoja / aLeads.length) * 100) : 0;
+      const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
 
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
@@ -74,8 +73,8 @@ export const SupervisorDashboard = () => {
 
       return {
         ...agente, unidadeNome: unidade?.nome || "—",
-        total: aLeads.length, carrosNaLoja, concluidos, agendados, confirmados,
-        dispensados, naLoja, perdidosAntes, perdidosDepois, taxaConversao,
+        total: aLeads.length, passaramNaLoja, concluidos, agendados,
+        dispensados, perdidos, naoAgendados, perdidosAntes, txConversao,
         fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
@@ -84,29 +83,34 @@ export const SupervisorDashboard = () => {
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
-      const carrosNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const passaramNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
+      const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
       return {
-        ...u, total: uLeads.length, carrosNaLoja,
+        ...u, total: uLeads.length, passaramNaLoja,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-        confirmados: uLeads.filter((l) => l.etapa === "confirmado").length,
-        concluidos: uLeads.filter((l) => l.etapa === "concluido").length,
+        concluidos,
         dispensados: uLeads.filter((l) => l.etapa === "dispensado").length,
-        naLoja: uLeads.filter((l) => l.etapa === "na_loja").length,
+        perdidos: uLeads.filter((l) => l.etapa === "perdido").length,
+        naoAgendados: uLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
         perdidosAntes: uLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
-        perdidosDepois: uLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length,
+        txConversao,
       };
     });
   }, [filteredLeads, unidades]);
 
   const globalStats = useMemo(() => {
-    const carrosNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const passaramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+    const naoAgendados = filteredLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
+    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-    const perdidosDepois = filteredLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
+    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
     return {
-      totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, perdidosAntes, perdidosDepois,
-      taxaConversao: filteredLeads.length > 0 ? Math.round((carrosNaLoja / filteredLeads.length) * 100) : 0,
+      totalLeads: filteredLeads.length, passaramNaLoja, concluidos, agendados,
+      naoAgendados, dispensados, perdidos, perdidosAntes, txConversao,
     };
   }, [filteredLeads]);
 
@@ -117,15 +121,15 @@ export const SupervisorDashboard = () => {
     return [
       { name: "Novos", value: selected.leads.filter((l) => l.etapa === "novo").length },
       { name: "Agendados", value: selected.agendados },
-      { name: "Confirmados", value: selected.confirmados },
-      { name: "Na Loja", value: selected.naLoja },
+      { name: "Na Loja", value: selected.passaramNaLoja },
       { name: "Concluídos", value: selected.concluidos },
       { name: "Dispensados", value: selected.dispensados },
+      { name: "Perdidos", value: selected.perdidos },
       { name: "Perdidos s/L", value: selected.perdidosAntes },
     ];
   }, [selected]);
 
-  const chartColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(190, 80%, 45%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)", "hsl(0, 72%, 51%)", "hsl(0, 50%, 65%)"];
+  const chartColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)", "hsl(0, 72%, 51%)", "hsl(0, 50%, 40%)", "hsl(0, 50%, 65%)"];
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -145,13 +149,18 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatsCard title="Total de Leads" value={globalStats.totalLeads} icon={Users} variant="info" />
+              <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
               <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Foram na Loja" value={globalStats.carrosNaLoja} icon={Car} variant="warning" />
+              <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
-              <StatsCard title="Conversão Loja" value={`${globalStats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
+              <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
             {/* Agent summary table */}
@@ -165,10 +174,11 @@ export const SupervisorDashboard = () => {
                       <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONFIRM.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ⏳</th>
                     </tr>
@@ -180,10 +190,11 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
                         <td className="py-3 text-center">{a.total}</td>
                         <td className="py-3 text-center text-primary">{a.agendados}</td>
-                        <td className="py-3 text-center text-warning">{a.confirmados}</td>
+                        <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
                         <td className="py-3 text-center text-success">{a.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{a.dispensados}</td>
-                        <td className="py-3 text-center font-medium">{a.taxaConversao}%</td>
+                        <td className="py-3 text-center text-destructive">{a.perdidos}</td>
+                        <td className="py-3 text-center font-medium">{a.txConversao}%</td>
                         <td className="py-3 text-center text-success">{a.fupConcluidos}</td>
                         <td className="py-3 text-center">
                           {a.fupPendentes > 0 ? (
@@ -208,12 +219,13 @@ export const SupervisorDashboard = () => {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 font-medium text-muted-foreground">LOJA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">N/AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONFIRM.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">PERD. c/L</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -221,12 +233,13 @@ export const SupervisorDashboard = () => {
                       <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
                         <td className="py-3 text-center">{u.total}</td>
+                        <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                         <td className="py-3 text-center text-primary">{u.agendados}</td>
-                        <td className="py-3 text-center text-warning">{u.confirmados}</td>
+                        <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                         <td className="py-3 text-center text-success">{u.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{u.dispensados}</td>
-                        <td className="py-3 text-center text-muted-foreground">{u.perdidosAntes}</td>
-                        <td className="py-3 text-center text-destructive">{u.perdidosDepois}</td>
+                        <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                        <td className="py-3 text-center font-medium">{u.txConversao}%</td>
                       </tr>
                     ))}
                   </tbody>
@@ -310,9 +323,10 @@ export const SupervisorDashboard = () => {
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
                       <span>{u.total} leads</span>
                       <span className="text-primary">{u.agendados} agend.</span>
-                      <span className="text-warning">{u.carrosNaLoja} na loja</span>
+                      <span className="text-warning">{u.passaramNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
                       <span className="text-destructive">{u.dispensados} disp.</span>
+                      <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
                   <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedUnidade === u.id ? "rotate-90" : ""}`} />
@@ -323,21 +337,19 @@ export const SupervisorDashboard = () => {
               const sel = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
               if (!sel) return null;
               const unitChartData = [
-                { name: "Novos", value: filteredLeads.filter((l) => l.id_unidade === sel.id && l.etapa === "novo").length },
+                { name: "N/Agend.", value: sel.naoAgendados },
                 { name: "Agendados", value: sel.agendados },
-                { name: "Confirmados", value: sel.confirmados },
-                { name: "Na Loja", value: sel.naLoja },
+                { name: "Na Loja", value: sel.passaramNaLoja },
                 { name: "Concluídos", value: sel.concluidos },
                 { name: "Dispensados", value: sel.dispensados },
-                { name: "Perd. s/L", value: sel.perdidosAntes },
-                { name: "Perd. c/L", value: sel.perdidosDepois },
+                { name: "Perdidos", value: sel.perdidos },
               ].filter((d) => d.value > 0);
               return (
                 <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{sel.nome}</h3>
+                  <h3 className="font-semibold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{sel.nome} — TX Conversão: {sel.txConversao}%</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.carrosNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Passaram na Loja</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
                   </div>
@@ -383,9 +395,9 @@ export const SupervisorDashboard = () => {
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
                       <span>{ag.total} leads</span>
                       <span className="text-primary">{ag.agendados} agend.</span>
-                      <span className="text-warning">{ag.carrosNaLoja} loja</span>
+                      <span className="text-warning">{ag.passaramNaLoja} loja</span>
                       <span className="text-success">{ag.concluidos} concl.</span>
-                      <span className="text-primary font-medium">{ag.taxaConversao}% conv.</span>
+                      <span className="font-medium">{ag.txConversao}% conv.</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 text-xs">
@@ -398,11 +410,11 @@ export const SupervisorDashboard = () => {
             </div>
             {selected && (
               <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                <h3 className="font-semibold">{selected.nome} — Detalhamento</h3>
+                <h3 className="font-semibold">{selected.nome} — TX Conversão: {selected.txConversao}%</h3>
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selected.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.agendados}</p><p className="text-xs text-muted-foreground">Agendados</p></div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.carrosNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selected.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
                 </div>
