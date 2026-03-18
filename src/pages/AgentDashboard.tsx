@@ -162,7 +162,7 @@ export const AgentDashboard = () => {
     };
   }, [leads, unidades, currentUser.unidade_padrao, today]);
 
-  const chartColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
+  
 
   return (
     <div className="flex min-h-screen bg-background">
