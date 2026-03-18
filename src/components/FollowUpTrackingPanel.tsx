@@ -17,6 +17,7 @@ export const FollowUpTrackingPanel = () => {
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
   const [agenteFilter, setAgenteFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
