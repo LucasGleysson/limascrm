@@ -1,12 +1,15 @@
 import { Fragment, useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
+import { TablePagination } from "@/components/TablePagination";
 import { Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass } from "@/lib/leadUtils";
+import { usePagination } from "@/hooks/usePagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag } from "lucide-react";
+import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const FollowUpTrackingPanel = () => {
@@ -14,6 +17,7 @@ export const FollowUpTrackingPanel = () => {
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
   const [agenteFilter, setAgenteFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
@@ -121,7 +125,7 @@ export const FollowUpTrackingPanel = () => {
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
   const getUnitName = (id?: string | null) => (id ? unidades.find((u) => u.id === id)?.nome || "—" : "—");
 
-  // Filtered leads list
+  // Filtered leads list with search
   const filteredLeadsList = useMemo(() => {
     let agentData = agentFupBreakdown;
     if (agenteFilter !== "todos") agentData = agentData.filter((a) => a.id === agenteFilter);
@@ -133,8 +137,17 @@ export const FollowUpTrackingPanel = () => {
       else allLeadsList.push(...ag.leadsWithFup);
     }
     const seen = new Set<string>();
-    return allLeadsList.filter((l) => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
-  }, [agentFupBreakdown, agenteFilter, statusFilter]);
+    const unique = allLeadsList.filter((l) => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      return unique.filter((l) => l.nome.toLowerCase().includes(q) || l.telefone.includes(q));
+    }
+    return unique;
+  }, [agentFupBreakdown, agenteFilter, statusFilter, searchQuery]);
+
+  const pagination = usePagination(filteredLeadsList, { pageSize: 20 });
 
   const renderLeadCard = (lead: Lead) => {
     const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
@@ -420,8 +433,17 @@ export const FollowUpTrackingPanel = () => {
         </div>
       </div>
 
-      {/* Filters + Fichas list */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Filters + Search + Fichas list */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou telefone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={agenteFilter} onValueChange={setAgenteFilter}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -441,11 +463,23 @@ export const FollowUpTrackingPanel = () => {
       </div>
 
       <div className="space-y-2">
-        {filteredLeadsList.map(renderLeadCard)}
+        {pagination.paginatedItems.map(renderLeadCard)}
         {filteredLeadsList.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum processo de follow-up encontrado.</p>
         )}
       </div>
+
+      {filteredLeadsList.length > 20 && (
+        <TablePagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.goToPage}
+          hasNextPage={pagination.hasNextPage}
+          hasPrevPage={pagination.hasPrevPage}
+        />
+      )}
 
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>

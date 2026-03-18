@@ -50,6 +50,7 @@ export interface Lead {
   fup_concluido_em?: string | null;
   fup_concluido_numero?: number | null;
   fup_motivo_conclusao?: string | null;
+  created_at?: string;
 }
 
 export interface Evento {

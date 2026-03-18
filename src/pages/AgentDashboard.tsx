@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin, Trophy, Award, Star } from "lucide-react";
+import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin, Trophy, Award } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
@@ -25,7 +25,6 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
@@ -109,47 +108,34 @@ export const AgentDashboard = () => {
     };
   }, [allMyLeads, eventos, today]);
 
-  // Gamification: conversion chart data
-  const conversionChart = useMemo(() => {
-    const totalLeads = allMyLeads.length;
-    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-    const naLoja = allMyLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-    const concluidos = allMyLeads.filter((l) => l.etapa === "concluido").length;
-    return [
-      { name: "Recebidos", value: totalLeads },
-      { name: "Agendados", value: agendados },
-      { name: "Na Loja", value: naLoja },
-      { name: "Concluídos", value: concluidos },
-    ];
-  }, [allMyLeads]);
-
-  const conversionRate = useMemo(() => {
-    const total = allMyLeads.length;
-    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-    return total > 0 ? Math.round((agendados / total) * 100) : 0;
-  }, [allMyLeads]);
+  // "Safra de Hoje" — cohort metrics based on leads created TODAY (created_at)
+  const safraHoje = useMemo(() => {
+    const cohort = allMyLeads.filter((l) => {
+      // Use created_at for precise cohort (includes time), fallback to data_entrada
+      const createdDate = l.created_at ? l.created_at.slice(0, 10) : l.data_entrada;
+      return createdDate === today;
+    });
+    const total = cohort.length;
+    const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
+    return {
+      total,
+      agendados,
+      txAgendamento: total > 0 ? Math.round((agendados / total) * 100) : 0,
+      naLojaOuSuperior,
+      txVisita: total > 0 ? Math.round((naLojaOuSuperior / total) * 100) : 0,
+      concluidos,
+    };
+  }, [allMyLeads, today]);
 
   // Store meta progress
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
     const carrosNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-    // We don't have metas_unidades loaded here easily, so just show progress as count
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
-
-  // Top 3 agents ranking by conversion
-  const top3Ranking = useMemo(() => {
-    const agentes = profiles.filter((p) => p.cargo === "agente");
-    return agentes.map((ag) => {
-      const agLeads = leads.filter((l) => l.id_agente === ag.id);
-      const total = agLeads.length;
-      const agendados = agLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-      const rate = total > 0 ? Math.round((agendados / total) * 100) : 0;
-      const concluidos = agLeads.filter((l) => l.etapa === "concluido").length;
-      return { id: ag.id, nome: ag.nome, rate, total, agendados, concluidos };
-    }).sort((a, b) => b.rate - a.rate).slice(0, 3);
-  }, [leads, profiles]);
 
   // Store stats for "Minha Loja"
   const storeStats = useMemo(() => {
@@ -176,9 +162,7 @@ export const AgentDashboard = () => {
     };
   }, [leads, unidades, currentUser.unidade_padrao, today]);
 
-  const chartColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
-  const podiumIcons = [Trophy, Award, Star];
-  const podiumColors = ["text-warning", "text-muted-foreground", "text-warning/70"];
+  
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -325,30 +309,39 @@ export const AgentDashboard = () => {
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
 
-            {/* Conversion chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="text-lg font-semibold mb-2">Aproveitamento Pessoal</h2>
-                <p className="text-xs text-muted-foreground mb-4">Leads Recebidos vs Agendados — Taxa: <span className="text-primary font-bold">{conversionRate}%</span></p>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={conversionChart}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                        {conversionChart.map((_, i) => <Cell key={i} fill={chartColors[i]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+            {/* Safra de Hoje — Cohort metrics */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-1">🌱 Aproveitamento da Safra de Hoje</h2>
+              <p className="text-xs text-muted-foreground mb-4">Métricas baseadas nos leads que entraram para você hoje</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-lg bg-muted/50 p-4 text-center space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Safra de Hoje</p>
+                  <p className="text-3xl font-bold">{safraHoje.total}</p>
+                  <p className="text-xs text-muted-foreground">leads novos</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Conversão em Agendamento</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-primary">{safraHoje.txAgendamento}%</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.agendados}/{safraHoje.total}</span>
+                  </div>
+                  <Progress value={safraHoje.txAgendamento} className="h-2" />
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Conversão em Visita</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-warning">{safraHoje.txVisita}%</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.naLojaOuSuperior}/{safraHoje.total}</span>
+                  </div>
+                  <Progress value={safraHoje.txVisita} className="h-2" />
                 </div>
               </div>
+            </div>
 
-              {/* Conquistas */}
+            {/* Conquistas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <h2 className="text-lg font-semibold">Conquistas</h2>
-
                 <div className="rounded-lg bg-muted/50 p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">FUPs Concluídos Hoje</span>
@@ -363,7 +356,6 @@ export const AgentDashboard = () => {
                     </div>
                   )}
                 </div>
-
                 {storeMetaProgress && (
                   <div className="rounded-lg bg-muted/50 p-3">
                     <div className="flex items-center justify-between mb-2">
@@ -374,54 +366,31 @@ export const AgentDashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">{storeMetaProgress.total > 0 ? Math.round((storeMetaProgress.carros / storeMetaProgress.total) * 100) : 0}% dos leads foram à loja</p>
                   </div>
                 )}
-
-                {conversionRate >= 70 && (
+                {safraHoje.txAgendamento >= 70 && (
                   <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/20 p-3">
                     <Award className="h-5 w-5 text-success" />
                     <div>
                       <p className="text-sm font-semibold text-success">Meta Batida! 🏆</p>
-                      <p className="text-xs text-success/80">Taxa de conversão acima de 70%</p>
+                      <p className="text-xs text-success/80">Safra com +70% de agendamento</p>
                     </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Top 3 Ranking */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-warning" /> Ranking Top 3 — Conversão
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {top3Ranking.map((ag, idx) => {
-                  const Icon = podiumIcons[idx] || Star;
-                  const isMe = ag.id === currentUser.id;
-                  return (
-                    <div key={ag.id} className={`rounded-xl border p-4 text-center space-y-2 ${isMe ? "border-primary bg-primary/5" : "border-border"}`}>
-                      <Icon className={`h-8 w-8 mx-auto ${podiumColors[idx]}`} />
-                      <p className="text-xl font-bold">{idx + 1}º</p>
-                      <p className={`font-semibold text-sm ${isMe ? "text-primary" : ""}`}>{ag.nome}{isMe ? " (Você)" : ""}</p>
-                      <p className="text-2xl font-bold text-primary">{ag.rate}%</p>
-                      <p className="text-xs text-muted-foreground">{ag.agendados}/{ag.total} agendados · {ag.concluidos} concluídos</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Minha Carteira */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                {ETAPAS_FUNIL.slice(0, 6).map((et) => {
-                  const count = allMyLeads.filter((l) => l.etapa === et.id).length;
-                  return (
-                    <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold">{count}</p>
-                      <p className="text-xs text-muted-foreground">{et.label}</p>
-                    </div>
-                  );
-                })}
+              {/* Minha Carteira */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {ETAPAS_FUNIL.slice(0, 6).map((et) => {
+                    const count = allMyLeads.filter((l) => l.etapa === et.id).length;
+                    return (
+                      <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold">{count}</p>
+                        <p className="text-xs text-muted-foreground">{et.label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>

@@ -247,6 +247,57 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
 
+            {/* Safra do Dia — Aproveitamento dos leads de hoje por agente */}
+            {(() => {
+              const todayStr = new Date().toISOString().split("T")[0];
+              const safraAgentes = agentes.map((ag) => {
+                const cohort = filteredLeads.filter((l) => l.id_agente === ag.id && (l.created_at ? l.created_at.slice(0, 10) : l.data_entrada) === todayStr);
+                const total = cohort.length;
+                const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
+                const naLoja = cohort.filter((l) => isCarroDoAgente(l.etapa)).length;
+                const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
+                const unidade = unidades.find((u) => u.id === ag.unidade_padrao);
+                return { ...ag, unidadeNome: unidade?.nome || "—", total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
+              }).filter((a) => a.total > 0);
+
+              if (safraAgentes.length === 0) return null;
+              return (
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="text-lg font-semibold mb-4">🌱 Aproveitamento da Safra — Hoje</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                          <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">SAFRA</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">% AGEND.</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">% VISITA</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {safraAgentes.map((a) => (
+                          <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 font-medium">{a.nome}</td>
+                            <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
+                            <td className="py-3 text-center">{a.total}</td>
+                            <td className="py-3 text-center text-primary">{a.agendados}</td>
+                            <td className="py-3 text-center font-medium">{a.txAgend}%</td>
+                            <td className="py-3 text-center text-warning">{a.naLoja}</td>
+                            <td className="py-3 text-center font-medium">{a.txVisita}%</td>
+                            <td className="py-3 text-center text-success">{a.concluidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Desqualificados report */}
             {(() => {
               const desq = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa));
