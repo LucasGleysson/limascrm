@@ -310,30 +310,39 @@ export const AgentDashboard = () => {
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
 
-            {/* Conversion chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="text-lg font-semibold mb-2">Aproveitamento Pessoal</h2>
-                <p className="text-xs text-muted-foreground mb-4">Leads Recebidos vs Agendados — Taxa: <span className="text-primary font-bold">{conversionRate}%</span></p>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={conversionChart}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                        {conversionChart.map((_, i) => <Cell key={i} fill={chartColors[i]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+            {/* Safra de Hoje — Cohort metrics */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-1">🌱 Aproveitamento da Safra de Hoje</h2>
+              <p className="text-xs text-muted-foreground mb-4">Métricas baseadas nos leads que entraram para você hoje</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-lg bg-muted/50 p-4 text-center space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Safra de Hoje</p>
+                  <p className="text-3xl font-bold">{safraHoje.total}</p>
+                  <p className="text-xs text-muted-foreground">leads novos</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Conversão em Agendamento</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-primary">{safraHoje.txAgendamento}%</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.agendados}/{safraHoje.total}</span>
+                  </div>
+                  <Progress value={safraHoje.txAgendamento} className="h-2" />
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Conversão em Visita</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-warning">{safraHoje.txVisita}%</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.naLojaOuSuperior}/{safraHoje.total}</span>
+                  </div>
+                  <Progress value={safraHoje.txVisita} className="h-2" />
                 </div>
               </div>
+            </div>
 
-              {/* Conquistas */}
+            {/* Conquistas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <h2 className="text-lg font-semibold">Conquistas</h2>
-
                 <div className="rounded-lg bg-muted/50 p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium">FUPs Concluídos Hoje</span>
@@ -348,7 +357,6 @@ export const AgentDashboard = () => {
                     </div>
                   )}
                 </div>
-
                 {storeMetaProgress && (
                   <div className="rounded-lg bg-muted/50 p-3">
                     <div className="flex items-center justify-between mb-2">
@@ -359,58 +367,33 @@ export const AgentDashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">{storeMetaProgress.total > 0 ? Math.round((storeMetaProgress.carros / storeMetaProgress.total) * 100) : 0}% dos leads foram à loja</p>
                   </div>
                 )}
-
-                {conversionRate >= 70 && (
+                {safraHoje.txAgendamento >= 70 && (
                   <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/20 p-3">
                     <Award className="h-5 w-5 text-success" />
                     <div>
                       <p className="text-sm font-semibold text-success">Meta Batida! 🏆</p>
-                      <p className="text-xs text-success/80">Taxa de conversão acima de 70%</p>
+                      <p className="text-xs text-success/80">Safra com +70% de agendamento</p>
                     </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Top 3 Ranking */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-warning" /> Ranking Top 3 — Conversão
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {top3Ranking.map((ag, idx) => {
-                  const Icon = podiumIcons[idx] || Star;
-                  const isMe = ag.id === currentUser.id;
-                  return (
-                    <div key={ag.id} className={`rounded-xl border p-4 text-center space-y-2 ${isMe ? "border-primary bg-primary/5" : "border-border"}`}>
-                      <Icon className={`h-8 w-8 mx-auto ${podiumColors[idx]}`} />
-                      <p className="text-xl font-bold">{idx + 1}º</p>
-                      <p className={`font-semibold text-sm ${isMe ? "text-primary" : ""}`}>{ag.nome}{isMe ? " (Você)" : ""}</p>
-                      <p className="text-2xl font-bold text-primary">{ag.rate}%</p>
-                      <p className="text-xs text-muted-foreground">{ag.agendados}/{ag.total} agendados · {ag.concluidos} concluídos</p>
-                    </div>
-                  );
-                })}
+              {/* Minha Carteira */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {ETAPAS_FUNIL.slice(0, 6).map((et) => {
+                    const count = allMyLeads.filter((l) => l.etapa === et.id).length;
+                    return (
+                      <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold">{count}</p>
+                        <p className="text-xs text-muted-foreground">{et.label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-
-            {/* Minha Carteira */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                {ETAPAS_FUNIL.slice(0, 6).map((et) => {
-                  const count = allMyLeads.filter((l) => l.etapa === et.id).length;
-                  return (
-                    <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold">{count}</p>
-                      <p className="text-xs text-muted-foreground">{et.label}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
 
         {activeTab === "minha_loja" && (
           <div className="p-6 space-y-6">

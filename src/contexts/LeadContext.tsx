@@ -298,6 +298,7 @@ function mapLead(row: any): Lead {
     fup_concluido_em: row.fup_concluido_em,
     fup_concluido_numero: row.fup_concluido_numero,
     fup_motivo_conclusao: row.fup_motivo_conclusao,
+    created_at: row.created_at,
   };
 }
 
