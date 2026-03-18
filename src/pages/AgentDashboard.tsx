@@ -394,6 +394,8 @@ export const AgentDashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
         {activeTab === "minha_loja" && (
           <div className="p-6 space-y-6">
