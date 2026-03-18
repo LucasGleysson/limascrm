@@ -109,47 +109,34 @@ export const AgentDashboard = () => {
     };
   }, [allMyLeads, eventos, today]);
 
-  // Gamification: conversion chart data
-  const conversionChart = useMemo(() => {
-    const totalLeads = allMyLeads.length;
-    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-    const naLoja = allMyLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-    const concluidos = allMyLeads.filter((l) => l.etapa === "concluido").length;
-    return [
-      { name: "Recebidos", value: totalLeads },
-      { name: "Agendados", value: agendados },
-      { name: "Na Loja", value: naLoja },
-      { name: "Concluídos", value: concluidos },
-    ];
-  }, [allMyLeads]);
-
-  const conversionRate = useMemo(() => {
-    const total = allMyLeads.length;
-    const agendados = allMyLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-    return total > 0 ? Math.round((agendados / total) * 100) : 0;
-  }, [allMyLeads]);
+  // "Safra de Hoje" — cohort metrics based on leads created TODAY (created_at)
+  const safraHoje = useMemo(() => {
+    const cohort = allMyLeads.filter((l) => {
+      // Use created_at for precise cohort (includes time), fallback to data_entrada
+      const createdDate = l.created_at ? l.created_at.slice(0, 10) : l.data_entrada;
+      return createdDate === today;
+    });
+    const total = cohort.length;
+    const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
+    return {
+      total,
+      agendados,
+      txAgendamento: total > 0 ? Math.round((agendados / total) * 100) : 0,
+      naLojaOuSuperior,
+      txVisita: total > 0 ? Math.round((naLojaOuSuperior / total) * 100) : 0,
+      concluidos,
+    };
+  }, [allMyLeads, today]);
 
   // Store meta progress
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
     const carrosNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-    // We don't have metas_unidades loaded here easily, so just show progress as count
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
-
-  // Top 3 agents ranking by conversion
-  const top3Ranking = useMemo(() => {
-    const agentes = profiles.filter((p) => p.cargo === "agente");
-    return agentes.map((ag) => {
-      const agLeads = leads.filter((l) => l.id_agente === ag.id);
-      const total = agLeads.length;
-      const agendados = agLeads.filter((l) => !["novo", "desqualificado_novo"].includes(l.etapa)).length;
-      const rate = total > 0 ? Math.round((agendados / total) * 100) : 0;
-      const concluidos = agLeads.filter((l) => l.etapa === "concluido").length;
-      return { id: ag.id, nome: ag.nome, rate, total, agendados, concluidos };
-    }).sort((a, b) => b.rate - a.rate).slice(0, 3);
-  }, [leads, profiles]);
 
   // Store stats for "Minha Loja"
   const storeStats = useMemo(() => {
