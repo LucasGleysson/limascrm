@@ -125,7 +125,7 @@ export const FollowUpTrackingPanel = () => {
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
   const getUnitName = (id?: string | null) => (id ? unidades.find((u) => u.id === id)?.nome || "—" : "—");
 
-  // Filtered leads list
+  // Filtered leads list with search
   const filteredLeadsList = useMemo(() => {
     let agentData = agentFupBreakdown;
     if (agenteFilter !== "todos") agentData = agentData.filter((a) => a.id === agenteFilter);
@@ -137,8 +137,17 @@ export const FollowUpTrackingPanel = () => {
       else allLeadsList.push(...ag.leadsWithFup);
     }
     const seen = new Set<string>();
-    return allLeadsList.filter((l) => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
-  }, [agentFupBreakdown, agenteFilter, statusFilter]);
+    const unique = allLeadsList.filter((l) => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      return unique.filter((l) => l.nome.toLowerCase().includes(q) || l.telefone.includes(q));
+    }
+    return unique;
+  }, [agentFupBreakdown, agenteFilter, statusFilter, searchQuery]);
+
+  const pagination = usePagination(filteredLeadsList, { pageSize: 20 });
 
   const renderLeadCard = (lead: Lead) => {
     const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
