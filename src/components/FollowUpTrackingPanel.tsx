@@ -1,12 +1,15 @@
 import { Fragment, useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
+import { TablePagination } from "@/components/TablePagination";
 import { Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass } from "@/lib/leadUtils";
+import { usePagination } from "@/hooks/usePagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag } from "lucide-react";
+import { CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const FollowUpTrackingPanel = () => {
