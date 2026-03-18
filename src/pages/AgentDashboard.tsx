@@ -25,7 +25,6 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
