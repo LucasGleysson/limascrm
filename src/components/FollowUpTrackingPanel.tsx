@@ -433,8 +433,17 @@ export const FollowUpTrackingPanel = () => {
         </div>
       </div>
 
-      {/* Filters + Fichas list */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Filters + Search + Fichas list */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou telefone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={agenteFilter} onValueChange={setAgenteFilter}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -454,11 +463,23 @@ export const FollowUpTrackingPanel = () => {
       </div>
 
       <div className="space-y-2">
-        {filteredLeadsList.map(renderLeadCard)}
+        {pagination.paginatedItems.map(renderLeadCard)}
         {filteredLeadsList.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum processo de follow-up encontrado.</p>
         )}
       </div>
+
+      {filteredLeadsList.length > 20 && (
+        <TablePagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.goToPage}
+          hasNextPage={pagination.hasNextPage}
+          hasPrevPage={pagination.hasPrevPage}
+        />
+      )}
 
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
