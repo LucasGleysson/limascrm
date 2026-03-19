@@ -22,6 +22,9 @@ interface Props {
   onOpenChange: (v: boolean) => void;
 }
 
+// Supervisor can change to ANY status
+const ALL_STATUSES = ETAPAS_FUNIL.map((e) => ({ id: e.id, label: e.label }));
+
 const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string; label: string }[] }> = {
   agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }] },
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }] },
@@ -64,6 +67,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [eventDescricao, setEventDescricao] = useState("");
   const creatingEventRef = useRef(false);
 
+  const isSupervisorOrGestor = currentUser?.cargo === "supervisor" || currentUser?.cargo === "gestor";
+
   useEffect(() => {
     setEditing(false);
     setEditingSchedule(false);
@@ -82,12 +87,9 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     markingLossRef.current = false;
   }, [lead?.id]);
 
-  // Build timeline from eventos + notas
   const timeline = useMemo(() => {
     if (!lead) return [];
     const entries: { date: string; label: string; text: string }[] = [];
-
-    // Add concluded evento descriptions to timeline
     const leadEventos = eventos.filter((e) => e.id_lead === lead.id);
     leadEventos.forEach((ev) => {
       if (ev.concluido && ev.descricao_conclusao) {
@@ -99,7 +101,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         });
       }
     });
-
     return entries;
   }, [lead, eventos]);
 
@@ -173,7 +174,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const isDesqAgendado = lead.etapa === "desqualificado_agendado";
   const canEditSchedule = isAgendado || isDispensado || isPerdido || isDesqAgendado;
   const canDisqualify = ["novo", "agendado", "reagendado"].includes(lead.etapa);
-  const canChangeStatus = !!STATUS_TRANSITIONS[lead.etapa];
+  // Supervisor/Gestor can always change status; agents can only use transitions
+  const canChangeStatus = isSupervisorOrGestor || !!STATUS_TRANSITIONS[lead.etapa];
   const canMarkLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
 
   const getDisqualifyStatus = () => {
@@ -263,6 +265,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const isEditMode = editing || editingSchedule;
+
+  // Get available status targets based on role
+  const statusTargets = isSupervisorOrGestor
+    ? ALL_STATUSES.filter((s) => s.id !== lead.etapa) // Supervisor can pick any status
+    : STATUS_TRANSITIONS[lead.etapa]?.targets || [];
 
   return (
     <>
@@ -455,7 +462,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     <Label className="text-sm font-semibold">Notas & Histórico</Label>
                   </div>
 
-                  {/* Timeline from eventos */}
                   {timeline.length > 0 && (
                     <div className="space-y-1.5 mb-2">
                       {timeline.map((entry, i) => (
@@ -605,7 +611,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Status change modal */}
+      {/* Status change modal — Supervisor sees ALL statuses */}
       <Dialog open={statusChangeOpen} onOpenChange={setStatusChangeOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -618,8 +624,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               Status atual: <strong>{etapa?.label || lead.etapa}</strong>
             </p>
             <p className="text-sm text-muted-foreground">Mover para:</p>
-            <div className="flex flex-col gap-2">
-              {STATUS_TRANSITIONS[lead.etapa]?.targets.map((target) => (
+            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
+              {statusTargets.map((target) => (
                 <Button key={target.id} variant="outline" className="justify-start gap-2" onClick={() => handleStatusChange(target.id)}>
                   {target.label}
                 </Button>
