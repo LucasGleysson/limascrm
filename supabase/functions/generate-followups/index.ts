@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
           }
         } else {
           refDate = today;
+          // Dispensado should enter rescue flow immediately
+          eventDateStr = today;
         }
         if (!eventDateStr!) {
           const entryDate = new Date(refDate + "T00:00:00");

@@ -46,18 +46,44 @@ export const EventoPanel = () => {
     [leads, currentUser.id]
   );
 
+  const today = new Date().toISOString().split("T")[0];
+
+  const getEncerrarStatus = (lead: Lead): string => {
+    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "perdido";
+    if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
+    if (["novo", "desqualificado"].includes(lead.etapa)) return "desqualificado_novo";
+    return lead.etapa;
+  };
+
+  const isLeadEligibleForFupToday = (lead: Lead): boolean => {
+    if (lead.fup_concluido) return false;
+    if (lead.etapa === "dispensado") return true;
+    if (lead.etapa === "novo") return true;
+    if (["agendado", "reagendado"].includes(lead.etapa)) {
+      return !!lead.data_agendamento && lead.data_agendamento <= today;
+    }
+    return false;
+  };
+
   const myLeadIds = useMemo(() => new Set(myLeads.map((l) => l.id)), [myLeads]);
 
   const myEvents = useMemo(() => {
     return eventos
-      .filter((e) => myLeadIds.has(e.id_lead))
+      .filter((e) => {
+        if (!myLeadIds.has(e.id_lead)) return false;
+        const lead = myLeads.find((l) => l.id === e.id_lead);
+        if (!lead) return false;
+        if (e.tipo === "followup" && !e.concluido) {
+          if (lead.fup_concluido) return false;
+          if (!isLeadEligibleForFupToday(lead)) return false;
+        }
+        return true;
+      })
       .sort((a, b) => {
         if (a.concluido !== b.concluido) return a.concluido ? 1 : -1;
         return a.data_prevista.localeCompare(b.data_prevista);
       });
-  }, [eventos, myLeadIds]);
-
-  const today = new Date().toISOString().split("T")[0];
+  }, [eventos, myLeadIds, myLeads, today]);
 
   const pendentes = myEvents.filter((e) => !e.concluido);
   const concluidos = myEvents.filter((e) => e.concluido);
@@ -149,12 +175,15 @@ export const EventoPanel = () => {
       const lead = concludeProcessLead;
       const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lead.id);
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
-      const notas = appendNota(lead.notas, "Processo FUP Concluído", concludeProcessMotivo.trim());
+      const newStatus = getEncerrarStatus(lead);
+      const statusLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
+      const notas = appendNota(lead.notas, "Processo FUP Concluído", `${concludeProcessMotivo.trim()} → Status: ${statusLabel}`);
       await updateLead(lead.id, {
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
         fup_concluido_numero: maxFup,
         fup_motivo_conclusao: concludeProcessMotivo.trim(),
+        etapa: newStatus,
         notas,
       });
       setConcludeProcessOpen(false);
@@ -191,9 +220,13 @@ export const EventoPanel = () => {
 
   // Leads with active FUP processes (not concluded)
   const leadsWithActiveFup = useMemo(() => {
-    const fupLeadIds = new Set(eventos.filter((e) => e.tipo === "followup").map((e) => e.id_lead));
-    return myLeads.filter((l) => fupLeadIds.has(l.id) && !l.fup_concluido);
-  }, [eventos, myLeads]);
+    const duePendingFupLeadIds = new Set(
+      eventos
+        .filter((e) => e.tipo === "followup" && !e.concluido && e.data_prevista <= today)
+        .map((e) => e.id_lead)
+    );
+    return myLeads.filter((l) => duePendingFupLeadIds.has(l.id) && isLeadEligibleForFupToday(l));
+  }, [eventos, myLeads, today]);
 
   // Leads eligible for "Mark as Loss" button (na_loja, dispensado, or in FUP process)
   const leadsForLoss = useMemo(() => {
