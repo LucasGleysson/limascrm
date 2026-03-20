@@ -18,6 +18,7 @@ import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriang
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, getToday, formatDateBR } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 const SIDEBAR_TABS = [
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
@@ -91,7 +92,8 @@ export const ReceptionistDashboard = () => {
     setLoadingAction(`checkin-${lead.id}`);
     try {
       const now = new Date().toISOString();
-      await updateLead(lead.id, { etapa: "confirmado", checkin: now });
+      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja");
+      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas });
     } finally {
       setLoadingAction(null);
     }
@@ -119,7 +121,9 @@ export const ReceptionistDashboard = () => {
     try {
       const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
       await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
+      await supabase.functions.invoke("generate-followups");
       setDispensarOpen(false);
+      setDispensarLead(null);
     } finally {
       setLoadingAction(null);
     }

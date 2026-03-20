@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLeads } from "@/contexts/LeadContext";
 import { CalendarCheck } from "lucide-react";
+import { appendNota } from "@/lib/notasUtils";
 
 interface Props {
   open: boolean;
@@ -15,7 +16,7 @@ interface Props {
 }
 
 export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) => {
-  const { updateLead, unidades } = useLeads();
+  const { updateLead, unidades, leads } = useLeads();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
@@ -36,11 +37,20 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
     if (!unidade || !data || !os || submittingRef.current) return;
     submittingRef.current = true;
     try {
+      const leadAtual = leads.find((l) => l.id === leadId);
+      const unidadeNome = unidades.find((u) => u.id === unidade)?.nome || "Unidade";
+      const isReagendamento = !!leadAtual && ["dispensado", "perdido", "desqualificado_agendado", "reagendado"].includes(leadAtual.etapa);
+      const novoStatus = isReagendamento ? "reagendado" : "agendado";
+      const notaLabel = isReagendamento ? "Reagendado" : "Agendado";
+      const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")} • OS: ${os}`;
+      const notas = appendNota(leadAtual?.notas, notaLabel, notaTexto);
+
       await updateLead(leadId, {
-        etapa: "agendado",
+        etapa: novoStatus,
         id_unidade: unidade,
         data_agendamento: data,
         numero_os: os,
+        notas,
       });
       onOpenChange(false);
     } finally {

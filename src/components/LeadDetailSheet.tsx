@@ -154,8 +154,21 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editSchedNumeroOs !== (lead.numero_os || "")) updates.numero_os = editSchedNumeroOs;
     if (editSchedUnidade !== (lead.id_unidade || "")) updates.id_unidade = editSchedUnidade;
 
-    if (["dispensado", "perdido"].includes(lead.etapa)) updates.etapa = "reagendado";
-    if (lead.etapa === "desqualificado_agendado") updates.etapa = "reagendado";
+    if (["dispensado", "perdido", "desqualificado_agendado"].includes(lead.etapa)) updates.etapa = "reagendado";
+
+    if (Object.keys(updates).length > 0) {
+      const unidadeNome = editSchedUnidade
+        ? unidades.find((u) => u.id === editSchedUnidade)?.nome || "Unidade"
+        : "Unidade";
+      const isReagendamento = updates.etapa === "reagendado";
+      const notaLabel = isReagendamento ? "Reagendado" : "Agendamento Atualizado";
+      const detalhes = [
+        `Data: ${editSchedDataAgendamento ? formatDateBR(editSchedDataAgendamento) : "—"}`,
+        `Unidade: ${unidadeNome}`,
+        `OS: ${editSchedNumeroOs || "—"}`,
+      ].join(" • ");
+      updates.notas = appendNota(lead.notas, notaLabel, detalhes);
+    }
 
     if (Object.keys(updates).length > 0) {
       await updateLead(lead.id, updates);

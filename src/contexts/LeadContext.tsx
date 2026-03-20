@@ -41,9 +41,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (user?.cargo === "recepcionista" && user.unidade_padrao) {
       query = query.eq("id_unidade", user.unidade_padrao);
     }
-    // Limit fetch for non-agent roles to reduce reads
     if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
-      query = query.limit(500);
+      query = query.range(0, 5000);
     }
     return query;
   }, []);

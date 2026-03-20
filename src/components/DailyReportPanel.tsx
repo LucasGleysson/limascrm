@@ -19,6 +19,17 @@ export const DailyReportPanel = () => {
   const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
   // All leads scheduled for this date
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
+  // Leads that effectively arrived at the store on this date
+  const passaramNaLojaNoDia = useMemo(() => {
+    const byCheckin = leads.filter((l) => l.checkin?.slice(0, 10) === dateStr);
+    const ids = new Set(byCheckin.map((l) => l.id));
+    const fallback = leads.filter((l) => !ids.has(l.id) && !l.checkin && l.data_agendamento === dateStr && ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa));
+    return [...byCheckin, ...fallback];
+  }, [leads, dateStr]);
+
+  const concluidosNoDia = useMemo(() => {
+    return leads.filter((l) => l.etapa === "concluido" && (l.checkout?.slice(0, 10) === dateStr || l.checkin?.slice(0, 10) === dateStr));
+  }, [leads, dateStr]);
 
   const globalStats = useMemo(() => {
     // Leads linked to a unit (for unit-based reports use all leads)
@@ -26,54 +37,58 @@ export const DailyReportPanel = () => {
     return {
       totalRegistros: createdToday.length, // Total NEW registrations today (regardless of current status)
       totalLeads: allLeads.length,
-      naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+      naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
       agendados: createdToday.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-      passaramNaLoja: createdToday.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length,
-      dispensados: createdToday.filter((l) => l.etapa === "dispensado").length,
-      concluidos: createdToday.filter((l) => l.etapa === "concluido").length,
+      passaramNaLoja: passaramNaLojaNoDia.length,
+      dispensados: passaramNaLojaNoDia.filter((l) => l.etapa === "dispensado").length,
+      concluidos: concluidosNoDia.length,
       perdidos: createdToday.filter((l) => l.etapa === "perdido").length,
       perdidosAntes: createdToday.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
     };
-  }, [createdToday, leads]);
+  }, [createdToday, leads, passaramNaLojaNoDia, concluidosNoDia]);
 
   const unitStats = useMemo(() => {
     return unidades.map((u) => {
       const uCreated = createdToday.filter((l) => l.id_unidade === u.id);
       const uAgendados = agendadosNoDia.filter((l) => l.id_unidade === u.id);
-      const passaramNaLoja = uCreated.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length;
+      const uPassaram = passaramNaLojaNoDia.filter((l) => l.id_unidade === u.id);
+      const uConcluidos = concluidosNoDia.filter((l) => l.id_unidade === u.id);
+      const passaramNaLoja = uPassaram.length;
       return {
         ...u,
         totalRegistros: uCreated.length,
-        naoAgendados: uCreated.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+        naoAgendados: uCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
         agendados: uAgendados.length,
         passaramNaLoja,
-        dispensados: uCreated.filter((l) => l.etapa === "dispensado").length,
-        concluidos: uCreated.filter((l) => l.etapa === "concluido").length,
+        dispensados: uPassaram.filter((l) => l.etapa === "dispensado").length,
+        concluidos: uConcluidos.length,
         perdidos: uCreated.filter((l) => l.etapa === "perdido").length,
-        txConversao: passaramNaLoja > 0 ? Math.round((uCreated.filter((l) => l.etapa === "concluido").length / passaramNaLoja) * 100) : 0,
+        txConversao: passaramNaLoja > 0 ? Math.round((uConcluidos.length / passaramNaLoja) * 100) : 0,
       };
     }).filter((u) => u.totalRegistros > 0 || u.agendados > 0);
-  }, [createdToday, agendadosNoDia, unidades]);
+  }, [createdToday, agendadosNoDia, unidades, passaramNaLojaNoDia, concluidosNoDia]);
 
   const agentStats = useMemo(() => {
     return agentes.map((a) => {
       const aCreated = createdToday.filter((l) => l.id_agente === a.id);
       const aAgendados = agendadosNoDia.filter((l) => l.id_agente === a.id);
       const unidade = unidades.find((u) => u.id === a.unidade_padrao);
-      const passaramNaLoja = aCreated.filter((l) => ["dispensado", "concluido", "confirmado", "na_loja"].includes(l.etapa)).length;
+      const aPassaram = passaramNaLojaNoDia.filter((l) => l.id_agente === a.id);
+      const aConcluidos = concluidosNoDia.filter((l) => l.id_agente === a.id);
+      const passaramNaLoja = aPassaram.length;
       return {
         ...a,
         unidadeNome: unidade?.nome || "—",
         totalRegistros: aCreated.length,
-        naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+        naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
         agendados: aAgendados.length,
         passaramNaLoja,
-        dispensados: aCreated.filter((l) => l.etapa === "dispensado").length,
-        concluidos: aCreated.filter((l) => l.etapa === "concluido").length,
+        dispensados: aPassaram.filter((l) => l.etapa === "dispensado").length,
+        concluidos: aConcluidos.length,
         perdidos: aCreated.filter((l) => l.etapa === "perdido").length,
       };
     }).filter((a) => a.totalRegistros > 0 || a.agendados > 0);
-  }, [createdToday, agendadosNoDia, agentes, unidades]);
+  }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia]);
 
   const prevDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); };
   const nextDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); };
