@@ -59,10 +59,20 @@ export const FollowUpTrackingPanel = () => {
     // Scheduled but no visit → desqualificado_agendado
     if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
     // New lead → desqualificado_novo
-    if (lead.etapa === "novo") return "desqualificado_novo";
+    if (["novo", "desqualificado"].includes(lead.etapa)) return "desqualificado_novo";
     // Already terminal
     return lead.etapa;
   }, []);
+
+  const isLeadPendingForToday = useCallback((lead: Lead) => {
+    if (lead.fup_concluido) return false;
+    if (lead.etapa === "dispensado") return true;
+    if (lead.etapa === "novo") return true;
+    if (["agendado", "reagendado"].includes(lead.etapa)) {
+      return !!lead.data_agendamento && lead.data_agendamento <= today;
+    }
+    return false;
+  }, [today]);
 
   const handleEncerrarFup = useCallback(async () => {
     if (!encerrarLead || !encerrarMotivo.trim() || encerrarLoading) return;
@@ -98,14 +108,21 @@ export const FollowUpTrackingPanel = () => {
     return agentes
       .map((ag) => {
         const agLeads = leads.filter((l) => l.id_agente === ag.id);
+        const leadById = new Map(agLeads.map((l) => [l.id, l]));
         const agLeadIds = new Set(agLeads.map((l) => l.id));
         const agFups = allFollowUps.filter((e) => agLeadIds.has(e.id_lead));
+        const pendingFupsToday = agFups.filter((e) => {
+          if (e.concluido || e.data_prevista > today) return false;
+          const lead = leadById.get(e.id_lead);
+          return !!lead && isLeadPendingForToday(lead);
+        });
 
         const byNumber: Record<number, { pending: number; completed: number }> = {};
         for (let i = 1; i <= 7; i++) {
           const nFups = agFups.filter((e) => e.numero === i);
+          const nPendingToday = pendingFupsToday.filter((e) => e.numero === i);
           byNumber[i] = {
-            pending: nFups.filter((e) => !e.concluido).length,
+            pending: nPendingToday.length,
             completed: nFups.filter((e) => e.concluido).length,
           };
         }
@@ -113,7 +130,10 @@ export const FollowUpTrackingPanel = () => {
         const leadIdsWithFup = new Set(agFups.map((e) => e.id_lead));
         const leadsWithFup = agLeads.filter((l) => leadIdsWithFup.has(l.id));
         const processesConcluidosFull = leadsWithFup.filter((l) => l.fup_concluido);
-        const processesPending = leadsWithFup.filter((l) => !l.fup_concluido);
+        const processPendingIds = new Set(pendingFupsToday.map((e) => e.id_lead));
+        const processesPending = Array.from(processPendingIds)
+          .map((id) => leadById.get(id))
+          .filter((lead): lead is Lead => !!lead);
 
         const dispensaLeadIds = new Set<string>();
         agLeads.forEach((lead) => {
@@ -133,7 +153,7 @@ export const FollowUpTrackingPanel = () => {
           processesPending,
           totalProcesses: leadsWithFup.length,
           totalFupsDone: agFups.filter((e) => e.concluido).length,
-          totalFupsPending: agFups.filter((e) => !e.concluido).length,
+          totalFupsPending: pendingFupsToday.length,
           totalFupsDoneToday: agFups.filter((e) => e.concluido && isConcludedOnDay(e.data_conclusao)).length,
           carrosGanhosDispensado,
           leadsWithFup,
@@ -141,7 +161,7 @@ export const FollowUpTrackingPanel = () => {
       })
       .filter((a) => a.totalProcesses > 0)
       .sort((a, b) => b.totalFupsDone - a.totalFupsDone);
-  }, [agentes, leads, allFollowUps, today]);
+  }, [agentes, leads, allFollowUps, today, isLeadPendingForToday]);
 
   const globalByNumber = useMemo(() => {
     const result: Record<number, { pending: number; completed: number }> = {};
@@ -158,8 +178,14 @@ export const FollowUpTrackingPanel = () => {
   const globalTotals = useMemo(() => {
     const leadsWithFup = new Set(allFollowUps.map((e) => e.id_lead));
     const relevantLeads = leads.filter((l) => leadsWithFup.has(l.id));
+    const leadById = new Map(relevantLeads.map((l) => [l.id, l]));
     const concluded = relevantLeads.filter((l) => l.fup_concluido);
-    const pending = relevantLeads.filter((l) => !l.fup_concluido);
+    const pending = relevantLeads.filter((l) => !l.fup_concluido && isLeadPendingForToday(l));
+    const pendingFupsToday = allFollowUps.filter((e) => {
+      if (e.concluido || e.data_prevista > today) return false;
+      const lead = leadById.get(e.id_lead);
+      return !!lead && isLeadPendingForToday(lead);
+    });
 
     const dispensaLeadIds = new Set<string>();
     relevantLeads.forEach((lead) => {
@@ -176,10 +202,10 @@ export const FollowUpTrackingPanel = () => {
       pending: pending.length,
       totalDone: allFollowUps.filter((e) => e.concluido).length,
       totalDoneToday: allFollowUps.filter((e) => e.concluido && isConcludedOnDay(e.data_conclusao)).length,
-      totalPending: allFollowUps.filter((e) => !e.concluido).length,
+      totalPending: pendingFupsToday.length,
       carrosDispensadoConcluido: concluded.filter((l) => dispensaLeadIds.has(l.id)).length,
     };
-  }, [allFollowUps, leads, today]);
+  }, [allFollowUps, leads, today, isLeadPendingForToday]);
 
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
   const getUnitName = (id?: string | null) => (id ? unidades.find((u) => u.id === id)?.nome || "—" : "—");
@@ -385,7 +411,7 @@ export const FollowUpTrackingPanel = () => {
                   <th key={n} className="text-center py-2 font-medium text-muted-foreground text-xs">F{n}</th>
                 ))}
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ✓</th>
-                <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ⏳</th>
+                <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ⏳ HOJE</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">FUPs ✓</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">FUPs HOJE</th>
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">🚗</th>
@@ -462,7 +488,7 @@ export const FollowUpTrackingPanel = () => {
 
       {/* Filters + Pending leads */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Processos Pendentes ({pendingLeadsList.length})</h2>
+        <h2 className="text-lg font-semibold">Processos Pendentes do Dia ({pendingLeadsList.length})</h2>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
