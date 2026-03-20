@@ -13,6 +13,7 @@ import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lu
 import { formatPhone } from "@/lib/phoneUtils";
 import { getToday } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 export const AgentReceptionPanel = () => {
   const { leads, updateLead, unidades } = useLeads();
@@ -52,7 +53,8 @@ export const AgentReceptionPanel = () => {
     setLoadingAction(`checkin-${lead.id}`);
     try {
       const now = new Date().toISOString();
-      await updateLead(lead.id, { etapa: "confirmado", checkin: now });
+      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja");
+      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas });
     } finally { setLoadingAction(null); }
   };
 
@@ -73,7 +75,9 @@ export const AgentReceptionPanel = () => {
     try {
       const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
       await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
+      await supabase.functions.invoke("generate-followups");
       setDispensarOpen(false);
+      setDispensarLead(null);
     } finally { setLoadingAction(null); }
   };
 
