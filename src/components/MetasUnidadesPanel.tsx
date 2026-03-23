@@ -318,7 +318,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                       <span className="text-sm font-bold min-w-[48px] text-right">{u.pct}%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {u.carrosNaLoja} de {u.metaVal} carros — Faltam {u.faltam}
+                      {u.carrosParaMeta} de {u.metaVal} carros — Faltam {u.faltam}
                     </p>
                   </div>
                   <div className="hidden sm:grid grid-cols-3 gap-4 text-center shrink-0">
