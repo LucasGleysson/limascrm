@@ -387,7 +387,6 @@ export const SupervisorDashboard = () => {
                 { name: "Agendados", value: sel.agendados },
                 { name: "Na Loja", value: sel.passaramNaLoja },
                 { name: "Concluídos", value: sel.concluidos },
-                { name: "Dispensados", value: sel.dispensados },
                 { name: "Perdidos", value: sel.perdidos },
               ].filter((d) => d.value > 0);
               return (
