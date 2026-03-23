@@ -195,9 +195,9 @@ export const ManagerDashboard = () => {
                       </div>
                       <div className="flex gap-3 text-sm flex-1 justify-end">
                         <span>{u.total} leads</span>
-                        <span className="text-warning">{u.carrosNaLoja} loja</span>
+                         <span className="text-warning">{u.carrosNaLoja} loja</span>
                         <span className="text-success">{u.concluidos} ✓</span>
-                        <span className="text-destructive">{u.dispensados} disp.</span>
+                        <span className="text-destructive">{u.perdidos} perd.</span>
                       </div>
                     </div>
                   ))}
