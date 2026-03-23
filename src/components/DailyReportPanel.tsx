@@ -197,7 +197,6 @@ export const DailyReportPanel = () => {
                     <td className="py-3 text-center text-warning">{a.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{a.agendados}</td>
                     <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                    <td className="py-3 text-center text-destructive">{a.dispensados}</td>
                     <td className="py-3 text-center text-success">{a.concluidos}</td>
                     <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                   </tr>
