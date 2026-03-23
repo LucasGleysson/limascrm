@@ -413,8 +413,7 @@ export const AgentDashboard = () => {
                   <StatsCard title="Taxa Conversão" value={`${storeStats.txConversao}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja → Concluído" />
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
-                  <StatsCard title="Dispensados" value={storeStats.dispensados} icon={XCircle} variant="destructive" />
+                 <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
                   <StatsCard title="Perdidos" value={storeStats.perdidos} icon={XCircle} variant="destructive" />
                   <StatsCard title="Agendados Hoje" value={storeStats.agendadosHoje} icon={CalendarDays} variant="info" />
                 </div>
