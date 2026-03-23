@@ -3,7 +3,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle } from "lucide-react";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
