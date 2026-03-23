@@ -349,8 +349,8 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                       <p className="text-[10px] text-muted-foreground">Leads no Mês</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xl font-bold text-warning">{sel.carrosNaLoja}</p>
-                      <p className="text-[10px] text-muted-foreground">Carros na Loja</p>
+                       <p className="text-xl font-bold text-warning">{sel.carrosParaMeta}</p>
+                      <p className="text-[10px] text-muted-foreground">Concl.+Perd.</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-xl font-bold text-success">{sel.concluidos}</p>
