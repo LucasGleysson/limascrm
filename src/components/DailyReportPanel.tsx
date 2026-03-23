@@ -120,7 +120,6 @@ export const DailyReportPanel = () => {
         <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
         <StatsCard title="Serviço Concluído" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
         <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
