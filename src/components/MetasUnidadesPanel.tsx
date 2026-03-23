@@ -111,10 +111,12 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         (l) => l.id_unidade === u.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
       const carrosNaLoja = monthLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosParaMeta = monthLeads.filter((l) => isCarroParaMeta(l.etapa)).length;
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
 
-      const pct = metaVal > 0 ? Math.round((carrosNaLoja / metaVal) * 100) : 0;
-      const faltam = Math.max(0, metaVal - carrosNaLoja);
+      const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
+      const faltam = Math.max(0, metaVal - carrosParaMeta);
       const mediaDiaria = elapsedBizDays > 0 ? carrosNaLoja / elapsedBizDays : 0;
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
