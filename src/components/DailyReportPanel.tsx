@@ -83,9 +83,8 @@ export const DailyReportPanel = () => {
         naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
         agendados: aAgendados.length,
         passaramNaLoja,
-        dispensados: aPassaram.filter((l) => l.etapa === "dispensado").length,
+        perdidos: aPassaram.filter((l) => l.etapa === "perdido").length,
         concluidos: aConcluidos.length,
-        perdidos: aCreated.filter((l) => l.etapa === "perdido").length,
       };
     }).filter((a) => a.totalRegistros > 0 || a.agendados > 0);
   }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia]);
