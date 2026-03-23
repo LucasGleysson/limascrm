@@ -14,7 +14,7 @@ import {
   ResponsiveContainer, Cell,
 } from "recharts";
 import { toast } from "sonner";
-import { isCarroDoAgente } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta } from "@/lib/leadUtils";
 
 interface Meta {
   id?: string;
