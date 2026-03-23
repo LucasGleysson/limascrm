@@ -22,9 +22,13 @@ export const getStatusBadgeClass = (etapa: string): string => {
 export const foiNaLoja = (etapa: string): boolean =>
   ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(etapa);
 
-/** Check if a lead is a "car for the agent" (arrived at store) */
+/** Na Loja = Concluído + Dispensado + Perdido */
 export const isCarroDoAgente = (etapa: string): boolean =>
-  ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(etapa);
+  ["concluido", "dispensado", "perdido"].includes(etapa);
+
+/** Meta count = Concluídos + Perdidos (carros que contam para meta) */
+export const isCarroParaMeta = (etapa: string): boolean =>
+  ["concluido", "perdido"].includes(etapa);
 
 /** Check if a lead was lost before going to the store */
 export const isPerdidoAntesLoja = (etapa: string): boolean =>
