@@ -226,7 +226,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalCarros}</p>
-          <p className="text-xs text-muted-foreground">Carros na Loja</p>
+          <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />
