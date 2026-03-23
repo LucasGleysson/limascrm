@@ -233,8 +233,8 @@ export const ManagerDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">NOVO</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
