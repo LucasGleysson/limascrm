@@ -103,7 +103,7 @@ export const AgentDashboard = () => {
     const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     return {
       novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje,
-      concluidos: concluidosHoje, dispensados: dispensadosHoje, eventosPendentes: pendingEvents,
+      concluidos: concluidosHoje, perdidos: dispensadosHoje, eventosPendentes: pendingEvents,
       fupsDoneToday,
     };
   }, [allMyLeads, eventos, today]);
