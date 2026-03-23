@@ -367,11 +367,11 @@ export const SupervisorDashboard = () => {
                   <div className="flex-1">
                     <span className="font-semibold">{u.nome}</span>
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-                      <span>{u.total} leads</span>
+                       <span>{u.total} leads</span>
                       <span className="text-primary">{u.agendados} agend.</span>
                       <span className="text-warning">{u.passaramNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
-                      <span className="text-destructive">{u.dispensados} disp.</span>
+                      <span className="text-destructive">{u.perdidos} perd.</span>
                       <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
