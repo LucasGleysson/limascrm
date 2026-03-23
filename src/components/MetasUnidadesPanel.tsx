@@ -144,7 +144,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       }
 
       return {
-        ...u, metaVal, carrosNaLoja, concluidos, pct, faltam,
+        ...u, metaVal, carrosNaLoja, carrosParaMeta, concluidos, perdidos, pct, faltam,
         mediaDiaria, necessarioPorDia, status, diasRestantes,
         totalLeads: monthLeads.length, agentBreakdown,
       };
