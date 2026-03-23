@@ -44,6 +44,9 @@ export const EventoPanel = () => {
   const [lossLead, setLossLead] = useState<Lead | null>(null);
   const [lossMotivo, setLossMotivo] = useState("");
 
+  // Search for follow-ups
+  const [fupSearch, setFupSearch] = useState("");
+
   const myLeads = useMemo(
     () => leads.filter((l) => l.id_agente === currentUser.id),
     [leads, currentUser.id]
