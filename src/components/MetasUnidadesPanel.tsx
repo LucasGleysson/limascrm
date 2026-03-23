@@ -189,7 +189,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const barData = useMemo(() => {
     return unitData.map((u) => ({
       name: u.nome,
-      carros: u.carrosNaLoja,
+      carros: u.carrosParaMeta,
       meta: u.metaVal,
     }));
   }, [unitData]);
