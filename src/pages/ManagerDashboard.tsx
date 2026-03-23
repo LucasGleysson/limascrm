@@ -249,8 +249,8 @@ export const ManagerDashboard = () => {
                         <td className="py-3 text-center">{a.novo}</td>
                         <td className="py-3 text-center text-primary">{a.agendado}</td>
                         <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
-                        <td className="py-3 text-center text-success">{a.concluido}</td>
-                        <td className="py-3 text-center text-destructive">{a.dispensados}</td>
+                         <td className="py-3 text-center text-success">{a.concluido}</td>
+                        <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                         <td className="py-3 text-center text-muted-foreground">{a.perdidosAntes}</td>
                         <td className="py-3 text-center font-medium">{a.taxa}%</td>
                         <td className="py-3 text-center text-success">{a.fupDone}</td>
