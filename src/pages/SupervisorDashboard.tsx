@@ -174,8 +174,7 @@ export const SupervisorDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
