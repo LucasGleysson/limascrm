@@ -441,13 +441,13 @@ export const AgentDashboard = () => {
                       <p className="text-2xl font-bold text-warning">{storeStats.naLoja}</p>
                       <p className="text-xs text-muted-foreground">Na Loja</p>
                     </div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-2xl font-bold text-success">{storeStats.concluidos}</p>
                       <p className="text-xs text-muted-foreground">Concluídos</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-destructive">{storeStats.dispensados}</p>
-                      <p className="text-xs text-muted-foreground">Dispensados</p>
+                      <p className="text-2xl font-bold text-destructive">{storeStats.perdidos}</p>
+                      <p className="text-xs text-muted-foreground">Perdidos</p>
                     </div>
                   </div>
                 </div>
