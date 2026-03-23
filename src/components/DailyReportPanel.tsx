@@ -141,11 +141,10 @@ export const DailyReportPanel = () => {
                   <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">DISPENSADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
                 </tr>
               </thead>
               <tbody>
