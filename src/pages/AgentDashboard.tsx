@@ -98,7 +98,7 @@ export const AgentDashboard = () => {
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
     const carrosHoje = todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
-    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
+    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "perdido").length;
     const pendingEvents = eventos.filter((e) => !e.concluido && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     return {
