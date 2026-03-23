@@ -304,7 +304,7 @@ export const AgentDashboard = () => {
               <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Dispensados" value={dailyStats.dispensados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Perdidos" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
               <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
