@@ -497,9 +497,6 @@ export const EventoPanel = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-          <div className="space-y-2">{concluidos.map((evento) => renderEventCard(evento, true))}</div>
-        </div>
-      )}
 
       {/* Conclude event modal */}
       <Dialog open={concludeOpen} onOpenChange={setConcludeOpen}>
