@@ -81,7 +81,7 @@ export const ManagerDashboard = () => {
         ...u, total: uLeads.length, carrosNaLoja,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         concluidos: uLeads.filter((l) => l.etapa === "concluido").length,
-        dispensados: uLeads.filter((l) => l.etapa === "dispensado").length,
+        perdidos: uLeads.filter((l) => l.etapa === "perdido").length,
       };
     });
   }, [filteredLeads, unidades]);
