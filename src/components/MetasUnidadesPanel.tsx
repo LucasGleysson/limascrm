@@ -247,7 +247,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
       {/* Chart */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold mb-3">Meta vs Carros na Loja</h3>
+        <h3 className="font-semibold mb-3">Meta vs Realizado (Concluídos + Perdidos)</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
