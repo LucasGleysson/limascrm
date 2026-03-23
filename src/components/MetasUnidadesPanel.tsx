@@ -255,7 +255,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="carros" name="Carros na Loja" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="carros" name="Concluídos + Perdidos" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="meta" name="Meta" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} opacity={0.4} />
             </BarChart>
           </ResponsiveContainer>
