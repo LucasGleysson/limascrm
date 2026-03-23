@@ -117,7 +117,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
       const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
       const faltam = Math.max(0, metaVal - carrosParaMeta);
-      const mediaDiaria = elapsedBizDays > 0 ? carrosNaLoja / elapsedBizDays : 0;
+      const mediaDiaria = elapsedBizDays > 0 ? carrosParaMeta / elapsedBizDays : 0;
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
 
