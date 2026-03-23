@@ -99,7 +99,7 @@ export const ManagerDashboard = () => {
         agendado: aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         carrosNaLoja,
         concluido: aLeads.filter((l) => l.etapa === "concluido").length,
-        dispensados: aLeads.filter((l) => l.etapa === "dispensado").length,
+        perdidos: aLeads.filter((l) => l.etapa === "perdido").length,
         perdidosAntes: aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
         total: aLeads.length,
         taxa: aLeads.length > 0 ? Math.round((carrosNaLoja / aLeads.length) * 100) : 0,
