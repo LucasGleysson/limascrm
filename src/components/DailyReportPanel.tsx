@@ -40,7 +40,7 @@ export const DailyReportPanel = () => {
       naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
       agendados: createdToday.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
       passaramNaLoja: passaramNaLojaNoDia.length,
-      dispensados: passaramNaLojaNoDia.filter((l) => l.etapa === "dispensado").length,
+      perdidos: passaramNaLojaNoDia.filter((l) => l.etapa === "perdido").length,
       concluidos: concluidosNoDia.length,
       perdidos: createdToday.filter((l) => l.etapa === "perdido").length,
       perdidosAntes: createdToday.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
