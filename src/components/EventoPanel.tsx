@@ -128,6 +128,22 @@ export const EventoPanel = () => {
     return cats;
   }, [followups, myLeads, today]);
 
+  // All pending followups flattened for search + pagination
+  const allPendingFollowups = useMemo(() => {
+    const all: Evento[] = [];
+    Object.values(followupsByCategory).forEach((arr) => all.push(...arr));
+    if (!fupSearch.trim()) return all;
+    const q = fupSearch.trim().toLowerCase();
+    return all.filter((e) => {
+      const lead = myLeads.find((l) => l.id === e.id_lead);
+      if (!lead) return false;
+      return lead.nome.toLowerCase().includes(q) || lead.telefone.includes(q);
+    });
+  }, [followupsByCategory, fupSearch, myLeads]);
+
+  const fupPagination = usePagination(allPendingFollowups, { pageSize: 20 });
+  const concludedPagination = usePagination(concluidos, { pageSize: 20 });
+
   const handleConclude = async () => {
     if (!selectedEvento || !descricao.trim() || concludingRef.current) return;
     concludingRef.current = true;
