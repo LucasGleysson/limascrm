@@ -369,8 +369,9 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                           <div key={ag.nome} className="flex items-center gap-3 text-sm p-2 rounded bg-muted/30">
                             <span className="font-medium flex-1">{ag.nome}</span>
                             <span>{ag.total} leads</span>
-                            <span className="text-warning">{ag.carrosNaLoja} loja</span>
                             <span className="text-success">{ag.concluidos} concl.</span>
+                            <span className="text-destructive">{ag.perdidos} perd.</span>
+                            <span className="text-primary font-semibold">{ag.carrosParaMeta} meta</span>
                           </div>
                         ))}
                       </div>
