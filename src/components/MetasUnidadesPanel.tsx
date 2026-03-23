@@ -129,7 +129,9 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
           nome: ag.nome,
           total: agLeads.length,
           carrosNaLoja: agLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
+          carrosParaMeta: agLeads.filter((l) => isCarroParaMeta(l.etapa)).length,
           concluidos: agLeads.filter((l) => l.etapa === "concluido").length,
+          perdidos: agLeads.filter((l) => l.etapa === "perdido").length,
         };
       });
 
