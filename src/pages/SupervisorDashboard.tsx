@@ -156,9 +156,8 @@ export const SupervisorDashboard = () => {
               <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
-              <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Perdidos (pós-loja)" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
