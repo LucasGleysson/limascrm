@@ -98,12 +98,12 @@ export const AgentDashboard = () => {
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
     const carrosHoje = todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
-    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
+    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "perdido").length;
     const pendingEvents = eventos.filter((e) => !e.concluido && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     return {
       novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje,
-      concluidos: concluidosHoje, dispensados: dispensadosHoje, eventosPendentes: pendingEvents,
+      concluidos: concluidosHoje, perdidos: dispensadosHoje, eventosPendentes: pendingEvents,
       fupsDoneToday,
     };
   }, [allMyLeads, eventos, today]);
@@ -304,7 +304,7 @@ export const AgentDashboard = () => {
               <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Dispensados" value={dailyStats.dispensados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Perdidos" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
               <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
@@ -413,8 +413,7 @@ export const AgentDashboard = () => {
                   <StatsCard title="Taxa Conversão" value={`${storeStats.txConversao}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja → Concluído" />
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
-                  <StatsCard title="Dispensados" value={storeStats.dispensados} icon={XCircle} variant="destructive" />
+                 <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
                   <StatsCard title="Perdidos" value={storeStats.perdidos} icon={XCircle} variant="destructive" />
                   <StatsCard title="Agendados Hoje" value={storeStats.agendadosHoje} icon={CalendarDays} variant="info" />
                 </div>
@@ -442,13 +441,13 @@ export const AgentDashboard = () => {
                       <p className="text-2xl font-bold text-warning">{storeStats.naLoja}</p>
                       <p className="text-xs text-muted-foreground">Na Loja</p>
                     </div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-2xl font-bold text-success">{storeStats.concluidos}</p>
                       <p className="text-xs text-muted-foreground">Concluídos</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-destructive">{storeStats.dispensados}</p>
-                      <p className="text-xs text-muted-foreground">Dispensados</p>
+                      <p className="text-2xl font-bold text-destructive">{storeStats.perdidos}</p>
+                      <p className="text-xs text-muted-foreground">Perdidos</p>
                     </div>
                   </div>
                 </div>

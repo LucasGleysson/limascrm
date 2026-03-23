@@ -3,7 +3,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle } from "lucide-react";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -35,14 +35,13 @@ export const DailyReportPanel = () => {
     // Leads linked to a unit (for unit-based reports use all leads)
     const allLeads = leads;
     return {
-      totalRegistros: createdToday.length, // Total NEW registrations today (regardless of current status)
+      totalRegistros: createdToday.length,
       totalLeads: allLeads.length,
       naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
       agendados: createdToday.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
       passaramNaLoja: passaramNaLojaNoDia.length,
-      dispensados: passaramNaLojaNoDia.filter((l) => l.etapa === "dispensado").length,
       concluidos: concluidosNoDia.length,
-      perdidos: createdToday.filter((l) => l.etapa === "perdido").length,
+      perdidos: passaramNaLojaNoDia.filter((l) => l.etapa === "perdido").length,
       perdidosAntes: createdToday.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
     };
   }, [createdToday, leads, passaramNaLojaNoDia, concluidosNoDia]);
@@ -60,9 +59,8 @@ export const DailyReportPanel = () => {
         naoAgendados: uCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
         agendados: uAgendados.length,
         passaramNaLoja,
-        dispensados: uPassaram.filter((l) => l.etapa === "dispensado").length,
         concluidos: uConcluidos.length,
-        perdidos: uCreated.filter((l) => l.etapa === "perdido").length,
+        perdidos: uPassaram.filter((l) => l.etapa === "perdido").length,
         txConversao: passaramNaLoja > 0 ? Math.round((uConcluidos.length / passaramNaLoja) * 100) : 0,
       };
     }).filter((u) => u.totalRegistros > 0 || u.agendados > 0);
@@ -83,9 +81,8 @@ export const DailyReportPanel = () => {
         naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
         agendados: aAgendados.length,
         passaramNaLoja,
-        dispensados: aPassaram.filter((l) => l.etapa === "dispensado").length,
+        perdidos: aPassaram.filter((l) => l.etapa === "perdido").length,
         concluidos: aConcluidos.length,
-        perdidos: aCreated.filter((l) => l.etapa === "perdido").length,
       };
     }).filter((a) => a.totalRegistros > 0 || a.agendados > 0);
   }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia]);
@@ -121,7 +118,6 @@ export const DailyReportPanel = () => {
         <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
         <StatsCard title="Serviço Concluído" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
         <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
@@ -143,11 +139,10 @@ export const DailyReportPanel = () => {
                   <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">DISPENSADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,7 +153,6 @@ export const DailyReportPanel = () => {
                     <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{u.agendados}</td>
                     <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
-                    <td className="py-3 text-center text-destructive">{u.dispensados}</td>
                     <td className="py-3 text-center text-success">{u.concluidos}</td>
                     <td className="py-3 text-center text-destructive">{u.perdidos}</td>
                     <td className="py-3 text-center font-medium">{u.txConversao}%</td>
@@ -187,10 +181,9 @@ export const DailyReportPanel = () => {
                   <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">DISPENSADOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                   <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,7 +195,6 @@ export const DailyReportPanel = () => {
                     <td className="py-3 text-center text-warning">{a.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{a.agendados}</td>
                     <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                    <td className="py-3 text-center text-destructive">{a.dispensados}</td>
                     <td className="py-3 text-center text-success">{a.concluidos}</td>
                     <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                   </tr>

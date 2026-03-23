@@ -14,7 +14,7 @@ import {
   ResponsiveContainer, Cell,
 } from "recharts";
 import { toast } from "sonner";
-import { isCarroDoAgente } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta } from "@/lib/leadUtils";
 
 interface Meta {
   id?: string;
@@ -111,11 +111,13 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         (l) => l.id_unidade === u.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
       const carrosNaLoja = monthLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosParaMeta = monthLeads.filter((l) => isCarroParaMeta(l.etapa)).length;
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
 
-      const pct = metaVal > 0 ? Math.round((carrosNaLoja / metaVal) * 100) : 0;
-      const faltam = Math.max(0, metaVal - carrosNaLoja);
-      const mediaDiaria = elapsedBizDays > 0 ? carrosNaLoja / elapsedBizDays : 0;
+      const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
+      const faltam = Math.max(0, metaVal - carrosParaMeta);
+      const mediaDiaria = elapsedBizDays > 0 ? carrosParaMeta / elapsedBizDays : 0;
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
 
@@ -127,7 +129,9 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
           nome: ag.nome,
           total: agLeads.length,
           carrosNaLoja: agLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
+          carrosParaMeta: agLeads.filter((l) => isCarroParaMeta(l.etapa)).length,
           concluidos: agLeads.filter((l) => l.etapa === "concluido").length,
+          perdidos: agLeads.filter((l) => l.etapa === "perdido").length,
         };
       });
 
@@ -140,7 +144,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       }
 
       return {
-        ...u, metaVal, carrosNaLoja, concluidos, pct, faltam,
+        ...u, metaVal, carrosNaLoja, carrosParaMeta, concluidos, perdidos, pct, faltam,
         mediaDiaria, necessarioPorDia, status, diasRestantes,
         totalLeads: monthLeads.length, agentBreakdown,
       };
@@ -149,7 +153,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);
-    const totalCarros = unitData.reduce((s, u) => s + u.carrosNaLoja, 0);
+    const totalCarros = unitData.reduce((s, u) => s + u.carrosParaMeta, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalCarros / totalMeta) * 100) : 0;
     const achieved = unitData.filter((u) => u.status === "achieved").length;
     const behind = unitData.filter((u) => u.status === "behind").length;
@@ -185,7 +189,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const barData = useMemo(() => {
     return unitData.map((u) => ({
       name: u.nome,
-      carros: u.carrosNaLoja,
+      carros: u.carrosParaMeta,
       meta: u.metaVal,
     }));
   }, [unitData]);
@@ -222,7 +226,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalCarros}</p>
-          <p className="text-xs text-muted-foreground">Carros na Loja</p>
+          <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />
@@ -243,7 +247,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
       {/* Chart */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold mb-3">Meta vs Carros na Loja</h3>
+        <h3 className="font-semibold mb-3">Meta vs Realizado (Concluídos + Perdidos)</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
@@ -251,7 +255,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="carros" name="Carros na Loja" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="carros" name="Concluídos + Perdidos" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="meta" name="Meta" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} opacity={0.4} />
             </BarChart>
           </ResponsiveContainer>
@@ -314,7 +318,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                       <span className="text-sm font-bold min-w-[48px] text-right">{u.pct}%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {u.carrosNaLoja} de {u.metaVal} carros — Faltam {u.faltam}
+                      {u.carrosParaMeta} de {u.metaVal} carros — Faltam {u.faltam}
                     </p>
                   </div>
                   <div className="hidden sm:grid grid-cols-3 gap-4 text-center shrink-0">
@@ -345,8 +349,8 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                       <p className="text-[10px] text-muted-foreground">Leads no Mês</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xl font-bold text-warning">{sel.carrosNaLoja}</p>
-                      <p className="text-[10px] text-muted-foreground">Carros na Loja</p>
+                       <p className="text-xl font-bold text-warning">{sel.carrosParaMeta}</p>
+                      <p className="text-[10px] text-muted-foreground">Concl.+Perd.</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-xl font-bold text-success">{sel.concluidos}</p>
@@ -365,8 +369,9 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                           <div key={ag.nome} className="flex items-center gap-3 text-sm p-2 rounded bg-muted/30">
                             <span className="font-medium flex-1">{ag.nome}</span>
                             <span>{ag.total} leads</span>
-                            <span className="text-warning">{ag.carrosNaLoja} loja</span>
                             <span className="text-success">{ag.concluidos} concl.</span>
+                            <span className="text-destructive">{ag.perdidos} perd.</span>
+                            <span className="text-primary font-semibold">{ag.carrosParaMeta} meta</span>
                           </div>
                         ))}
                       </div>

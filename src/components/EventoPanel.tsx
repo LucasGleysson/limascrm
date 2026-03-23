@@ -9,11 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadDetailSheet } from "./LeadDetailSheet";
-import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag, Skull, XCircle } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
+import { usePagination } from "@/hooks/usePagination";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag, Skull, XCircle, Search } from "lucide-react";
 import { Evento, Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
-
+import { formatPhone } from "@/lib/phoneUtils";
 export const EventoPanel = () => {
   const { eventos, leads, addEvento, concluirEvento, updateLead } = useLeads();
   const { currentUser } = useRole();
@@ -40,6 +43,9 @@ export const EventoPanel = () => {
   const [lossOpen, setLossOpen] = useState(false);
   const [lossLead, setLossLead] = useState<Lead | null>(null);
   const [lossMotivo, setLossMotivo] = useState("");
+
+  // Search for follow-ups
+  const [fupSearch, setFupSearch] = useState("");
 
   const myLeads = useMemo(
     () => leads.filter((l) => l.id_agente === currentUser.id),
@@ -121,6 +127,22 @@ export const EventoPanel = () => {
     });
     return cats;
   }, [followups, myLeads, today]);
+
+  // All pending followups flattened for search + pagination
+  const allPendingFollowups = useMemo(() => {
+    const all: Evento[] = [];
+    Object.values(followupsByCategory).forEach((arr) => all.push(...arr));
+    if (!fupSearch.trim()) return all;
+    const q = fupSearch.trim().toLowerCase();
+    return all.filter((e) => {
+      const lead = myLeads.find((l) => l.id === e.id_lead);
+      if (!lead) return false;
+      return lead.nome.toLowerCase().includes(q) || lead.telefone.includes(q);
+    });
+  }, [followupsByCategory, fupSearch, myLeads]);
+
+  const fupPagination = usePagination(allPendingFollowups, { pageSize: 20 });
+  const concludedPagination = usePagination(concluidos, { pageSize: 20 });
 
   const handleConclude = async () => {
     if (!selectedEvento || !descricao.trim() || concludingRef.current) return;
@@ -346,84 +368,135 @@ export const EventoPanel = () => {
       </div>
 
       {renderSection("Lembretes Criados", <StickyNote className="h-4 w-4 text-accent-foreground" />, lembretes, "Nenhum lembrete pendente.")}
-      {renderSection("Follow-ups — Novos Leads", <PhoneIcon className="h-4 w-4 text-primary" />, followupsByCategory.novo)}
-      {renderSection("Follow-ups — Agendados de Hoje", <CalendarCheck className="h-4 w-4 text-success" />, followupsByCategory.agendado_hoje)}
-      {renderSection("Follow-ups — Agendados que Não Foram", <AlertCircle className="h-4 w-4 text-destructive" />, followupsByCategory.agendado_atrasado)}
-      {renderSection("Resgatar — Dispensados", <UserX className="h-4 w-4 text-warning" />, followupsByCategory.dispensado)}
-      {renderSection("Outros Follow-ups", <Clock className="h-4 w-4 text-muted-foreground" />, followupsByCategory.other)}
 
-      {/* Concluir Processo FUP section + Encerrar Follow-up */}
-      {leadsWithActiveFup.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-muted-foreground">
-            <Flag className="h-4 w-4 text-primary" /> Encerrar Follow-up / Concluir Processo ({leadsWithActiveFup.length})
-          </h3>
-          <p className="text-xs text-muted-foreground mb-2 pl-6">Encerre o follow-up antes dos 7 FUPs ou marque como perda.</p>
-          <div className="space-y-2">
-            {leadsWithActiveFup.map((lead) => {
-              const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lead.id);
-              const done = fups.filter((e) => e.concluido).length;
-              const total = fups.length;
-              const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
-              const canLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
-              return (
-                <div key={lead.id} className="flex items-center gap-4 p-3 rounded-xl bg-card border border-border">
-                  <div className="flex-1 cursor-pointer hover:underline" onClick={() => openLeadDetail(lead.id)}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{lead.nome}</span>
-                      <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>{etapa?.label || lead.etapa}</Badge>
-                      <Badge variant="secondary" className="text-xs">{done}/{total} FUPs</Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {canLoss && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLossLead(lead);
-                          setLossMotivo("");
-                          setLossOpen(true);
-                        }}
-                        className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                      >
-                        <Skull className="h-3 w-3" /> Perda
-                      </Button>
+      {/* Follow-ups with search + pagination */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Follow-ups Pendentes ({allPendingFollowups.length})</h2>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou telefone..."
+            value={fupSearch}
+            onChange={(e) => setFupSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Category badges */}
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">Novos: {followupsByCategory.novo.length}</Badge>
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30">Agend. Hoje: {followupsByCategory.agendado_hoje.length}</Badge>
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">Atrasados: {followupsByCategory.agendado_atrasado.length}</Badge>
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Dispensados: {followupsByCategory.dispensado.length}</Badge>
+        </div>
+
+        <div className="space-y-2">
+          {fupPagination.paginatedItems.map((evento) => {
+            const lead = getLead(evento.id_lead);
+            const canMarkLoss = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido";
+            const canEncerrar = lead && !lead.fup_concluido;
+            const etapa = lead ? ETAPAS_FUNIL.find((e) => e.id === lead.etapa) : null;
+            const leadFups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === evento.id_lead);
+            const done = leadFups.filter((e) => e.concluido).length;
+
+            return (
+              <div
+                key={evento.id}
+                className={`flex items-center gap-3 p-3 rounded-xl bg-card border transition-all ${
+                  isOverdue(evento.data_prevista) ? "border-destructive/30" : "border-border"
+                } hover:bg-muted/50`}
+              >
+                <div
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => openLeadDetail(evento.id_lead)}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">{getLeadName(evento.id_lead)}</span>
+                    <Badge variant="outline" className={`text-xs ${lead ? getStatusBadgeClass(lead.etapa) : ""}`}>
+                      {etapa?.label || lead?.etapa || "—"}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">
+                      FUP {evento.numero}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{done} feitos</Badge>
+                    {isOverdue(evento.data_prevista) && (
+                      <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                        <AlertCircle className="h-3 w-3 mr-1" /> Atrasado
+                      </Badge>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConcludeProcessLead(lead);
-                        setConcludeProcessMotivo("");
-                        setConcludeProcessOpen(true);
-                      }}
-                      className="gap-1 text-xs"
-                    >
-                      <XCircle className="h-3 w-3" /> Encerrar FUP
-                    </Button>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                    <span className="flex items-center gap-1"><PhoneIcon className="h-3 w-3" />{lead ? formatPhone(lead.telefone) : "—"}</span>
+                    <span>Previsto: {formatDateBR(evento.data_prevista)}</span>
+                    {evento.descricao && <span className="italic">"{evento.descricao}"</span>}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {canMarkLoss && (
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={(e) => { e.stopPropagation(); setLossLead(lead!); setLossMotivo(""); setLossOpen(true); }}
+                      className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                      title="Marcar como Perda"
+                    >
+                      <Skull className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {canEncerrar && (
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={(e) => { e.stopPropagation(); setConcludeProcessLead(lead!); setConcludeProcessMotivo(""); setConcludeProcessOpen(true); }}
+                      className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                      title="Encerrar Follow-up"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Encerrar
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); setSelectedEvento(evento); setDescricao(""); setConcludeOpen(true); }}
+                    className="gap-1"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Concluir
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+          {allPendingFollowups.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhum follow-up pendente. 🎉</p>
+          )}
         </div>
-      )}
 
-      {pendentes.length === 0 && leadsWithActiveFup.length === 0 && (
-        <p className="text-sm text-muted-foreground py-4 text-center">Nenhum evento pendente. 🎉</p>
-      )}
+        <TablePagination
+          currentPage={fupPagination.currentPage} totalPages={fupPagination.totalPages}
+          totalItems={fupPagination.totalItems} pageSize={fupPagination.pageSize}
+          onPageChange={fupPagination.goToPage} hasNextPage={fupPagination.hasNextPage} hasPrevPage={fupPagination.hasPrevPage}
+        />
+      </div>
 
-      {concluidos.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-success" /> Concluídos ({concluidos.length})
-          </h2>
-          <div className="space-y-2">{concluidos.map((evento) => renderEventCard(evento, true))}</div>
-        </div>
-      )}
+      {/* Concluded — collapsible */}
+      <Accordion type="single" collapsible>
+        <AccordionItem value="concluded" className="rounded-xl border border-border bg-card">
+          <AccordionTrigger className="px-5 py-4 hover:no-underline">
+            <span className="flex items-center gap-2 text-lg font-semibold">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              Concluídos ({concluidos.length})
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-5 space-y-2">
+            {concludedPagination.paginatedItems.map((evento) => renderEventCard(evento, true))}
+            {concluidos.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento concluído.</p>
+            )}
+            <TablePagination
+              currentPage={concludedPagination.currentPage} totalPages={concludedPagination.totalPages}
+              totalItems={concludedPagination.totalItems} pageSize={concludedPagination.pageSize}
+              onPageChange={concludedPagination.goToPage} hasNextPage={concludedPagination.hasNextPage} hasPrevPage={concludedPagination.hasPrevPage}
+            />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* Conclude event modal */}
       <Dialog open={concludeOpen} onOpenChange={setConcludeOpen}>

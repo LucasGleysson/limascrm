@@ -18,7 +18,7 @@ import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -81,7 +81,7 @@ export const ManagerDashboard = () => {
         ...u, total: uLeads.length, carrosNaLoja,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         concluidos: uLeads.filter((l) => l.etapa === "concluido").length,
-        dispensados: uLeads.filter((l) => l.etapa === "dispensado").length,
+        perdidos: uLeads.filter((l) => l.etapa === "perdido").length,
       };
     });
   }, [filteredLeads, unidades]);
@@ -99,7 +99,7 @@ export const ManagerDashboard = () => {
         agendado: aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         carrosNaLoja,
         concluido: aLeads.filter((l) => l.etapa === "concluido").length,
-        dispensados: aLeads.filter((l) => l.etapa === "dispensado").length,
+        perdidos: aLeads.filter((l) => l.etapa === "perdido").length,
         perdidosAntes: aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
         total: aLeads.length,
         taxa: aLeads.length > 0 ? Math.round((carrosNaLoja / aLeads.length) * 100) : 0,
@@ -195,9 +195,9 @@ export const ManagerDashboard = () => {
                       </div>
                       <div className="flex gap-3 text-sm flex-1 justify-end">
                         <span>{u.total} leads</span>
-                        <span className="text-warning">{u.carrosNaLoja} loja</span>
+                         <span className="text-warning">{u.carrosNaLoja} loja</span>
                         <span className="text-success">{u.concluidos} ✓</span>
-                        <span className="text-destructive">{u.dispensados} disp.</span>
+                        <span className="text-destructive">{u.perdidos} perd.</span>
                       </div>
                     </div>
                   ))}
@@ -233,8 +233,8 @@ export const ManagerDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">NOVO</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD. s/L</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
@@ -249,8 +249,8 @@ export const ManagerDashboard = () => {
                         <td className="py-3 text-center">{a.novo}</td>
                         <td className="py-3 text-center text-primary">{a.agendado}</td>
                         <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
-                        <td className="py-3 text-center text-success">{a.concluido}</td>
-                        <td className="py-3 text-center text-destructive">{a.dispensados}</td>
+                         <td className="py-3 text-center text-success">{a.concluido}</td>
+                        <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                         <td className="py-3 text-center text-muted-foreground">{a.perdidosAntes}</td>
                         <td className="py-3 text-center font-medium">{a.taxa}%</td>
                         <td className="py-3 text-center text-success">{a.fupDone}</td>

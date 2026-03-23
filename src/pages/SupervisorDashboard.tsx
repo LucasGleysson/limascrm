@@ -16,7 +16,7 @@ import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { DispensaReportPanel } from "@/components/DispensaReportPanel";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -156,9 +156,8 @@ export const SupervisorDashboard = () => {
               <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="destructive" />
-              <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Perdidos (pós-loja)" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
@@ -175,8 +174,7 @@ export const SupervisorDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
@@ -191,8 +189,7 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 text-center">{a.total}</td>
                         <td className="py-3 text-center text-primary">{a.agendados}</td>
                         <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                        <td className="py-3 text-center text-success">{a.concluidos}</td>
-                        <td className="py-3 text-center text-destructive">{a.dispensados}</td>
+                         <td className="py-3 text-center text-success">{a.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                         <td className="py-3 text-center font-medium">{a.txConversao}%</td>
                         <td className="py-3 text-center text-success">{a.fupConcluidos}</td>
@@ -222,8 +219,7 @@ export const SupervisorDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">N/AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
                     </tr>
@@ -236,8 +232,7 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                         <td className="py-3 text-center text-primary">{u.agendados}</td>
                         <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
-                        <td className="py-3 text-center text-success">{u.concluidos}</td>
-                        <td className="py-3 text-center text-destructive">{u.dispensados}</td>
+                         <td className="py-3 text-center text-success">{u.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{u.perdidos}</td>
                         <td className="py-3 text-center font-medium">{u.txConversao}%</td>
                       </tr>
@@ -372,11 +367,11 @@ export const SupervisorDashboard = () => {
                   <div className="flex-1">
                     <span className="font-semibold">{u.nome}</span>
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-                      <span>{u.total} leads</span>
+                       <span>{u.total} leads</span>
                       <span className="text-primary">{u.agendados} agend.</span>
                       <span className="text-warning">{u.passaramNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
-                      <span className="text-destructive">{u.dispensados} disp.</span>
+                      <span className="text-destructive">{u.perdidos} perd.</span>
                       <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
@@ -392,7 +387,6 @@ export const SupervisorDashboard = () => {
                 { name: "Agendados", value: sel.agendados },
                 { name: "Na Loja", value: sel.passaramNaLoja },
                 { name: "Concluídos", value: sel.concluidos },
-                { name: "Dispensados", value: sel.dispensados },
                 { name: "Perdidos", value: sel.perdidos },
               ].filter((d) => d.value > 0);
               return (
@@ -402,7 +396,7 @@ export const SupervisorDashboard = () => {
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Passaram na Loja</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                   </div>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -467,7 +461,7 @@ export const SupervisorDashboard = () => {
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.agendados}</p><p className="text-xs text-muted-foreground">Agendados</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selected.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                 </div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
