@@ -79,22 +79,21 @@ Deno.serve(async (req) => {
         : 0;
 
       if (maxExisting >= 7) {
-        // After 7 followups, mark FUP process as concluded on the lead
+        // Determine final status based on current etapa
+        let finalEtapa = lead.etapa;
+        if (lead.etapa === "novo") finalEtapa = "desqualificado_novo";
+        else if (["agendado", "reagendado"].includes(lead.etapa)) finalEtapa = "desqualificado_agendado";
+        else if (lead.etapa === "dispensado") finalEtapa = "perdido";
+
+        // Single atomic update to prevent race condition
         await supabase.from("leads").update({
           fup_concluido: true,
           fup_concluido_em: new Date().toISOString(),
           fup_concluido_numero: 7,
           fup_motivo_conclusao: "Processo completo (7 follow-ups)",
+          etapa: finalEtapa,
         }).eq("id", lead.id);
 
-        // Also update etapa for final status
-        if (lead.etapa === "novo") {
-          await supabase.from("leads").update({ etapa: "desqualificado_novo" }).eq("id", lead.id);
-        } else if (["agendado", "reagendado"].includes(lead.etapa)) {
-          await supabase.from("leads").update({ etapa: "desqualificado_agendado" }).eq("id", lead.id);
-        } else if (lead.etapa === "dispensado") {
-          await supabase.from("leads").update({ etapa: "perdido" }).eq("id", lead.id);
-        }
         statusChanged++;
         continue;
       }
