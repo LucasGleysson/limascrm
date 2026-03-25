@@ -103,14 +103,15 @@ export const SupervisorDashboard = () => {
     const passaramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
-    const naoAgendados = filteredLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
+    const naoAgendados = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
-    const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+    const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
     return {
       totalLeads: filteredLeads.length, passaramNaLoja, concluidos, agendados,
-      naoAgendados, dispensados, perdidos, perdidosAntes, txConversao,
+      naoAgendados, dispensados, perdidos, desqNovos, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
 
@@ -158,7 +159,9 @@ export const SupervisorDashboard = () => {
             </div>
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard title="Perdidos (pós-loja)" value={globalStats.perdidos} icon={Skull} variant="destructive" />
-              <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
+              <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
+              <StatsCard title="Desq. Novos" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
+              <StatsCard title="Desq. Agendados" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
