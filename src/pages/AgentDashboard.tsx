@@ -28,6 +28,8 @@ import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { ORIGENS } from "@/data/mockData";
 
+const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
+
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
