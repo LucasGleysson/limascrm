@@ -107,11 +107,12 @@ export const SupervisorDashboard = () => {
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
     return {
       totalLeads: filteredLeads.length, passaramNaLoja, concluidos, agendados,
-      naoAgendados, dispensados, perdidos, desqNovos, desqAgendados, txConversao,
+      naoAgendados, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
 
@@ -160,8 +161,9 @@ export const SupervisorDashboard = () => {
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard title="Perdidos (pós-loja)" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
-              <StatsCard title="Desq. Novos" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
-              <StatsCard title="Desq. Agendados" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
+              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
+              <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
@@ -300,23 +302,28 @@ export const SupervisorDashboard = () => {
             {(() => {
               const desq = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa));
               const desqNovo = desq.filter((l) => l.etapa === "desqualificado_novo").length;
+              const desqOutraCidade = desq.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
               const desqAgendado = desq.filter((l) => l.etapa === "desqualificado_agendado").length;
               if (desq.length === 0) return null;
               return (
                 <div className="rounded-xl border border-border bg-card p-5">
                   <h2 className="text-lg font-semibold mb-4">Relatório de Desqualificados</h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold">{desq.length}</p>
-                      <p className="text-xs text-muted-foreground">Total Desqualificados</p>
-                    </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-2xl font-bold text-warning">{desqNovo}</p>
-                      <p className="text-xs text-muted-foreground">Na etapa Novo</p>
+                      <p className="text-xs text-muted-foreground">Desq. Novo</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold text-orange-500">{desqOutraCidade}</p>
+                      <p className="text-xs text-muted-foreground">Outra Cidade</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-2xl font-bold text-destructive">{desqAgendado}</p>
-                      <p className="text-xs text-muted-foreground">Na etapa Agendado</p>
+                      <p className="text-xs text-muted-foreground">Desq. Agendado</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-2xl font-bold">{desq.length}</p>
+                      <p className="text-xs text-muted-foreground">Total</p>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
@@ -325,6 +332,7 @@ export const SupervisorDashboard = () => {
                         <tr className="border-b border-border">
                           <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                           <th className="text-center py-2 font-medium text-muted-foreground">DESQ. NOVO</th>
+                          <th className="text-center py-2 font-medium text-muted-foreground">OUTRA CIDADE</th>
                           <th className="text-center py-2 font-medium text-muted-foreground">DESQ. AGENDADO</th>
                           <th className="text-center py-2 font-medium text-muted-foreground">TOTAL</th>
                         </tr>
@@ -337,6 +345,7 @@ export const SupervisorDashboard = () => {
                             <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
                               <td className="py-3 font-medium">{ag.nome}</td>
                               <td className="py-3 text-center text-warning">{agDesq.filter((l) => l.etapa === "desqualificado_novo").length}</td>
+                              <td className="py-3 text-center text-orange-500">{agDesq.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length}</td>
                               <td className="py-3 text-center text-destructive">{agDesq.filter((l) => l.etapa === "desqualificado_agendado").length}</td>
                               <td className="py-3 text-center font-medium">{agDesq.length}</td>
                             </tr>
