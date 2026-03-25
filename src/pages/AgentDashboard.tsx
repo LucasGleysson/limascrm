@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin, Trophy, Award } from "lucide-react";
+import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarChart3, MapPin, Trophy, Award, PieChart as PieChartIcon } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
@@ -25,6 +25,8 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { ORIGENS } from "@/data/mockData";
 
 const SIDEBAR_TABS = [
   { id: "leads", label: "Leads", icon: Users },
@@ -99,7 +101,17 @@ export const AgentDashboard = () => {
     const carrosHoje = todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length;
     const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "perdido").length;
-    const pendingEvents = eventos.filter((e) => !e.concluido && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead && !l.fup_concluido)).length;
+      const isEligible = (lead: Lead): boolean => {
+        if (lead.fup_concluido) return false;
+        if (lead.etapa === "dispensado") return true;
+        if (lead.etapa === "novo") return true;
+        if (["agendado", "reagendado"].includes(lead.etapa)) {
+          return !!lead.data_agendamento && lead.data_agendamento <= today;
+        }
+        return false;
+      };
+      const pendingEvents = eventos.filter((e) => !e.concluido && e.tipo === "followup" && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead && isEligible(l))).length
+        + eventos.filter((e) => !e.concluido && e.tipo === "lembrete" && e.data_prevista <= today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     return {
       novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje,
@@ -127,6 +139,14 @@ export const AgentDashboard = () => {
       txVisita: total > 0 ? Math.round((naLojaOuSuperior / total) * 100) : 0,
       concluidos,
     };
+  }, [allMyLeads, today]);
+
+  // Origin breakdown for today's new leads
+  const origemHoje = useMemo(() => {
+    const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
+    const counts: Record<string, number> = {};
+    todayLeads.forEach((l) => { counts[l.origem] = (counts[l.origem] || 0) + 1; });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [allMyLeads, today]);
 
   // Store meta progress
@@ -308,6 +328,37 @@ export const AgentDashboard = () => {
               <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
+
+            {/* Origin breakdown pie chart */}
+            {origemHoje.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5 text-muted-foreground" /> Novos Leads por Origem
+                </h2>
+                <p className="text-xs text-muted-foreground mb-4">Distribuição dos {dailyStats.novos} leads de hoje</p>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="w-48 h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={origemHoje} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                          {origemHoje.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {origemHoje.map((o, i) => (
+                      <div key={o.name} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="text-sm font-medium">{o.name}</span>
+                        <span className="text-sm text-muted-foreground">{o.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Safra de Hoje — Cohort metrics */}
             <div className="rounded-xl border border-border bg-card p-5">
