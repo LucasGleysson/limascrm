@@ -2,8 +2,11 @@ import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+
+const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -123,7 +126,43 @@ export const DailyReportPanel = () => {
         <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
       </div>
 
-      {/* By city */}
+      {/* Origin breakdown pie chart */}
+      {(() => {
+        const origemData = Object.entries(
+          createdToday.reduce<Record<string, number>>((acc, l) => { acc[l.origem] = (acc[l.origem] || 0) + 1; return acc; }, {})
+        ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+        if (origemData.length === 0) return null;
+        return (
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+              <PieChartIcon className="h-5 w-5 text-muted-foreground" /> Registros por Origem
+            </h2>
+            <p className="text-xs text-muted-foreground mb-4">Distribuição dos {globalStats.totalRegistros} registros do dia</p>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-48 h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={origemData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                      {origemData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {origemData.map((o, i) => (
+                  <div key={o.name} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                    <span className="text-sm font-medium">{o.name}</span>
+                    <span className="text-sm text-muted-foreground">{o.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <MapPin className="h-5 w-5 text-muted-foreground" /> Por Cidade
