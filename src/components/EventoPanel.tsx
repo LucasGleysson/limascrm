@@ -391,10 +391,22 @@ export const EventoPanel = () => {
 
         {/* Category badges */}
         <div className="flex flex-wrap gap-2 text-xs">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">Novos: {followupsByCategory.novo.length}</Badge>
-          <Badge variant="outline" className="bg-success/10 text-success border-success/30">Agend. Hoje: {followupsByCategory.agendado_hoje.length}</Badge>
-          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">Atrasados: {followupsByCategory.agendado_atrasado.length}</Badge>
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Dispensados: {followupsByCategory.dispensado.length}</Badge>
+          {[
+            { key: null, label: "Todos", count: Object.values(followupsByCategory).reduce((s, a) => s + a.length, 0), cls: "bg-muted text-muted-foreground border-border" },
+            { key: "novo", label: "Novos", count: followupsByCategory.novo.length, cls: "bg-primary/10 text-primary border-primary/30" },
+            { key: "agendado_hoje", label: "Agend. Hoje", count: followupsByCategory.agendado_hoje.length, cls: "bg-success/10 text-success border-success/30" },
+            { key: "agendado_atrasado", label: "Atrasados", count: followupsByCategory.agendado_atrasado.length, cls: "bg-destructive/10 text-destructive border-destructive/30" },
+            { key: "dispensado", label: "Dispensados", count: followupsByCategory.dispensado.length, cls: "bg-warning/10 text-warning border-warning/30" },
+          ].map((cat) => (
+            <Badge
+              key={cat.key ?? "all"}
+              variant="outline"
+              className={`cursor-pointer transition-all ${cat.cls} ${fupCategoryFilter === cat.key ? "ring-2 ring-ring ring-offset-1 scale-105 font-bold" : "opacity-80 hover:opacity-100"}`}
+              onClick={() => setFupCategoryFilter(fupCategoryFilter === cat.key ? null : cat.key)}
+            >
+              {cat.label}: {cat.count}
+            </Badge>
+          ))}
         </div>
 
         <div className="space-y-2">
