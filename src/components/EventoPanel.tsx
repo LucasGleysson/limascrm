@@ -46,6 +46,7 @@ export const EventoPanel = () => {
 
   // Search for follow-ups
   const [fupSearch, setFupSearch] = useState("");
+  const [fupCategoryFilter, setFupCategoryFilter] = useState<string | null>(null);
 
   const myLeads = useMemo(
     () => leads.filter((l) => l.id_agente === currentUser.id),
