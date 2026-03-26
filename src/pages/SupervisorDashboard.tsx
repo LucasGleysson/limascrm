@@ -59,11 +59,15 @@ export const SupervisorDashboard = () => {
       const passaramNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
+      const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+      const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
       const naoAgendados = aLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
 
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
@@ -73,9 +77,9 @@ export const SupervisorDashboard = () => {
 
       return {
         ...agente, unidadeNome: unidade?.nome || "—",
-        total: aLeads.length, passaramNaLoja, concluidos, agendados,
-        dispensados, perdidos, naoAgendados, perdidosAntes, txConversao,
-        fupConcluidos, fupPendentes, leads: aLeads,
+        total: aLeads.length, passaramNaLoja, concluidos, agendados, totalAgendamentos,
+        dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, perdidosAntes,
+        txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
   }, [filteredLeads, eventos, agentes, unidades]);
@@ -449,12 +453,13 @@ export const SupervisorDashboard = () => {
                       <span className="font-semibold">{ag.nome}</span>
                       <span className="text-xs text-muted-foreground">({ag.unidadeNome})</span>
                     </div>
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
+                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                       <span>{ag.total} leads</span>
-                      <span className="text-primary">{ag.agendados} agend.</span>
+                      <span className="text-primary">{ag.totalAgendamentos} agend.</span>
                       <span className="text-warning">{ag.passaramNaLoja} loja</span>
                       <span className="text-success">{ag.concluidos} concl.</span>
-                      <span className="font-medium">{ag.txConversao}% conv.</span>
+                      <span className="text-destructive">{ag.perdidos} perd.</span>
+                      <span className="font-medium">{ag.txAgendamento}% ag. | {ag.txConversao}% conv.</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 text-xs">
@@ -467,12 +472,17 @@ export const SupervisorDashboard = () => {
             </div>
             {selected && (
               <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                <h3 className="font-semibold">{selected.nome} — TX Conversão: {selected.txConversao}%</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selected.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.agendados}</p><p className="text-xs text-muted-foreground">Agendados</p></div>
+                <h3 className="font-semibold">{selected.nome} — Conv. Agend: {selected.txAgendamento}% | Conv. Loja: {selected.txConversao}%</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selected.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selected.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                 </div>
                 <div className="h-64">
