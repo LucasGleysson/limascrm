@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -13,16 +13,14 @@ const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "
 export const DailyReportPanel = () => {
   const { leads, unidades, profiles } = useLeads();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const dateStr = selectedDate.toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
 
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
-  // ALL leads created on this date (regardless of current status)
   const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
-  // All leads scheduled for this date
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
-  // Leads that effectively arrived at the store on this date
   const passaramNaLojaNoDia = useMemo(() => {
     const byCheckin = leads.filter((l) => l.checkin?.slice(0, 10) === dateStr);
     const ids = new Set(byCheckin.map((l) => l.id));
@@ -35,19 +33,21 @@ export const DailyReportPanel = () => {
   }, [leads, dateStr]);
 
   const globalStats = useMemo(() => {
-    // Leads linked to a unit (for unit-based reports use all leads)
-    const allLeads = leads;
+    const desqNovos = createdToday.filter((l) => l.etapa === "desqualificado_novo").length;
+    const desqOutraCidade = createdToday.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
+    const desqAgendados = createdToday.filter((l) => l.etapa === "desqualificado_agendado").length;
     return {
       totalRegistros: createdToday.length,
-      totalLeads: allLeads.length,
-      naoAgendados: createdToday.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
-      agendados: createdToday.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
+      naoAgendados: createdToday.filter((l) => l.etapa === "novo").length,
+      agendados: createdToday.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length,
       passaramNaLoja: passaramNaLojaNoDia.length,
       concluidos: concluidosNoDia.length,
       perdidos: passaramNaLojaNoDia.filter((l) => l.etapa === "perdido").length,
-      perdidosAntes: createdToday.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
+      desqNovos,
+      desqOutraCidade,
+      desqAgendados,
     };
-  }, [createdToday, leads, passaramNaLojaNoDia, concluidosNoDia]);
+  }, [createdToday, passaramNaLojaNoDia, concluidosNoDia]);
 
   const unitStats = useMemo(() => {
     return unidades.map((u) => {
@@ -59,7 +59,7 @@ export const DailyReportPanel = () => {
       return {
         ...u,
         totalRegistros: uCreated.length,
-        naoAgendados: uCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
+        naoAgendados: uCreated.filter((l) => l.etapa === "novo").length,
         agendados: uAgendados.length,
         passaramNaLoja,
         concluidos: uConcluidos.length,
@@ -77,17 +77,34 @@ export const DailyReportPanel = () => {
       const aPassaram = passaramNaLojaNoDia.filter((l) => l.id_agente === a.id);
       const aConcluidos = concluidosNoDia.filter((l) => l.id_agente === a.id);
       const passaramNaLoja = aPassaram.length;
+      const totalAgendamentos = aCreated.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+      const desqNovos = aCreated.filter((l) => l.etapa === "desqualificado_novo").length;
+      const desqOutraCidade = aCreated.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
+      const desqAgendados = aCreated.filter((l) => l.etapa === "desqualificado_agendado").length;
+      const txAgendamento = aCreated.length > 0 ? Math.round((totalAgendamentos / aCreated.length) * 100) : 0;
+      const txNaLoja = passaramNaLoja > 0 ? Math.round((aConcluidos.length / passaramNaLoja) * 100) : 0;
+
+      // Origin breakdown
+      const origemMap: Record<string, number> = {};
+      aCreated.forEach((l) => { origemMap[l.origem] = (origemMap[l.origem] || 0) + 1; });
+      const origemData = Object.entries(origemMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
       return {
         ...a,
         unidadeNome: unidade?.nome || "—",
         totalRegistros: aCreated.length,
-        naoAgendados: aCreated.filter((l) => ["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length,
-        agendados: aAgendados.length,
+        totalAgendamentos,
         passaramNaLoja,
         perdidos: aPassaram.filter((l) => l.etapa === "perdido").length,
         concluidos: aConcluidos.length,
+        desqNovos,
+        desqOutraCidade,
+        desqAgendados,
+        txAgendamento,
+        txNaLoja,
+        origemData,
       };
-    }).filter((a) => a.totalRegistros > 0 || a.agendados > 0);
+    }).filter((a) => a.totalRegistros > 0 || a.totalAgendamentos > 0);
   }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia]);
 
   const prevDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); };
@@ -116,14 +133,16 @@ export const DailyReportPanel = () => {
       {/* Global stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard title="Registros Novos" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
-        <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
-        <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
+        <StatsCard title="Agendamentos" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
         <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard title="Serviço Concluído" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
-        <StatsCard title="Perdidos s/ Loja" value={globalStats.perdidosAntes} icon={XCircle} variant="destructive" />
+        <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={AlertTriangle} variant="warning" />
+        <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
+        <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
+        <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
       </div>
 
       {/* Origin breakdown pie chart */}
@@ -163,6 +182,7 @@ export const DailyReportPanel = () => {
         );
       })()}
 
+      {/* By city */}
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <MapPin className="h-5 w-5 text-muted-foreground" /> Por Cidade
@@ -178,10 +198,10 @@ export const DailyReportPanel = () => {
                   <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">TX CONV.</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,7 +223,7 @@ export const DailyReportPanel = () => {
         )}
       </div>
 
-      {/* By agent */}
+      {/* By agent - expandable */}
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Users className="h-5 w-5 text-muted-foreground" /> Por Agente
@@ -218,25 +238,103 @@ export const DailyReportPanel = () => {
                   <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                   <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                   <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">DESQ.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">% AGEND.</th>
+                  <th className="text-center py-2 font-medium text-muted-foreground">% LOJA</th>
                 </tr>
               </thead>
               <tbody>
                 {agentStats.map((a) => (
-                  <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="py-3 font-medium">{a.nome}</td>
-                    <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
-                    <td className="py-3 text-center">{a.totalRegistros}</td>
-                    <td className="py-3 text-center text-warning">{a.naoAgendados}</td>
-                    <td className="py-3 text-center text-primary">{a.agendados}</td>
-                    <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                    <td className="py-3 text-center text-success">{a.concluidos}</td>
-                    <td className="py-3 text-center text-destructive">{a.perdidos}</td>
-                  </tr>
+                  <>
+                    <tr
+                      key={a.id}
+                      className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${expandedAgent === a.id ? "bg-muted/30" : ""}`}
+                      onClick={() => setExpandedAgent(expandedAgent === a.id ? null : a.id)}
+                    >
+                      <td className="py-3 font-medium flex items-center gap-1.5">
+                        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expandedAgent === a.id ? "rotate-0" : "-rotate-90"}`} />
+                        {a.nome}
+                      </td>
+                      <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
+                      <td className="py-3 text-center">{a.totalRegistros}</td>
+                      <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
+                      <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
+                      <td className="py-3 text-center text-success">{a.concluidos}</td>
+                      <td className="py-3 text-center text-destructive">{a.perdidos}</td>
+                      <td className="py-3 text-center text-muted-foreground">{a.desqNovos + a.desqAgendados}</td>
+                      <td className="py-3 text-center font-medium">{a.txAgendamento}%</td>
+                      <td className="py-3 text-center font-medium">{a.txNaLoja}%</td>
+                    </tr>
+                    {expandedAgent === a.id && (
+                      <tr key={`${a.id}-detail`}>
+                        <td colSpan={10} className="p-0">
+                          <div className="bg-muted/20 border-t border-border/30 p-4 space-y-4">
+                            {/* Funnel */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold">{a.totalRegistros}</p>
+                                <p className="text-xs text-muted-foreground">Registros</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-primary">{a.totalAgendamentos}</p>
+                                <p className="text-xs text-muted-foreground">Agendamentos</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-warning">{a.passaramNaLoja}</p>
+                                <p className="text-xs text-muted-foreground">Na Loja</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-success">{a.concluidos}</p>
+                                <p className="text-xs text-muted-foreground">Concluídos</p>
+                              </div>
+                            </div>
+                            {/* Desq + conversions */}
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-warning">{a.desqNovos}</p>
+                                <p className="text-xs text-muted-foreground">Desq. Novo</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-orange-500">{a.desqOutraCidade}</p>
+                                <p className="text-xs text-muted-foreground">Outra Cidade</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold text-destructive">{a.desqAgendados}</p>
+                                <p className="text-xs text-muted-foreground">Desq. Agendado</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold">{a.txAgendamento}%</p>
+                                <p className="text-xs text-muted-foreground">Conv. Agend.</p>
+                              </div>
+                              <div className="rounded-lg bg-card border border-border p-3 text-center">
+                                <p className="text-xl font-bold">{a.txNaLoja}%</p>
+                                <p className="text-xs text-muted-foreground">Conv. Na Loja</p>
+                              </div>
+                            </div>
+                            {/* Origin */}
+                            {a.origemData.length > 0 && (
+                              <div>
+                                <p className="text-sm font-medium mb-2">Origem dos Registros</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {a.origemData.map((o, i) => (
+                                    <div key={o.name} className="flex items-center gap-2 rounded-lg bg-card border border-border px-3 py-1.5">
+                                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                      <span className="text-sm font-medium">{o.name}</span>
+                                      <span className="text-sm text-muted-foreground">{o.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>
