@@ -59,11 +59,15 @@ export const SupervisorDashboard = () => {
       const passaramNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
+      const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+      const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
       const naoAgendados = aLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
 
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
@@ -73,9 +77,9 @@ export const SupervisorDashboard = () => {
 
       return {
         ...agente, unidadeNome: unidade?.nome || "—",
-        total: aLeads.length, passaramNaLoja, concluidos, agendados,
-        dispensados, perdidos, naoAgendados, perdidosAntes, txConversao,
-        fupConcluidos, fupPendentes, leads: aLeads,
+        total: aLeads.length, passaramNaLoja, concluidos, agendados, totalAgendamentos,
+        dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, perdidosAntes,
+        txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
   }, [filteredLeads, eventos, agentes, unidades]);
