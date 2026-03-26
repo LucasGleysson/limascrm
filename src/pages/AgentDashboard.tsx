@@ -19,7 +19,7 @@ import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPhone } from "@/lib/phoneUtils";
-import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, getToday } from "@/lib/leadUtils";
+import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, foiNaLoja, getToday } from "@/lib/leadUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -131,7 +131,7 @@ export const AgentDashboard = () => {
     });
     const total = cohort.length;
     const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
-    const naLojaOuSuperior = cohort.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
     return {
       total,
