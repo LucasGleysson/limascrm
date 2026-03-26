@@ -453,12 +453,13 @@ export const SupervisorDashboard = () => {
                       <span className="font-semibold">{ag.nome}</span>
                       <span className="text-xs text-muted-foreground">({ag.unidadeNome})</span>
                     </div>
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
+                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                       <span>{ag.total} leads</span>
-                      <span className="text-primary">{ag.agendados} agend.</span>
+                      <span className="text-primary">{ag.totalAgendamentos} agend.</span>
                       <span className="text-warning">{ag.passaramNaLoja} loja</span>
                       <span className="text-success">{ag.concluidos} concl.</span>
-                      <span className="font-medium">{ag.txConversao}% conv.</span>
+                      <span className="text-destructive">{ag.perdidos} perd.</span>
+                      <span className="font-medium">{ag.txAgendamento}% ag. | {ag.txConversao}% conv.</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0 text-xs">
