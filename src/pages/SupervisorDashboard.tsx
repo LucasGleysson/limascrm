@@ -472,12 +472,17 @@ export const SupervisorDashboard = () => {
             </div>
             {selected && (
               <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                <h3 className="font-semibold">{selected.nome} — TX Conversão: {selected.txConversao}%</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selected.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.agendados}</p><p className="text-xs text-muted-foreground">Agendados</p></div>
+                <h3 className="font-semibold">{selected.nome} — Conv. Agend: {selected.txAgendamento}% | Conv. Loja: {selected.txConversao}%</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selected.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selected.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selected.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
+                  <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selected.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
                   <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                 </div>
                 <div className="h-64">
