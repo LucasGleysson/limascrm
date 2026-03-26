@@ -129,10 +129,16 @@ export const EventoPanel = () => {
     return cats;
   }, [followups, myLeads, today]);
 
-  // All pending followups flattened for search + pagination
+  // All pending followups flattened for search + category filter + pagination
   const allPendingFollowups = useMemo(() => {
-    const all: Evento[] = [];
-    Object.values(followupsByCategory).forEach((arr) => all.push(...arr));
+    let all: Evento[] = [];
+    if (fupCategoryFilter) {
+      // Show only selected category, sorted by data_prevista descending (most recent first)
+      const catEvents = followupsByCategory[fupCategoryFilter] || [];
+      all = [...catEvents].sort((a, b) => b.data_prevista.localeCompare(a.data_prevista));
+    } else {
+      Object.values(followupsByCategory).forEach((arr) => all.push(...arr));
+    }
     if (!fupSearch.trim()) return all;
     const q = fupSearch.trim().toLowerCase();
     return all.filter((e) => {
@@ -140,7 +146,7 @@ export const EventoPanel = () => {
       if (!lead) return false;
       return lead.nome.toLowerCase().includes(q) || lead.telefone.includes(q);
     });
-  }, [followupsByCategory, fupSearch, myLeads]);
+  }, [followupsByCategory, fupSearch, myLeads, fupCategoryFilter]);
 
   const fupPagination = usePagination(allPendingFollowups, { pageSize: 20 });
   const concludedPagination = usePagination(concluidos, { pageSize: 20 });
