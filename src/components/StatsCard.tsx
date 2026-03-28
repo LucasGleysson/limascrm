@@ -1,3 +1,4 @@
+import React from "react";
 import { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
@@ -27,22 +28,26 @@ const iconVariantStyles = {
   destructive: "bg-destructive/10 text-destructive",
 };
 
-export const StatsCard = ({ title, value, subtitle, icon: Icon, trend, variant = "default" }: StatsCardProps) => (
-  <div className={`rounded-xl border p-5 animate-slide-in ${variantStyles[variant]}`}>
-    <div className="flex items-start justify-between">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <p className="text-2xl font-bold tracking-tight">{value}</p>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-        {trend && (
-          <p className={`text-xs font-medium ${trend.positive ? "text-success" : "text-destructive"}`}>
-            {trend.positive ? "↑" : "↓"} {Math.abs(trend.value)}%
-          </p>
-        )}
-      </div>
-      <div className={`rounded-lg p-2.5 ${iconVariantStyles[variant]}`}>
-        <Icon className="h-5 w-5" />
+export const StatsCard = React.forwardRef<HTMLDivElement, StatsCardProps>(
+  ({ title, value, subtitle, icon: Icon, trend, variant = "default" }, ref) => (
+    <div ref={ref} className={`rounded-xl border p-5 animate-slide-in ${variantStyles[variant]}`}>
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          {trend && (
+            <p className={`text-xs font-medium ${trend.positive ? "text-success" : "text-destructive"}`}>
+              {trend.positive ? "↑" : "↓"} {Math.abs(trend.value)}%
+            </p>
+          )}
+        </div>
+        <div className={`rounded-lg p-2.5 ${iconVariantStyles[variant]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
       </div>
     </div>
-  </div>
+  )
 );
+
+StatsCard.displayName = "StatsCard";

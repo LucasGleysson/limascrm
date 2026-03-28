@@ -116,7 +116,8 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
   const monthRange = useMemo(() => getMonthRange(mesRef), [mesRef]);
-  const weekRange = useMemo(() => getWeekRange(), []);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const weekRange = useMemo(() => getWeekRange(), [todayStr]);
   const totalBizDays = useMemo(() => businessDaysInMonth(mesRef), [mesRef]);
   const elapsedBizDays = useMemo(() => businessDaysElapsed(mesRef), [mesRef]);
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
@@ -130,15 +131,17 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
         (l) => l.id_agente === ag.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+      const carrosParaMeta = concluidos + perdidos;
 
       const weekLeads = leads.filter(
         (l) => l.id_agente === ag.id && l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to
       );
-      const concluidosSemana = weekLeads.filter((l) => l.etapa === "concluido").length;
+      const concluidosSemana = weekLeads.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
 
-      const pct = metaVal > 0 ? Math.round((concluidos / metaVal) * 100) : 0;
-      const faltam = Math.max(0, metaVal - concluidos);
-      const mediaDiaria = elapsedBizDays > 0 ? concluidos / elapsedBizDays : 0;
+      const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
+      const faltam = Math.max(0, metaVal - carrosParaMeta);
+      const mediaDiaria = elapsedBizDays > 0 ? carrosParaMeta / elapsedBizDays : 0;
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
 
@@ -146,7 +149,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       const pctSemanal = metaSemanal > 0 ? Math.round((concluidosSemana / metaSemanal) * 100) : 0;
 
       const totalLeadsMes = monthLeads.length;
-      const aproveitamento = totalLeadsMes > 0 ? Math.round((concluidos / totalLeadsMes) * 100) : 0;
+      const aproveitamento = totalLeadsMes > 0 ? Math.round((carrosParaMeta / totalLeadsMes) * 100) : 0;
 
       let status: "on_track" | "at_risk" | "behind" | "achieved" = "on_track";
       if (pct >= 100) status = "achieved";
@@ -157,7 +160,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       }
 
       return {
-        ...ag, metaVal, concluidos, concluidosSemana, pct, faltam,
+        ...ag, metaVal, concluidos, perdidos, carrosParaMeta, concluidosSemana, pct, faltam,
         mediaDiaria, necessarioPorDia, metaSemanal, pctSemanal,
         aproveitamento, totalLeadsMes, status, diasRestantes,
       };
@@ -166,7 +169,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
 
   const globalStats = useMemo(() => {
     const totalMeta = agentData.reduce((s, a) => s + a.metaVal, 0);
-    const totalConcluidos = agentData.reduce((s, a) => s + a.concluidos, 0);
+    const totalConcluidos = agentData.reduce((s, a) => s + a.carrosParaMeta, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalConcluidos / totalMeta) * 100) : 0;
     const achieved = agentData.filter((a) => a.status === "achieved").length;
     const behind = agentData.filter((a) => a.status === "behind").length;

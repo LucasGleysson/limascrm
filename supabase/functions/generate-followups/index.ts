@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
           // Dispensado should enter rescue flow immediately
           eventDateStr = today;
         }
-        if (!eventDateStr!) {
+        if (!eventDateStr) {
           const entryDate = new Date(refDate + "T00:00:00");
           const nextDay = new Date(entryDate);
           nextDay.setDate(nextDay.getDate() + 1);
