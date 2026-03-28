@@ -39,7 +39,7 @@ export const FollowUpTrackingPanel = () => {
   const [encerrarMotivo, setEncerrarMotivo] = useState("");
   const [encerrarLoading, setEncerrarLoading] = useState(false);
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = new Date().toISOString().split("T")[0];
   const isConcludedOnDay = (iso?: string | null) => !!iso && iso.slice(0, 10) === today;
 
   const allFollowUps = useMemo(() => eventos.filter((e) => e.tipo === "followup"), [eventos]);
