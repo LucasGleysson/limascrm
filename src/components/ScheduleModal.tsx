@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLeads } from "@/contexts/LeadContext";
 import { CalendarCheck } from "lucide-react";
 import { appendNota } from "@/lib/notasUtils";
+import { SERVICOS_TAGS } from "@/data/mockData";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   open: boolean;
@@ -20,6 +22,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -27,9 +30,14 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
       setUnidade("");
       setData("");
       setOs("");
+      setTags([]);
       submittingRef.current = false;
     }
   }, [open, leadId]);
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+  };
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -50,6 +58,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
         id_unidade: unidade,
         data_agendamento: data,
         numero_os: os,
+        tags_servico: tags.length > 0 ? tags : null,
         notas,
       });
       onOpenChange(false);
@@ -86,6 +95,21 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
           <div>
             <Label>Número da OS</Label>
             <Input value={os} onChange={(e) => setOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
+          </div>
+          <div>
+            <Label>Serviços</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {SERVICOS_TAGS.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant={tags.includes(tag) ? "default" : "outline"}
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleTag(tag)}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
         <DialogFooter>
