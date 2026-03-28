@@ -254,7 +254,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalConcluidos}</p>
-          <p className="text-xs text-muted-foreground">Concluídos</p>
+          <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />
@@ -367,7 +367,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
                       <span className="text-sm font-bold min-w-[48px] text-right">{ag.pct}%</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {ag.concluidos} de {ag.metaVal} carros — Faltam {ag.faltam}
+                      {ag.carrosParaMeta} de {ag.metaVal} carros — Faltam {ag.faltam}
                     </p>
                   </div>
                   <div className="hidden sm:grid grid-cols-3 gap-4 text-center shrink-0">
@@ -398,8 +398,8 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
                       <p className="text-[10px] text-muted-foreground">Meta Mensal</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xl font-bold text-success">{sel.concluidos}</p>
-                      <p className="text-[10px] text-muted-foreground">Concluídos</p>
+                      <p className="text-xl font-bold text-success">{sel.carrosParaMeta}</p>
+                      <p className="text-[10px] text-muted-foreground">Concl.+Perd.</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
                       <p className="text-xl font-bold text-primary">{sel.pct}%</p>
