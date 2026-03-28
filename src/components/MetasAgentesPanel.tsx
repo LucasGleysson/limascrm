@@ -205,7 +205,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const barData = useMemo(() => {
     return agentData.map((a) => ({
       name: a.nome.split(" ")[0],
-      concluidos: a.concluidos,
+      concluidos: a.carrosParaMeta,
       meta: a.metaVal,
       faltam: a.faltam,
     }));
