@@ -159,7 +159,7 @@ export const AgentDashboard = () => {
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
-    const carrosNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const carrosNaLoja = storeLeads.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
 
@@ -169,7 +169,7 @@ export const AgentDashboard = () => {
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
     const storeName = unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || "—";
     const todayAgendados = storeLeads.filter((l) => l.data_agendamento === today);
-    const passaramNaLoja = storeLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const passaramNaLoja = storeLeads.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     const concluidos = storeLeads.filter((l) => l.etapa === "concluido").length;
     const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
     return {
@@ -184,7 +184,7 @@ export const AgentDashboard = () => {
       passaramNaLoja,
       txConversao,
       agendadosHoje: todayAgendados.length,
-      confirmadosHoje: todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length,
+      confirmadosHoje: todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length,
     };
   }, [leads, unidades, currentUser.unidade_padrao, today]);
 
@@ -471,7 +471,7 @@ export const AgentDashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                  <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
-                  <StatsCard title="Perdidos" value={storeStats.perdidos} icon={XCircle} variant="destructive" />
+                  <StatsCard title="Dispensados" value={storeStats.dispensados} icon={XCircle} variant="destructive" />
                   <StatsCard title="Agendados Hoje" value={storeStats.agendadosHoje} icon={CalendarDays} variant="info" />
                 </div>
                 <div className="rounded-xl border border-border bg-card p-5">
@@ -503,8 +503,8 @@ export const AgentDashboard = () => {
                       <p className="text-xs text-muted-foreground">Concluídos</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-destructive">{storeStats.perdidos}</p>
-                      <p className="text-xs text-muted-foreground">Perdidos</p>
+                      <p className="text-2xl font-bold text-destructive">{storeStats.dispensados}</p>
+                      <p className="text-xs text-muted-foreground">Dispensados</p>
                     </div>
                   </div>
                 </div>
