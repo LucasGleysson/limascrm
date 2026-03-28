@@ -100,9 +100,9 @@ export const AgentDashboard = () => {
   const dailyStats = useMemo(() => {
     const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
-    const carrosHoje = todayAgendados.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const carrosHoje = todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
-    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "perdido").length;
+    const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
       const isEligible = (lead: Lead): boolean => {
         if (lead.fup_concluido) return false;
         if (lead.etapa === "dispensado") return true;
@@ -130,15 +130,19 @@ export const AgentDashboard = () => {
       return createdDate === today;
     });
     const total = cohort.length;
-    const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
-    const naLojaOuSuperior = cohort.filter((l) => foiNaLoja(l.etapa)).length;
+    const desqualificados = cohort.filter((l) => ["desqualificado_novo", "desqualificado_agendado"].includes(l.etapa)).length;
+    const produtivos = total - desqualificados;
+    const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado_agendado", "desqualificado"].includes(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
     return {
       total,
+      produtivos,
+      desqualificados,
       agendados,
-      txAgendamento: total > 0 ? Math.round((agendados / total) * 100) : 0,
+      txAgendamento: produtivos > 0 ? Math.round((agendados / produtivos) * 100) : 0,
       naLojaOuSuperior,
-      txVisita: total > 0 ? Math.round((naLojaOuSuperior / total) * 100) : 0,
+      txVisita: produtivos > 0 ? Math.round((naLojaOuSuperior / produtivos) * 100) : 0,
       concluidos,
     };
   }, [allMyLeads, today]);
@@ -326,7 +330,7 @@ export const AgentDashboard = () => {
               <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Perdidos" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
+              <StatsCard title="Dispensados" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
               <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
               <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
             </div>
@@ -368,15 +372,15 @@ export const AgentDashboard = () => {
               <p className="text-xs text-muted-foreground mb-4">Métricas baseadas nos leads que entraram para você hoje</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-lg bg-muted/50 p-4 text-center space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Safra de Hoje</p>
-                  <p className="text-3xl font-bold">{safraHoje.total}</p>
-                  <p className="text-xs text-muted-foreground">leads novos</p>
+                  <p className="text-sm font-medium text-muted-foreground">Safra Produtiva</p>
+                  <p className="text-3xl font-bold">{safraHoje.produtivos}</p>
+                  <p className="text-xs text-muted-foreground">{safraHoje.total} novos − {safraHoje.desqualificados} desq.</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Conversão em Agendamento</p>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-primary">{safraHoje.txAgendamento}%</span>
-                    <span className="text-sm text-muted-foreground">{safraHoje.agendados}/{safraHoje.total}</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.agendados}/{safraHoje.produtivos}</span>
                   </div>
                   <Progress value={safraHoje.txAgendamento} className="h-2" />
                 </div>
@@ -384,7 +388,7 @@ export const AgentDashboard = () => {
                   <p className="text-sm font-medium text-muted-foreground">Conversão em Visita</p>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-warning">{safraHoje.txVisita}%</span>
-                    <span className="text-sm text-muted-foreground">{safraHoje.naLojaOuSuperior}/{safraHoje.total}</span>
+                    <span className="text-sm text-muted-foreground">{safraHoje.naLojaOuSuperior}/{safraHoje.produtivos}</span>
                   </div>
                   <Progress value={safraHoje.txVisita} className="h-2" />
                 </div>

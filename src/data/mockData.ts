@@ -23,8 +23,7 @@ export const ETAPAS_EVASAO_DEPOIS = ["dispensado", "perdido"] as const;
 export const ETAPAS_CARRO_AGENTE = ["confirmado", "na_loja", "concluido", "dispensado", "perdido"] as const;
 
 export const SERVICOS_TAGS = [
-  "Troca de Óleo", "Alinhamento", "Balanceamento", "Freios", "Suspensão",
-  "Elétrica", "Ar Condicionado", "Revisão Completa", "Diagnóstico", "Outros"
+  "Amortecedor", "Freio", "Óleo", "Alinhamento", "Balanceamento", "Cambagem", "Homocinética"
 ];
 
 export type UserRole = "agente" | "recepcionista" | "supervisor" | "gestor";
