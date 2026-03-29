@@ -17,6 +17,7 @@ import { Evento, Lead, ETAPAS_FUNIL } from "@/data/mockData";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { formatPhone } from "@/lib/phoneUtils";
+
 export const EventoPanel = () => {
   const { eventos, leads, addEvento, concluirEvento, updateLead } = useLeads();
   const { currentUser } = useRole();
@@ -39,12 +40,10 @@ export const EventoPanel = () => {
   const [concludeProcessLead, setConcludeProcessLead] = useState<Lead | null>(null);
   const [concludeProcessMotivo, setConcludeProcessMotivo] = useState("");
 
-  // Mark as loss state
   const [lossOpen, setLossOpen] = useState(false);
   const [lossLead, setLossLead] = useState<Lead | null>(null);
   const [lossMotivo, setLossMotivo] = useState("");
 
-  // Search for follow-ups
   const [fupSearch, setFupSearch] = useState("");
   const [fupCategoryFilter, setFupCategoryFilter] = useState<string | null>(null);
 
@@ -54,6 +53,9 @@ export const EventoPanel = () => {
   );
 
   const today = new Date().toISOString().split("T")[0];
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
 
   const getEncerrarStatus = (lead: Lead): string => {
     if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "perdido";
@@ -67,7 +69,8 @@ export const EventoPanel = () => {
     if (lead.etapa === "dispensado") return true;
     if (lead.etapa === "novo") return true;
     if (["agendado", "reagendado"].includes(lead.etapa)) {
-      return !!lead.data_agendamento && lead.data_agendamento <= today;
+      // Include: appointment tomorrow (day-before reminder), today, or past
+      return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
     }
     return false;
   };
@@ -90,7 +93,7 @@ export const EventoPanel = () => {
         if (a.concluido !== b.concluido) return a.concluido ? 1 : -1;
         return a.data_prevista.localeCompare(b.data_prevista);
       });
-  }, [eventos, myLeadIds, myLeads, today]);
+  }, [eventos, myLeadIds, myLeads, today, tomorrowStr]);
 
   const pendentes = myEvents.filter((e) => !e.concluido);
   const concluidos = myEvents.filter((e) => e.concluido);
@@ -105,7 +108,7 @@ export const EventoPanel = () => {
     if (["agendado", "reagendado"].includes(lead.etapa)) {
       if (lead.data_agendamento && lead.data_agendamento < today) return "agendado_atrasado";
       if (lead.data_agendamento === today) return "agendado_hoje";
-      // FILTER OUT future appointments from follow-up list
+      if (lead.data_agendamento === tomorrowStr) return "agendado_amanha";
       return "ignore";
     }
     if (["novo"].includes(lead.etapa)) return "novo";
@@ -115,6 +118,7 @@ export const EventoPanel = () => {
   const followupsByCategory = useMemo(() => {
     const cats: Record<string, Evento[]> = {
       novo: [],
+      agendado_amanha: [],
       agendado_hoje: [],
       agendado_atrasado: [],
       dispensado: [],
@@ -127,13 +131,11 @@ export const EventoPanel = () => {
       }
     });
     return cats;
-  }, [followups, myLeads, today]);
+  }, [followups, myLeads, today, tomorrowStr]);
 
-  // All pending followups flattened for search + category filter + pagination
   const allPendingFollowups = useMemo(() => {
     let all: Evento[] = [];
     if (fupCategoryFilter) {
-      // Show only selected category, sorted by data_prevista descending (most recent first)
       const catEvents = followupsByCategory[fupCategoryFilter] || [];
       all = [...catEvents].sort((a, b) => b.data_prevista.localeCompare(a.data_prevista));
     } else {
@@ -223,7 +225,6 @@ export const EventoPanel = () => {
     }
   };
 
-  // Handle marking lead as loss ("perdido")
   const handleMarkLoss = async () => {
     if (!lossLead || !lossMotivo.trim() || markingLossRef.current) return;
     markingLossRef.current = true;
@@ -247,7 +248,6 @@ export const EventoPanel = () => {
     }
   };
 
-  // Leads with active FUP processes (not concluded)
   const leadsWithActiveFup = useMemo(() => {
     const duePendingFupLeadIds = new Set(
       eventos
@@ -257,7 +257,6 @@ export const EventoPanel = () => {
     return myLeads.filter((l) => duePendingFupLeadIds.has(l.id) && isLeadEligibleForFupToday(l));
   }, [eventos, myLeads, today]);
 
-  // Leads eligible for "Mark as Loss" button (na_loja, dispensado, or in FUP process)
   const leadsForLoss = useMemo(() => {
     return myLeads.filter((l) =>
       ["na_loja", "dispensado", "confirmado"].includes(l.etapa) && l.etapa !== "perdido"
@@ -389,11 +388,12 @@ export const EventoPanel = () => {
           />
         </div>
 
-        {/* Category badges */}
+        {/* Category badges - now includes "Amanhã" */}
         <div className="flex flex-wrap gap-2 text-xs">
           {[
             { key: null, label: "Todos", count: Object.values(followupsByCategory).reduce((s, a) => s + a.length, 0), cls: "bg-muted text-muted-foreground border-border" },
             { key: "novo", label: "Novos", count: followupsByCategory.novo.length, cls: "bg-primary/10 text-primary border-primary/30" },
+            { key: "agendado_amanha", label: "Amanhã", count: followupsByCategory.agendado_amanha.length, cls: "bg-info/10 text-info border-info/30" },
             { key: "agendado_hoje", label: "Agend. Hoje", count: followupsByCategory.agendado_hoje.length, cls: "bg-success/10 text-success border-success/30" },
             { key: "agendado_atrasado", label: "Atrasados", count: followupsByCategory.agendado_atrasado.length, cls: "bg-destructive/10 text-destructive border-destructive/30" },
             { key: "dispensado", label: "Dispensados", count: followupsByCategory.dispensado.length, cls: "bg-warning/10 text-warning border-warning/30" },
@@ -551,7 +551,7 @@ export const EventoPanel = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Conclude FUP Process / Encerrar Follow-up modal */}
+      {/* Conclude FUP Process modal */}
       <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) setConcludeProcessMotivo(""); setConcludeProcessOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
