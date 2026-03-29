@@ -7,11 +7,12 @@ import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle } from "lucide-react";
+import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle, Search } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
-import { getToday } from "@/lib/leadUtils";
+import { getToday, formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +32,8 @@ export const AgentReceptionPanel = () => {
   const [dispensarMotivo, setDispensarMotivo] = useState("");
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const today = getToday();
 
@@ -44,6 +47,36 @@ export const AgentReceptionPanel = () => {
   const presentes = myLeads.filter((l) => l.etapa === "na_loja");
   const concluidos = myLeads.filter((l) => l.etapa === "concluido" && l.checkout?.startsWith(today));
   const dispensados = myLeads.filter((l) => l.etapa === "dispensado");
+
+  // All actionable leads grouped for filtering
+  const allLeads = useMemo(() => {
+    const groups: { key: string; label: string; leads: Lead[]; cls: string }[] = [
+      { key: "hoje", label: "Hoje", leads: agendadosHoje, cls: "bg-primary/10 text-primary border-primary/30" },
+      { key: "atrasado", label: "Atrasados", leads: agendadosAtrasados, cls: "bg-destructive/10 text-destructive border-destructive/30" },
+      { key: "confirmado", label: "Confirmados", leads: confirmados, cls: "bg-info/10 text-info border-info/30" },
+      { key: "na_loja", label: "Em Serviço", leads: presentes, cls: "bg-warning/10 text-warning border-warning/30" },
+    ];
+    return groups;
+  }, [agendadosHoje, agendadosAtrasados, confirmados, presentes]);
+
+  const filteredLeads = useMemo(() => {
+    let items: { lead: Lead; group: string }[] = [];
+
+    if (activeFilter) {
+      const group = allLeads.find((g) => g.key === activeFilter);
+      if (group) items = group.leads.map((l) => ({ lead: l, group: group.key }));
+    } else {
+      allLeads.forEach((g) => g.leads.forEach((l) => items.push({ lead: l, group: g.key })));
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      items = items.filter(({ lead }) =>
+        lead.nome.toLowerCase().includes(q) || lead.telefone.includes(q) || (lead.numero_os && lead.numero_os.toLowerCase().includes(q))
+      );
+    }
+    return items;
+  }, [allLeads, activeFilter, searchQuery]);
 
   const getUnidadeNome = (id?: string | null) =>
     id ? unidades.find((u) => u.id === id)?.nome || "—" : "—";
@@ -104,6 +137,51 @@ export const AgentReceptionPanel = () => {
 
   const toggleTag = (tag: string) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
+  const getGroupBadge = (group: string) => {
+    const labels: Record<string, { label: string; cls: string }> = {
+      hoje: { label: "Agendado Hoje", cls: "bg-primary/10 text-primary border-primary/30" },
+      atrasado: { label: "Atrasado", cls: "bg-destructive/10 text-destructive border-destructive/30" },
+      confirmado: { label: "Confirmado", cls: "bg-info/10 text-info border-info/30" },
+      na_loja: { label: "Em Serviço", cls: "bg-warning/10 text-warning border-warning/30" },
+    };
+    return labels[group] || { label: group, cls: "" };
+  };
+
+  const getActions = (lead: Lead, group: string) => {
+    if (group === "hoje" || group === "atrasado") {
+      return (
+        <Button onClick={(e) => { e.stopPropagation(); handleCheckin(lead); }} className="gap-1" size="sm" disabled={loadingAction === `checkin-${lead.id}`}>
+          <LogIn className="h-3.5 w-3.5" /> {loadingAction === `checkin-${lead.id}` ? "..." : "Check-in"}
+        </Button>
+      );
+    }
+    if (group === "confirmado") {
+      return (
+        <div className="flex gap-1">
+          <Button onClick={(e) => { e.stopPropagation(); handleEmServico(lead); }} className="gap-1" size="sm" disabled={loadingAction === `servico-${lead.id}`}>
+            <Wrench className="h-3.5 w-3.5" /> {loadingAction === `servico-${lead.id}` ? "..." : "Em Serviço"}
+          </Button>
+          <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDispensarOpen(lead); }} className="gap-1">
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      );
+    }
+    if (group === "na_loja") {
+      return (
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" className="gap-1 border-success/30 text-success hover:bg-success/10" onClick={(e) => { e.stopPropagation(); setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutMotivo(""); setCheckoutOpen(true); }}>
+            <LogOut className="h-3.5 w-3.5" /> Check-out
+          </Button>
+          <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDispensarOpen(lead); }} className="gap-1">
+            <XCircle className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -119,111 +197,78 @@ export const AgentReceptionPanel = () => {
         <StatsCard title="Dispensados" value={dispensados.length} icon={XCircle} variant="destructive" />
       </div>
 
-      {/* 1. Aguardando Chegada (hoje) */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Aguardando Chegada — Hoje</h2>
-        {agendadosHoje.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum agendamento pendente para hoje.</p>
-        ) : (
-          <div className="space-y-2">
-            {agendadosHoje.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border">
-                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
-                  <span className="font-semibold">{lead.nome}</span>
-                  <p className="text-sm text-muted-foreground">
-                    {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · {getUnidadeNome(lead.id_unidade)}
-                  </p>
-                </div>
-                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
-                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Search + Category Filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone ou OS..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          {[
+            { key: null, label: "Todos", count: allLeads.reduce((s, g) => s + g.leads.length, 0), cls: "bg-muted text-muted-foreground border-border" },
+            ...allLeads.map((g) => ({ key: g.key, label: g.label, count: g.leads.length, cls: g.cls })),
+          ].map((cat) => (
+            <Badge
+              key={cat.key ?? "all"}
+              variant="outline"
+              className={`cursor-pointer transition-all ${cat.cls} ${activeFilter === cat.key ? "ring-2 ring-ring ring-offset-1 scale-105 font-bold" : "opacity-80 hover:opacity-100"}`}
+              onClick={() => setActiveFilter(activeFilter === cat.key ? null : cat.key)}
+            >
+              {cat.label}: {cat.count}
+            </Badge>
+          ))}
+        </div>
       </div>
 
-      {/* 2. Pendentes (dias anteriores) */}
-      {agendadosAtrasados.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" /> Pendentes — Dias Anteriores
-          </h2>
-          <div className="space-y-2">
-            {agendadosAtrasados.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-destructive/20">
-                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
-                  <span className="font-semibold">{lead.nome}</span>
-                  <p className="text-sm text-muted-foreground">
-                    {formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""} · Agendado: {lead.data_agendamento ? new Date(lead.data_agendamento + "T12:00:00").toLocaleDateString("pt-BR") : "—"} · {getUnidadeNome(lead.id_unidade)}
-                  </p>
-                </div>
-                <Button onClick={() => handleCheckin(lead)} className="gap-2" size="lg" disabled={loadingAction === `checkin-${lead.id}`}>
-                  <LogIn className="h-4 w-4" /> {loadingAction === `checkin-${lead.id}` ? "Aguarde..." : "Check-in"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 3. Confirmados */}
-      {confirmados.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Confirmados — Aguardando Serviço</h2>
-          <div className="space-y-2">
-            {confirmados.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-info/20">
-                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{lead.nome}</span>
-                    <Badge variant="outline" className="bg-info/15 text-info border-info/30 text-xs">
-                      <span className="mr-1">●</span> Confirmado
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => handleEmServico(lead)} className="gap-2" size="lg" disabled={loadingAction === `servico-${lead.id}`}>
-                    <Wrench className="h-4 w-4" /> {loadingAction === `servico-${lead.id}` ? "Aguarde..." : "Em Serviço"}
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
-                    <XCircle className="h-4 w-4" /> Dispensar
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 4. Em Serviço */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Em Serviço</h2>
-        {presentes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ninguém em serviço.</p>
+      {/* Unified lead list */}
+      <div className="space-y-2">
+        {filteredLeads.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum cliente encontrado.</p>
         ) : (
-          <div className="space-y-2">
-            {presentes.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-warning/20">
-                <div className="flex-1 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{lead.nome}</span>
-                    {lead.is_porta && <Badge variant="outline">Porta</Badge>}
+          filteredLeads.map(({ lead, group }) => {
+            const badge = getGroupBadge(group);
+            return (
+              <div
+                key={lead.id}
+                className={`flex items-center gap-3 p-3 rounded-xl bg-card border transition-all hover:bg-muted/50 ${
+                  group === "atrasado" ? "border-destructive/20" : "border-border"
+                }`}
+              >
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">{lead.nome}</span>
+                    <Badge variant="outline" className={`text-xs ${badge.cls}`}>
+                      {badge.label}
+                    </Badge>
+                    {lead.is_porta && <Badge variant="outline" className="text-xs">Porta</Badge>}
+                    {lead.tags_servico && lead.tags_servico.length > 0 && (
+                      <div className="flex gap-1">
+                        {lead.tags_servico.map((t) => (
+                          <Badge key={t} variant="secondary" className="text-[10px] py-0">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)}{lead.numero_os ? ` · OS: ${lead.numero_os}` : ""}</p>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                    <span>{formatPhone(lead.telefone)}</span>
+                    {lead.numero_os && <span>OS: {lead.numero_os}</span>}
+                    <span>{getUnidadeNome(lead.id_unidade)}</span>
+                    {group === "atrasado" && lead.data_agendamento && (
+                      <span className="text-destructive">Agendado: {formatDateBR(lead.data_agendamento)}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="gap-2 border-success/30 text-success hover:bg-success/10" size="lg" onClick={() => { setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutMotivo(""); setCheckoutOpen(true); }}>
-                    <LogOut className="h-4 w-4" /> Check-out
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleDispensarOpen(lead)} className="gap-2" size="lg">
-                    <XCircle className="h-4 w-4" /> Dispensar
-                  </Button>
+                <div className="shrink-0">
+                  {getActions(lead, group)}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
       </div>
 

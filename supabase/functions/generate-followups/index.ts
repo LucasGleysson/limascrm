@@ -16,12 +16,16 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    // Four followup scenarios:
+    // Five followup scenarios:
     // 1. novo: lead never scheduled → followup to get them to schedule
     // 2. agendado/reagendado with appointment TODAY → reminder to go to unit
     // 3. agendado/reagendado with appointment PAST and no checkin → no-show rescue
     // 4. dispensado: went to store but was dispensed → rescue followup
+    // 5. agendado/reagendado with appointment TOMORROW → day-before reminder
 
     const { data: leads, error: leadsErr } = await supabase
       .from("leads")
@@ -38,10 +42,11 @@ Deno.serve(async (req) => {
 
     // Filter eligible leads based on their scenario
     const eligible = leads.filter((lead) => {
-      // Skip leads with concluded FUP process
       if (lead.fup_concluido) return false;
       // Scenario 1: novo lead, at least 1 day old
       if (lead.etapa === "novo" && lead.data_entrada < today) return true;
+      // Scenario 5: agendado/reagendado, appointment is TOMORROW → day-before reminder
+      if (["agendado", "reagendado"].includes(lead.etapa) && lead.data_agendamento === tomorrowStr && !lead.checkin) return true;
       // Scenario 2: agendado/reagendado, appointment is TODAY → reminder
       if (["agendado", "reagendado"].includes(lead.etapa) && lead.data_agendamento === today && !lead.checkin) return true;
       // Scenario 3: agendado/reagendado, appointment date PASSED, no checkin → no-show rescue
@@ -79,13 +84,11 @@ Deno.serve(async (req) => {
         : 0;
 
       if (maxExisting >= 7) {
-        // Determine final status based on current etapa
         let finalEtapa = lead.etapa;
         if (lead.etapa === "novo") finalEtapa = "desqualificado_novo";
         else if (["agendado", "reagendado"].includes(lead.etapa)) finalEtapa = "desqualificado_agendado";
         else if (lead.etapa === "dispensado") finalEtapa = "perdido";
 
-        // Single atomic update to prevent race condition
         await supabase.from("leads").update({
           fup_concluido: true,
           fup_concluido_em: new Date().toISOString(),
@@ -99,28 +102,28 @@ Deno.serve(async (req) => {
       }
 
       const nextNum = maxExisting + 1;
-      let eventDateStr: string;
+      let eventDateStr: string | undefined;
 
       if (nextNum === 1) {
         let refDate: string;
         if (lead.etapa === "novo") {
           refDate = lead.data_entrada;
         } else if (["agendado", "reagendado"].includes(lead.etapa)) {
-          // For today's appointments, create followup for today (reminder)
-          if (lead.data_agendamento === today) {
-            refDate = today;
-            // Set event date to today directly for reminder
+          if (lead.data_agendamento === tomorrowStr) {
+            // Day-before reminder: create for today
+            eventDateStr = today;
+          } else if (lead.data_agendamento === today) {
+            // Same-day reminder
             eventDateStr = today;
           } else {
             refDate = lead.data_agendamento || lead.data_entrada;
           }
         } else {
           refDate = today;
-          // Dispensado should enter rescue flow immediately
           eventDateStr = today;
         }
         if (!eventDateStr) {
-          const entryDate = new Date(refDate + "T00:00:00");
+          const entryDate = new Date(refDate! + "T00:00:00");
           const nextDay = new Date(entryDate);
           nextDay.setDate(nextDay.getDate() + 1);
           eventDateStr = nextDay.toISOString().split("T")[0];
@@ -146,7 +149,9 @@ Deno.serve(async (req) => {
       if (lead.etapa === "novo") {
         descricao = `Follow-up ${nextNum}: Ligar para agendar`;
       } else if (["agendado", "reagendado"].includes(lead.etapa)) {
-        if (lead.data_agendamento === today) {
+        if (lead.data_agendamento === tomorrowStr) {
+          descricao = `Follow-up ${nextNum}: Lembrar cliente do agendamento de amanhã`;
+        } else if (lead.data_agendamento === today) {
           descricao = `Follow-up ${nextNum}: Lembrar cliente do agendamento de hoje`;
         } else {
           descricao = `Follow-up ${nextNum}: Cliente não compareceu - resgatar`;
