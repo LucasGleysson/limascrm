@@ -64,15 +64,20 @@ export const FollowUpTrackingPanel = () => {
     return lead.etapa;
   }, []);
 
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
+
   const isLeadPendingForToday = useCallback((lead: Lead) => {
     if (lead.fup_concluido) return false;
     if (lead.etapa === "dispensado") return true;
     if (lead.etapa === "novo") return true;
     if (["agendado", "reagendado"].includes(lead.etapa)) {
-      return !!lead.data_agendamento && lead.data_agendamento <= today;
+      // Include tomorrow for day-before reminders
+      return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
     }
     return false;
-  }, [today]);
+  }, [today, tomorrowStr]);
 
   const handleEncerrarFup = useCallback(async () => {
     if (!encerrarLead || !encerrarMotivo.trim() || encerrarLoading) return;
