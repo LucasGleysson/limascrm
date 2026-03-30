@@ -85,6 +85,8 @@ export const ManagerDashboard = () => {
   const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
     l.id_unidade || agentUnitMap[l.id_agente] || null;
 
+  const agentes = profiles.filter((u) => u.cargo === "agente");
+
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
@@ -107,7 +109,7 @@ export const ManagerDashboard = () => {
     });
   }, [filteredLeads, unidades, agentUnitMap, agentes]);
 
-  const agentes = profiles.filter((u) => u.cargo === "agente");
+
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
