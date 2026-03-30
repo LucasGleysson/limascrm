@@ -41,6 +41,7 @@ export const ManagerDashboard = () => {
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
 
