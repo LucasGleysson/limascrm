@@ -22,6 +22,7 @@ import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLo
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "por_loja", label: "Por Loja", icon: MapPin },
   { id: "fichas", label: "Fichas", icon: FileText },
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
