@@ -385,7 +385,7 @@ export const SupervisorDashboard = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold">Desempenho por Loja</h1>
-                <p className="text-muted-foreground text-sm">Clique em uma loja para ver detalhes</p>
+                <p className="text-muted-foreground text-sm">Leads atribuídos pela unidade ou pelo agente vinculado</p>
               </div>
               <div className="flex items-center gap-3">{RefreshButton}<PeriodFilter value={period} onChange={setPeriod} /></div>
             </div>
@@ -398,12 +398,11 @@ export const SupervisorDashboard = () => {
                   <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div className="flex-1">
                     <span className="font-semibold">{u.nome}</span>
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground">
-                       <span>{u.total} leads</span>
-                      <span className="text-primary">{u.agendados} agend.</span>
+                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                      <span>{u.total} registros</span>
+                      <span className="text-primary">{u.totalAgendamentos} agend.</span>
                       <span className="text-warning">{u.passaramNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
-                      <span className="text-destructive">{u.perdidos} perd.</span>
                       <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
@@ -414,35 +413,125 @@ export const SupervisorDashboard = () => {
             {(() => {
               const sel = selectedUnidade ? unidadeStats.find((u) => u.id === selectedUnidade) : null;
               if (!sel) return null;
-              const unitChartData = [
-                { name: "N/Agend.", value: sel.naoAgendados },
-                { name: "Agendados", value: sel.agendados },
+              const funnelChartData = [
+                { name: "Registros", value: sel.total },
+                { name: "Agendamentos", value: sel.totalAgendamentos },
                 { name: "Na Loja", value: sel.passaramNaLoja },
                 { name: "Concluídos", value: sel.concluidos },
-                { name: "Perdidos", value: sel.perdidos },
+              ];
+              const evasionChartData = [
+                { name: "Desq. Novo", value: sel.desqNovos, color: "hsl(38, 92%, 50%)" },
+                { name: "Outra Cidade", value: sel.desqOutraCidade, color: "hsl(25, 95%, 53%)" },
+                { name: "Desq. Agend.", value: sel.desqAgendados, color: "hsl(0, 72%, 51%)" },
+                { name: "Dispensados", value: sel.dispensados, color: "hsl(280, 65%, 60%)" },
+                { name: "Perdidos", value: sel.perdidos, color: "hsl(0, 50%, 40%)" },
               ].filter((d) => d.value > 0);
+              const funnelColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
               return (
-                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{sel.nome} — TX Conversão: {sel.txConversao}%</h3>
+                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-5">
+                  <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
+                  
+                  {/* Funnel cards */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Total</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Passaram na Loja</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{sel.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
+                  </div>
+
+                  {/* Evasion cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-orange-500">{sel.desqOutraCidade}</p><p className="text-xs text-muted-foreground">Outra Cidade</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-purple-500">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                   </div>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={unitChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                        <Tooltip />
-                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                          {unitChartData.map((_, i) => <Cell key={i} fill={chartColors[i] || "hsl(var(--muted-foreground))"} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* Funnel chart */}
+                    <div>
+                      <h4 className="text-sm font-medium mb-2 text-muted-foreground">Funil de Conversão</h4>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={funnelChartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                            <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                            <Tooltip />
+                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                              {funnelChartData.map((_, i) => <Cell key={i} fill={funnelColors[i]} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    {/* Evasion chart */}
+                    {evasionChartData.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Evasão do Funil</h4>
+                        <div className="h-56">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={evasionChartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                              <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                              <Tooltip />
+                              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                                {evasionChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Agents assigned to this store */}
+                  {sel.unitAgents.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2 text-muted-foreground">Agentes vinculados</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">DESQ.</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                              <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sel.unitAgents.map((ag) => {
+                              const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
+                              const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+                              const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
+                              const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+                              const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+                              const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
+                              const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
+                              return (
+                                <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
+                                  <td className="py-2 font-medium">{ag.nome}</td>
+                                  <td className="py-2 text-center">{agLeads.length}</td>
+                                  <td className="py-2 text-center text-primary">{agAgend}</td>
+                                  <td className="py-2 text-center text-warning">{agNaLoja}</td>
+                                  <td className="py-2 text-center text-success">{agConcl}</td>
+                                  <td className="py-2 text-center text-muted-foreground">{agDesq}</td>
+                                  <td className="py-2 text-center text-purple-500">{agDisp}</td>
+                                  <td className="py-2 text-center text-destructive">{agPerd}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
