@@ -489,48 +489,52 @@ export const SupervisorDashboard = () => {
                   </div>
 
                   {/* Agents assigned to this store */}
+                  <StoreAgentAssigner
+                    unidadeId={sel.id}
+                    unitAgents={sel.unitAgents}
+                    allAgents={agentes}
+                    onUpdated={refreshAll}
+                  />
+
                   {sel.unitAgents.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-2 text-muted-foreground">Agentes vinculados</h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">DESQ.</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
-                              <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {sel.unitAgents.map((ag) => {
-                              const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                              const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-                              const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
-                              const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
-                              const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-                              const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
-                              const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
-                              return (
-                                <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
-                                  <td className="py-2 font-medium">{ag.nome}</td>
-                                  <td className="py-2 text-center">{agLeads.length}</td>
-                                  <td className="py-2 text-center text-primary">{agAgend}</td>
-                                  <td className="py-2 text-center text-warning">{agNaLoja}</td>
-                                  <td className="py-2 text-center text-success">{agConcl}</td>
-                                  <td className="py-2 text-center text-muted-foreground">{agDesq}</td>
-                                  <td className="py-2 text-center text-purple-500">{agDisp}</td>
-                                  <td className="py-2 text-center text-destructive">{agPerd}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">DESQ.</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sel.unitAgents.map((ag) => {
+                            const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
+                            const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+                            const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
+                            const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+                            const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+                            const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
+                            const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
+                            return (
+                              <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
+                                <td className="py-2 font-medium">{ag.nome}</td>
+                                <td className="py-2 text-center">{agLeads.length}</td>
+                                <td className="py-2 text-center text-primary">{agAgend}</td>
+                                <td className="py-2 text-center text-warning">{agNaLoja}</td>
+                                <td className="py-2 text-center text-success">{agConcl}</td>
+                                <td className="py-2 text-center text-muted-foreground">{agDesq}</td>
+                                <td className="py-2 text-center text-purple-500">{agDisp}</td>
+                                <td className="py-2 text-center text-destructive">{agPerd}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
