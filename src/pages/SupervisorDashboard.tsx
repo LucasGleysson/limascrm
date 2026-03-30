@@ -84,24 +84,40 @@ export const SupervisorDashboard = () => {
     });
   }, [filteredLeads, eventos, agentes, unidades]);
 
+  // Build a map of agent -> unidade_padrao for fallback attribution
+  const agentUnitMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    profiles.forEach((p) => { if (p.unidade_padrao) map[p.id] = p.unidade_padrao; });
+    return map;
+  }, [profiles]);
+
+  const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
+    l.id_unidade || agentUnitMap[l.id_agente] || null;
+
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
-      const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
+      const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
       const passaramNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
+      const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+      const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+      const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
+      const desqAgendados = uLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
+      const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
+      const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      // Agents assigned to this unit
+      const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       return {
-        ...u, total: uLeads.length, passaramNaLoja,
+        ...u, total: uLeads.length, passaramNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-        concluidos,
-        dispensados: uLeads.filter((l) => l.etapa === "dispensado").length,
-        perdidos: uLeads.filter((l) => l.etapa === "perdido").length,
-        naoAgendados: uLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length,
+        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados,
+        naoAgendados: uLeads.filter((l) => ["novo"].includes(l.etapa)).length,
         perdidosAntes: uLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
-        txConversao,
+        txConversao, unitAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, unidades]);
+  }, [filteredLeads, unidades, agentUnitMap, agentes]);
 
   const globalStats = useMemo(() => {
     const passaramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
