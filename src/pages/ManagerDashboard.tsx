@@ -55,7 +55,7 @@ export const ManagerDashboard = () => {
   }, [leads, unidadeFilter, period]);
 
   const stats = useMemo(() => {
-    const carrosNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
