@@ -64,7 +64,7 @@ export const SupervisorDashboard = () => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const aLeadIds = new Set(aLeads.map((l) => l.id));
-      const passaramNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const passaramNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
@@ -118,7 +118,7 @@ export const SupervisorDashboard = () => {
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const passaramNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const passaramNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
@@ -141,20 +141,19 @@ export const SupervisorDashboard = () => {
   }, [filteredLeads, unidades, agentUnitMap, agentes]);
 
   const globalStats = useMemo(() => {
-    const passaramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
-    const naoAgendados = filteredLeads.filter((l) => l.etapa === "novo").length;
-    const emAtendimento = filteredLeads.filter((l) => ["confirmado", "na_loja"].includes(l.etapa)).length;
+    const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
-    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+    const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
-      totalLeads: filteredLeads.length, passaramNaLoja, concluidos, agendados,
-      naoAgendados, emAtendimento, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
+      totalLeads: filteredLeads.length, naLoja, concluidos, agendados,
+      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
 
@@ -193,22 +192,24 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
 
-            {/* Funil — categorias mutuamente exclusivas que somam ao total */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Total de Leads" value={globalStats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
+            {/* Registros e Funil */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Em Atendimento" value={globalStats.emAtendimento} icon={Car} variant="info" />
+              <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+            </div>
+            {/* Na Loja */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Na Loja" value={globalStats.naLoja} icon={Car} variant="warning" subtitle="Conf+Concl+Disp+Perd+Reag" />
               <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
               <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
               <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
-              <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
-              <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
             </div>
-            {/* Métricas agregadas (não somam ao total) */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Na Loja (agregado)" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
+            {/* Desqualificados */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
               <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
+              <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
@@ -538,7 +539,7 @@ export const SupervisorDashboard = () => {
                         <tbody>
                           {sel.unitAgents.map((ag) => {
                             const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+                            const agNaLoja = agLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
                             const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
                             const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;

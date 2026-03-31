@@ -55,7 +55,7 @@ export const ManagerDashboard = () => {
   }, [leads, unidadeFilter, period]);
 
   const stats = useMemo(() => {
-    const carrosNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
@@ -91,7 +91,7 @@ export const ManagerDashboard = () => {
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const carrosNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
@@ -115,7 +115,7 @@ export const ManagerDashboard = () => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
-      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       return {
         nome: agente.nome, unidade: unidade?.nome || "—",
@@ -449,7 +449,7 @@ export const ManagerDashboard = () => {
                         <tbody>
                           {sel.unitAgents.map((ag) => {
                             const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+                            const agNaLoja = agLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
                             const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
                             const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
