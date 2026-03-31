@@ -449,7 +449,7 @@ export const ManagerDashboard = () => {
                         <tbody>
                           {sel.unitAgents.map((ag) => {
                             const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLoja = agLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+                            const agNaLoja = agLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
                             const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
                             const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
