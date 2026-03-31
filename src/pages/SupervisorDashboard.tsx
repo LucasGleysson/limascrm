@@ -206,9 +206,9 @@ export const SupervisorDashboard = () => {
               <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
             </div>
             {/* Métricas agregadas (não somam ao total) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Na Loja (agregado)" value={globalStats.passaramNaLoja} icon={Car} variant="warning" description="Concluídos + Dispensados + Perdidos" />
-              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" description="Subconjunto de Desq. Novo" />
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatsCard title="Na Loja (agregado)" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
+              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
