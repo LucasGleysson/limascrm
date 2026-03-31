@@ -54,9 +54,16 @@ export const SupervisorDashboard = () => {
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
 
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const tomorrowStr = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  }, []);
+
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
+      const aLeadIds = new Set(aLeads.map((l) => l.id));
       const passaramNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
@@ -65,25 +72,38 @@ export const SupervisorDashboard = () => {
       const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
       const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
-      const naoAgendados = aLeads.filter((l) => ["novo", "desqualificado_novo"].includes(l.etapa)).length;
+      const naoAgendados = aLeads.filter((l) => l.etapa === "novo").length;
+      const emAtendimento = aLeads.filter((l) => ["confirmado", "na_loja"].includes(l.etapa)).length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
       const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
 
-      const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
+      // FUP pendentes: same logic as agent view — only data_prevista <= today and lead eligible
+      const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeadIds.has(e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
-      const fupPendentes = agFollowUps.filter((e) => !e.concluido).length;
+      const leadById = new Map(aLeads.map((l) => [l.id, l]));
+      const fupPendentes = agFollowUps.filter((e) => {
+        if (e.concluido || e.data_prevista > todayStr) return false;
+        const lead = leadById.get(e.id_lead);
+        if (!lead || lead.fup_concluido) return false;
+        if (lead.etapa === "dispensado") return true;
+        if (lead.etapa === "novo") return true;
+        if (["agendado", "reagendado"].includes(lead.etapa)) {
+          return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
+        }
+        return false;
+      }).length;
 
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
 
       return {
         ...agente, unidadeNome: unidade?.nome || "—",
         total: aLeads.length, passaramNaLoja, concluidos, agendados, totalAgendamentos,
-        dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, perdidosAntes,
+        dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, emAtendimento, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, eventos, agentes, unidades]);
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
 
   // Build a map of agent -> unidade_padrao for fallback attribution
   const agentUnitMap = useMemo(() => {
