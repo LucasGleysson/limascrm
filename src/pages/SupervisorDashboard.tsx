@@ -193,19 +193,22 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Funil — categorias mutuamente exclusivas que somam ao total */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard title="Total de Leads" value={globalStats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
               <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
+              <StatsCard title="Em Atendimento" value={globalStats.emAtendimento} icon={Car} variant="info" />
               <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
-            </div>
-             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Perdidos (pós-loja)" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
+              <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
               <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
-              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
               <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
+            </div>
+            {/* Métricas agregadas (não somam ao total) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Na Loja (agregado)" value={globalStats.passaramNaLoja} icon={Car} variant="warning" description="Concluídos + Dispensados + Perdidos" />
+              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" description="Subconjunto de Desq. Novo" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
