@@ -118,7 +118,7 @@ export const SupervisorDashboard = () => {
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const passaramNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const passaramNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
