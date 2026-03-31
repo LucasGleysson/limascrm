@@ -115,7 +115,7 @@ export const ManagerDashboard = () => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
-      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       return {
         nome: agente.nome, unidade: unidade?.nome || "—",
