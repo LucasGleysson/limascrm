@@ -135,19 +135,24 @@ export const DailyReportPanel = () => {
         </div>
       </div>
 
-      {/* Global stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Registros Novos" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
-        <StatsCard title="Agendamentos" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-        <StatsCard title="Passaram na Loja" value={globalStats.passaramNaLoja} icon={Car} variant="warning" />
-        <StatsCard title="Serviço Concluído" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+      {/* Registros e Funil */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatsCard title="Total de Registros" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
+        <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
+        <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Na Loja */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard title="Na Loja" value={globalStats.naLoja} icon={Car} variant="warning" subtitle="Conf+Concl+Disp+Perd+Reag" />
+        <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
+        <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
-        <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={AlertTriangle} variant="warning" />
+      </div>
+      {/* Desqualificados */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={AlertTriangle} variant="destructive" />
         <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
         <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
-        <StatsCard title="Não Agendados" value={globalStats.naoAgendados} icon={AlertTriangle} variant="warning" />
       </div>
 
       {/* Origin breakdown pie chart */}
