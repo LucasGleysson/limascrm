@@ -141,20 +141,19 @@ export const SupervisorDashboard = () => {
   }, [filteredLeads, unidades, agentUnitMap, agentes]);
 
   const globalStats = useMemo(() => {
-    const passaramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
-    const naoAgendados = filteredLeads.filter((l) => l.etapa === "novo").length;
-    const emAtendimento = filteredLeads.filter((l) => ["confirmado", "na_loja"].includes(l.etapa)).length;
+    const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
-    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+    const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
-      totalLeads: filteredLeads.length, passaramNaLoja, concluidos, agendados,
-      naoAgendados, emAtendimento, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
+      totalLeads: filteredLeads.length, naLoja, concluidos, agendados,
+      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
 
