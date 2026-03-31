@@ -91,7 +91,7 @@ export const ManagerDashboard = () => {
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const carrosNaLoja = uLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
