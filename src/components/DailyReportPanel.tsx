@@ -32,22 +32,27 @@ export const DailyReportPanel = () => {
     return leads.filter((l) => l.etapa === "concluido" && (l.checkout?.slice(0, 10) === dateStr || l.checkin?.slice(0, 10) === dateStr));
   }, [leads, dateStr]);
 
+  const dispensadosNoDia = useMemo(() => {
+    return passaramNaLojaNoDia.filter((l) => l.etapa === "dispensado");
+  }, [passaramNaLojaNoDia]);
+
   const globalStats = useMemo(() => {
     const desqNovos = createdToday.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = createdToday.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = createdToday.filter((l) => l.etapa === "desqualificado_agendado").length;
     return {
       totalRegistros: createdToday.length,
-      naoAgendados: createdToday.filter((l) => l.etapa === "novo").length,
+      novos: createdToday.filter((l) => l.etapa === "novo").length,
       agendados: createdToday.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length,
-      passaramNaLoja: passaramNaLojaNoDia.length,
+      naLoja: passaramNaLojaNoDia.length,
       concluidos: concluidosNoDia.length,
+      dispensados: dispensadosNoDia.length,
       perdidos: passaramNaLojaNoDia.filter((l) => l.etapa === "perdido").length,
       desqNovos,
       desqOutraCidade,
       desqAgendados,
     };
-  }, [createdToday, passaramNaLojaNoDia, concluidosNoDia]);
+  }, [createdToday, passaramNaLojaNoDia, concluidosNoDia, dispensadosNoDia]);
 
   const unitStats = useMemo(() => {
     return unidades.map((u) => {
