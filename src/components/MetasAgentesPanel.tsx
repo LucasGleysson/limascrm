@@ -123,21 +123,34 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const agentData = useMemo(() => {
+    // Helper: check if a lead belongs to this month by data_entrada OR data_agendamento
+    const isLeadInMonth = (l: typeof leads[0]) =>
+      (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
+      (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
+
     return agentes.map((ag) => {
       const meta = metas.find((m) => m.id_agente === ag.id);
       const metaVal = meta?.meta_carros || 0;
 
-      const monthLeads = leads.filter(
+      // Leads created in the month (for total/aproveitamento)
+      const monthLeadsByEntrada = leads.filter(
         (l) => l.id_agente === ag.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
-      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+      // Leads that visited the store in the month (broader: entrada OR agendamento)
+      const monthLeadsForLoja = leads.filter(
+        (l) => l.id_agente === ag.id && isLeadInMonth(l)
+      );
+      const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeadsForLoja.filter((l) => l.etapa === "perdido").length;
       const carrosParaMeta = concluidos + perdidos;
 
-      const weekLeads = leads.filter(
-        (l) => l.id_agente === ag.id && l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to
+      const isWeekInMonth = (l: typeof leads[0]) =>
+        (l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to) ||
+        (l.data_agendamento && l.data_agendamento >= weekRange.from && l.data_agendamento <= weekRange.to);
+      const weekLeadsForLoja = leads.filter(
+        (l) => l.id_agente === ag.id && isWeekInMonth(l)
       );
-      const concluidosSemana = weekLeads.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
+      const concluidosSemana = weekLeadsForLoja.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
 
       const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
       const faltam = Math.max(0, metaVal - carrosParaMeta);
@@ -148,7 +161,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       const metaSemanal = metaVal > 0 ? Math.round(metaVal / (totalBizDays / 5)) : 0;
       const pctSemanal = metaSemanal > 0 ? Math.round((concluidosSemana / metaSemanal) * 100) : 0;
 
-      const totalLeadsMes = monthLeads.length;
+      const totalLeadsMes = monthLeadsByEntrada.length;
       const aproveitamento = totalLeadsMes > 0 ? Math.round((carrosParaMeta / totalLeadsMes) * 100) : 0;
 
       let status: "on_track" | "at_risk" | "behind" | "achieved" = "on_track";

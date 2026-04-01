@@ -103,17 +103,28 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const unitData = useMemo(() => {
+    // Helper: check if a lead belongs to this month by data_entrada OR data_agendamento
+    const isLeadInMonth = (l: typeof leads[0]) =>
+      (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
+      (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
+
     return unidades.map((u) => {
       const meta = metas.find((m) => m.id_unidade === u.id);
       const metaVal = meta?.meta_carros || 0;
 
-      const monthLeads = leads.filter(
+      // Leads created in the month (for total count)
+      const monthLeadsByEntrada = leads.filter(
         (l) => l.id_unidade === u.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      const carrosNaLoja = monthLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
-      const carrosParaMeta = monthLeads.filter((l) => isCarroParaMeta(l.etapa)).length;
-      const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
-      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+      // Leads that visited the store in the month (by agendamento date OR entrada date)
+      const monthLeadsForLoja = leads.filter(
+        (l) => l.id_unidade === u.id && isLeadInMonth(l)
+      );
+      // Deduplicate: use the broader set for store metrics
+      const carrosNaLoja = monthLeadsForLoja.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosParaMeta = monthLeadsForLoja.filter((l) => isCarroParaMeta(l.etapa)).length;
+      const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeadsForLoja.filter((l) => l.etapa === "perdido").length;
 
       const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
       const faltam = Math.max(0, metaVal - carrosParaMeta);
@@ -124,14 +135,15 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       // Agent breakdown for this unit
       const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       const agentBreakdown = unitAgents.map((ag) => {
-        const agLeads = monthLeads.filter((l) => l.id_agente === ag.id);
+        const agLeadsEntrada = monthLeadsByEntrada.filter((l) => l.id_agente === ag.id);
+        const agLeadsLoja = monthLeadsForLoja.filter((l) => l.id_agente === ag.id);
         return {
           nome: ag.nome,
-          total: agLeads.length,
-          carrosNaLoja: agLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
-          carrosParaMeta: agLeads.filter((l) => isCarroParaMeta(l.etapa)).length,
-          concluidos: agLeads.filter((l) => l.etapa === "concluido").length,
-          perdidos: agLeads.filter((l) => l.etapa === "perdido").length,
+          total: agLeadsEntrada.length,
+          carrosNaLoja: agLeadsLoja.filter((l) => isCarroDoAgente(l.etapa)).length,
+          carrosParaMeta: agLeadsLoja.filter((l) => isCarroParaMeta(l.etapa)).length,
+          concluidos: agLeadsLoja.filter((l) => l.etapa === "concluido").length,
+          perdidos: agLeadsLoja.filter((l) => l.etapa === "perdido").length,
         };
       });
 
@@ -146,7 +158,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       return {
         ...u, metaVal, carrosNaLoja, carrosParaMeta, concluidos, perdidos, pct, faltam,
         mediaDiaria, necessarioPorDia, status, diasRestantes,
-        totalLeads: monthLeads.length, agentBreakdown,
+        totalLeads: monthLeadsByEntrada.length, agentBreakdown,
       };
     });
   }, [unidades, metas, leads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes]);
