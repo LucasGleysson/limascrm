@@ -21,15 +21,29 @@ export const DailyReportPanel = () => {
 
   const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
+  // Anchor "Na Loja" to data_agendamento (the real event date), NOT checkin timestamp.
+  // This ensures metrics are stable even when check-in is registered late (next day, etc.).
   const passaramNaLojaNoDia = useMemo(() => {
-    const byCheckin = leads.filter((l) => l.checkin?.slice(0, 10) === dateStr);
-    const ids = new Set(byCheckin.map((l) => l.id));
-    const fallback = leads.filter((l) => !ids.has(l.id) && !l.checkin && l.data_agendamento === dateStr && ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa));
-    return [...byCheckin, ...fallback];
+    return leads.filter((l) => {
+      const naLojaEtapas = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
+      if (!naLojaEtapas.includes(l.etapa)) return false;
+      // Primary: use data_agendamento as the real event date
+      if (l.data_agendamento) return l.data_agendamento === dateStr;
+      // Walk-ins without appointment: use checkin date, then data_entrada
+      if (l.checkin) return l.checkin.slice(0, 10) === dateStr;
+      return l.data_entrada === dateStr;
+    });
   }, [leads, dateStr]);
 
+  // Anchor "Concluídos" to data_agendamento for the same stability reason.
   const concluidosNoDia = useMemo(() => {
-    return leads.filter((l) => l.etapa === "concluido" && (l.checkout?.slice(0, 10) === dateStr || l.checkin?.slice(0, 10) === dateStr));
+    return leads.filter((l) => {
+      if (l.etapa !== "concluido") return false;
+      if (l.data_agendamento) return l.data_agendamento === dateStr;
+      if (l.checkout) return l.checkout.slice(0, 10) === dateStr;
+      if (l.checkin) return l.checkin.slice(0, 10) === dateStr;
+      return l.data_entrada === dateStr;
+    });
   }, [leads, dateStr]);
 
   const dispensadosNoDia = useMemo(() => {
