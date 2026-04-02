@@ -42,10 +42,9 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       query = query.eq("id_unidade", user.unidade_padrao);
     }
     if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
-      // Load last 90 days by date instead of fixed row count
-      const from = new Date();
-      from.setDate(from.getDate() - 90);
-      query = query.gte("data_entrada", from.toISOString().split("T")[0]);
+      // No date filter — supervisors/gestors need full visibility
+      // Supabase default returns up to 1000 rows; we raise to 5000
+      query = query.limit(5000);
     }
     return query;
   }, []);
