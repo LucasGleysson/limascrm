@@ -101,7 +101,7 @@ export const LeadSearchPanel = () => {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, getDateFrom]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
