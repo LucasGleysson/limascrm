@@ -125,7 +125,7 @@ export const LeadSearchPanel = () => {
         <p className="text-muted-foreground text-sm">Busque por nome, telefone ou OS em todas as cidades e agentes</p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -133,6 +133,18 @@ export const LeadSearchPanel = () => {
           className="max-w-md"
           onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
         />
+        <Select value={periodo} onValueChange={setPeriodo}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">Últimos 2 meses</SelectItem>
+            <SelectItem value="3">Últimos 3 meses</SelectItem>
+            <SelectItem value="6">Últimos 6 meses</SelectItem>
+            <SelectItem value="12">Último ano</SelectItem>
+            <SelectItem value="all">Todo período</SelectItem>
+          </SelectContent>
+        </Select>
         <Button onClick={handleSearch} disabled={loading || !query.trim()} className="gap-2">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           Buscar
