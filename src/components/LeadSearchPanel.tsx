@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -33,8 +34,16 @@ export const LeadSearchPanel = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [periodo, setPeriodo] = useState("2");
 
   const canDelete = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
+
+  const getDateFrom = useCallback(() => {
+    if (periodo === "all") return null;
+    const d = new Date();
+    d.setMonth(d.getMonth() - parseInt(periodo));
+    return d.toISOString().split("T")[0];
+  }, [periodo]);
 
   const handleSearch = useCallback(async () => {
     const q = query.trim();
@@ -43,11 +52,16 @@ export const LeadSearchPanel = () => {
     setSearched(true);
 
     try {
-      // Search by nome (ilike), telefone (ilike), or numero_os (ilike)
+      const dateFrom = getDateFrom();
+      const buildQuery = (field: string) => {
+        let qb = supabase.from("leads").select("*").ilike(field, `%${q}%`).order("created_at", { ascending: false });
+        if (dateFrom) qb = qb.gte("data_entrada", dateFrom);
+        return qb.limit(200);
+      };
       const [byNome, byTelefone, byOs] = await Promise.all([
-        supabase.from("leads").select("*").ilike("nome", `%${q}%`).order("created_at", { ascending: false }).limit(50),
-        supabase.from("leads").select("*").ilike("telefone", `%${q}%`).order("created_at", { ascending: false }).limit(50),
-        supabase.from("leads").select("*").ilike("numero_os", `%${q}%`).order("created_at", { ascending: false }).limit(50),
+        buildQuery("nome"),
+        buildQuery("telefone"),
+        buildQuery("numero_os"),
       ]);
 
       // Merge and deduplicate
@@ -87,7 +101,7 @@ export const LeadSearchPanel = () => {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, getDateFrom]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -111,7 +125,7 @@ export const LeadSearchPanel = () => {
         <p className="text-muted-foreground text-sm">Busque por nome, telefone ou OS em todas as cidades e agentes</p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -119,6 +133,18 @@ export const LeadSearchPanel = () => {
           className="max-w-md"
           onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
         />
+        <Select value={periodo} onValueChange={setPeriodo}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">Últimos 2 meses</SelectItem>
+            <SelectItem value="3">Últimos 3 meses</SelectItem>
+            <SelectItem value="6">Últimos 6 meses</SelectItem>
+            <SelectItem value="12">Último ano</SelectItem>
+            <SelectItem value="all">Todo período</SelectItem>
+          </SelectContent>
+        </Select>
         <Button onClick={handleSearch} disabled={loading || !query.trim()} className="gap-2">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           Buscar

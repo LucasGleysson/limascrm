@@ -70,7 +70,8 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasUnidadesPanel = ({ profiles }: Props) => {
-  const { leads, unidades } = useLeads();
+  const { unidades } = useLeads();
+  const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const now = new Date();
@@ -97,14 +98,32 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
+  // Fetch leads specifically for the selected month (independent of context)
+  const fetchMonthLeads = useCallback(async () => {
+    const range = getMonthRange(mesRef);
+    // Get leads where data_entrada OR data_agendamento falls in the month
+    const [byEntrada, byAgendamento] = await Promise.all([
+      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
+      supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
+    ]);
+    const allRows = [...(byEntrada.data || []), ...(byAgendamento.data || [])];
+    const seen = new Set<string>();
+    const unique: any[] = [];
+    for (const row of allRows) {
+      if (!seen.has(row.id)) { seen.add(row.id); unique.push(row); }
+    }
+    setMetaLeads(unique);
+  }, [mesRef]);
+
+  useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
+
   const monthRange = useMemo(() => getMonthRange(mesRef), [mesRef]);
   const totalBizDays = useMemo(() => businessDaysInMonth(mesRef), [mesRef]);
   const elapsedBizDays = useMemo(() => businessDaysElapsed(mesRef), [mesRef]);
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const unitData = useMemo(() => {
-    // Helper: check if a lead belongs to this month by data_entrada OR data_agendamento
-    const isLeadInMonth = (l: typeof leads[0]) =>
+    const isLeadInMonth = (l: any) =>
       (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
       (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
 
@@ -112,15 +131,12 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       const meta = metas.find((m) => m.id_unidade === u.id);
       const metaVal = meta?.meta_carros || 0;
 
-      // Leads created in the month (for total count)
-      const monthLeadsByEntrada = leads.filter(
+      const monthLeadsByEntrada = metaLeads.filter(
         (l) => l.id_unidade === u.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      // Leads that visited the store in the month (by agendamento date OR entrada date)
-      const monthLeadsForLoja = leads.filter(
+      const monthLeadsForLoja = metaLeads.filter(
         (l) => l.id_unidade === u.id && isLeadInMonth(l)
       );
-      // Deduplicate: use the broader set for store metrics
       const carrosNaLoja = monthLeadsForLoja.filter((l) => isCarroDoAgente(l.etapa)).length;
       const carrosParaMeta = monthLeadsForLoja.filter((l) => isCarroParaMeta(l.etapa)).length;
       const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
@@ -132,7 +148,6 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
 
-      // Agent breakdown for this unit
       const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       const agentBreakdown = unitAgents.map((ag) => {
         const agLeadsEntrada = monthLeadsByEntrada.filter((l) => l.id_agente === ag.id);
@@ -161,7 +176,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         totalLeads: monthLeadsByEntrada.length, agentBreakdown,
       };
     });
-  }, [unidades, metas, leads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes]);
+  }, [unidades, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes]);
 
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);

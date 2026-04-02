@@ -88,7 +88,8 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasAgentesPanel = ({ profiles }: Props) => {
-  const { leads } = useLeads();
+  const { leads: _contextLeads } = useLeads();
+  const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const now = new Date();
@@ -115,6 +116,28 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
+  // Fetch leads specifically for the selected month (independent of context)
+  const fetchMonthLeads = useCallback(async () => {
+    const range = getMonthRange(mesRef);
+    const week = getWeekRange();
+    // Get leads where data_entrada OR data_agendamento falls in the month or week
+    const earliest = range.from < week.from ? range.from : week.from;
+    const latest = range.to > week.to ? range.to : week.to;
+    const [byEntrada, byAgendamento] = await Promise.all([
+      supabase.from("leads").select("*").gte("data_entrada", earliest).lte("data_entrada", latest),
+      supabase.from("leads").select("*").gte("data_agendamento", earliest).lte("data_agendamento", latest),
+    ]);
+    const allRows = [...(byEntrada.data || []), ...(byAgendamento.data || [])];
+    const seen = new Set<string>();
+    const unique: any[] = [];
+    for (const row of allRows) {
+      if (!seen.has(row.id)) { seen.add(row.id); unique.push(row); }
+    }
+    setMetaLeads(unique);
+  }, [mesRef]);
+
+  useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
+
   const monthRange = useMemo(() => getMonthRange(mesRef), [mesRef]);
   const todayStr = new Date().toISOString().split("T")[0];
   const weekRange = useMemo(() => getWeekRange(), [todayStr]);
@@ -123,8 +146,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const agentData = useMemo(() => {
-    // Helper: check if a lead belongs to this month by data_entrada OR data_agendamento
-    const isLeadInMonth = (l: typeof leads[0]) =>
+    const isLeadInMonth = (l: any) =>
       (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
       (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
 
@@ -132,22 +154,20 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       const meta = metas.find((m) => m.id_agente === ag.id);
       const metaVal = meta?.meta_carros || 0;
 
-      // Leads created in the month (for total/aproveitamento)
-      const monthLeadsByEntrada = leads.filter(
+      const monthLeadsByEntrada = metaLeads.filter(
         (l) => l.id_agente === ag.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      // Leads that visited the store in the month (broader: entrada OR agendamento)
-      const monthLeadsForLoja = leads.filter(
+      const monthLeadsForLoja = metaLeads.filter(
         (l) => l.id_agente === ag.id && isLeadInMonth(l)
       );
       const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
       const perdidos = monthLeadsForLoja.filter((l) => l.etapa === "perdido").length;
       const carrosParaMeta = concluidos + perdidos;
 
-      const isWeekInMonth = (l: typeof leads[0]) =>
+      const isWeekInMonth = (l: any) =>
         (l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to) ||
         (l.data_agendamento && l.data_agendamento >= weekRange.from && l.data_agendamento <= weekRange.to);
-      const weekLeadsForLoja = leads.filter(
+      const weekLeadsForLoja = metaLeads.filter(
         (l) => l.id_agente === ag.id && isWeekInMonth(l)
       );
       const concluidosSemana = weekLeadsForLoja.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
@@ -178,7 +198,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
         aproveitamento, totalLeadsMes, status, diasRestantes,
       };
     });
-  }, [agentes, metas, leads, monthRange, weekRange, elapsedBizDays, totalBizDays, isCurrentMonth]);
+  }, [agentes, metas, metaLeads, monthRange, weekRange, elapsedBizDays, totalBizDays, isCurrentMonth]);
 
   const globalStats = useMemo(() => {
     const totalMeta = agentData.reduce((s, a) => s + a.metaVal, 0);
