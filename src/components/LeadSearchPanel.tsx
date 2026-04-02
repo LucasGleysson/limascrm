@@ -34,8 +34,16 @@ export const LeadSearchPanel = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [periodo, setPeriodo] = useState("2");
 
   const canDelete = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
+
+  const getDateFrom = useCallback(() => {
+    if (periodo === "all") return null;
+    const d = new Date();
+    d.setMonth(d.getMonth() - parseInt(periodo));
+    return d.toISOString().split("T")[0];
+  }, [periodo]);
 
   const handleSearch = useCallback(async () => {
     const q = query.trim();
@@ -44,11 +52,16 @@ export const LeadSearchPanel = () => {
     setSearched(true);
 
     try {
-      // Search by nome (ilike), telefone (ilike), or numero_os (ilike)
+      const dateFrom = getDateFrom();
+      const buildQuery = (field: string) => {
+        let qb = supabase.from("leads").select("*").ilike(field, `%${q}%`).order("created_at", { ascending: false });
+        if (dateFrom) qb = qb.gte("data_entrada", dateFrom);
+        return qb.limit(200);
+      };
       const [byNome, byTelefone, byOs] = await Promise.all([
-        supabase.from("leads").select("*").ilike("nome", `%${q}%`).order("created_at", { ascending: false }).limit(50),
-        supabase.from("leads").select("*").ilike("telefone", `%${q}%`).order("created_at", { ascending: false }).limit(50),
-        supabase.from("leads").select("*").ilike("numero_os", `%${q}%`).order("created_at", { ascending: false }).limit(50),
+        buildQuery("nome"),
+        buildQuery("telefone"),
+        buildQuery("numero_os"),
       ]);
 
       // Merge and deduplicate
