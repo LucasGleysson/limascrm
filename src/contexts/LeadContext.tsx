@@ -42,7 +42,10 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       query = query.eq("id_unidade", user.unidade_padrao);
     }
     if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
-      query = query.range(0, 5000);
+      // Load last 90 days by date instead of fixed row count
+      const from = new Date();
+      from.setDate(from.getDate() - 90);
+      query = query.gte("data_entrada", from.toISOString().split("T")[0]);
     }
     return query;
   }, []);
