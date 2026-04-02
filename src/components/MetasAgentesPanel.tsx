@@ -88,7 +88,8 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasAgentesPanel = ({ profiles }: Props) => {
-  const { leads } = useLeads();
+  const { leads: _contextLeads } = useLeads();
+  const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const now = new Date();
