@@ -438,7 +438,8 @@ export const ManagerDashboard = () => {
                     unidadeId={sel.id}
                     unitAgents={sel.unitAgents}
                     allAgents={agentes}
-                    onUpdated={refreshAll}
+                    agentUnidades={agentUnidades}
+                    onUpdated={() => refreshAll()}
                   />
 
                   {sel.unitAgents.length > 0 && (
