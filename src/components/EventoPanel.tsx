@@ -452,14 +452,14 @@ export const EventoPanel = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {canMarkLoss && (
+          {lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido" && lead.etapa !== "analise_supervisor" && (
                     <Button
                       size="sm" variant="outline"
                       onClick={(e) => { e.stopPropagation(); setLossLead(lead!); setLossMotivo(""); setLossOpen(true); }}
-                      className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                      title="Marcar como Perda"
+                      className="gap-1 text-xs text-warning border-warning/30 hover:bg-warning/10"
+                      title="Enviar para Análise"
                     >
-                      <Skull className="h-3.5 w-3.5" />
+                      <AlertCircle className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {canEncerrar && (
