@@ -591,13 +591,13 @@ export const EventoPanel = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Loss modal */}
+      {/* Send to Supervisor Analysis modal */}
       <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Skull className="h-5 w-5 text-destructive" />
-              Marcar como Perda
+              <AlertCircle className="h-5 w-5 text-warning" />
+              Enviar para Análise do Supervisor
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -605,14 +605,14 @@ export const EventoPanel = () => {
               Cliente: <strong>{lossLead?.nome}</strong>
             </p>
             <p className="text-xs text-muted-foreground">
-              O lead será marcado como "Perdido" e o processo de follow-up será encerrado.
+              O lead será enviado para análise do supervisor, que decidirá se é perda ou desqualificação.
             </p>
             <div>
-              <Label>Motivo da perda</Label>
+              <Label>Motivo do envio para análise</Label>
               <Textarea
                 value={lossMotivo}
                 onChange={(e) => setLossMotivo(e.target.value)}
-                placeholder="Ex: Fez serviço em concorrente, desistiu..."
+                placeholder="Ex: Cliente fez serviço em concorrente, não tem mais interesse..."
                 className="mt-1"
                 rows={3}
                 onKeyDown={(e) => {
