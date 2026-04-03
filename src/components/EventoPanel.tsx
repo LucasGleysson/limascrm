@@ -58,7 +58,8 @@ export const EventoPanel = () => {
   const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
 
   const getEncerrarStatus = (lead: Lead): string => {
-    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "perdido";
+    // Post-store leads go to supervisor analysis instead of directly to "perdido"
+    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "analise_supervisor";
     if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
     if (["novo", "desqualificado"].includes(lead.etapa)) return "desqualificado_novo";
     return lead.etapa;
