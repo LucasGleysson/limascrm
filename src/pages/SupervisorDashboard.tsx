@@ -31,7 +31,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos, unidades, profiles, refreshAll } = useLeads();
+  const { leads, eventos, unidades, profiles, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("visao_geral");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
