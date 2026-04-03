@@ -37,7 +37,7 @@ const PIE_COLORS = [
 ];
 
 export const ManagerDashboard = () => {
-  const { leads, unidades, profiles, eventos, refreshAll } = useLeads();
+  const { leads, unidades, profiles, eventos, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
@@ -76,20 +76,31 @@ export const ManagerDashboard = () => {
     })).filter((d) => d.value > 0);
   }, [filteredLeads]);
 
-  // Build a map of agent -> unidade_padrao for fallback attribution
+  // Build a map of agent -> unidades using agente_unidades (many-to-many)
   const agentUnitMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    profiles.forEach((p) => { if (p.unidade_padrao) map[p.id] = p.unidade_padrao; });
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    // Fallback to unidade_padrao
+    profiles.forEach((p) => {
+      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
+        map[p.id] = [p.unidade_padrao];
+      }
+    });
     return map;
-  }, [profiles]);
+  }, [agentUnidades, profiles]);
 
   const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
-    l.id_unidade || agentUnitMap[l.id_agente] || null;
+    l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null) || null;
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
 
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
+      const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
+      const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
       const carrosNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
@@ -100,15 +111,14 @@ export const ManagerDashboard = () => {
       const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const txConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-      const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       return {
         ...u, total: uLeads.length, carrosNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados,
-        txConversao, unitAgents, leads: uLeads,
+        txConversao, unitAgents: uAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, unidades, agentUnitMap, agentes]);
+  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
 
 
   const agenteTable = useMemo(() => {
@@ -428,7 +438,8 @@ export const ManagerDashboard = () => {
                     unidadeId={sel.id}
                     unitAgents={sel.unitAgents}
                     allAgents={agentes}
-                    onUpdated={refreshAll}
+                    agentUnidades={agentUnidades}
+                    onUpdated={() => refreshAll()}
                   />
 
                   {sel.unitAgents.length > 0 && (

@@ -58,7 +58,8 @@ export const EventoPanel = () => {
   const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
 
   const getEncerrarStatus = (lead: Lead): string => {
-    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "perdido";
+    // Post-store leads go to supervisor analysis instead of directly to "perdido"
+    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "analise_supervisor";
     if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
     if (["novo", "desqualificado"].includes(lead.etapa)) return "desqualificado_novo";
     return lead.etapa;
@@ -229,16 +230,16 @@ export const EventoPanel = () => {
     if (!lossLead || !lossMotivo.trim() || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
-      const notas = appendNota(lossLead.notas, "Marcado como Perda", lossMotivo.trim());
+      const notas = appendNota(lossLead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
       const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lossLead.id);
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
       await updateLead(lossLead.id, {
-        etapa: "perdido",
+        etapa: "analise_supervisor",
         notas,
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
         fup_concluido_numero: maxFup,
-        fup_motivo_conclusao: `Perda: ${lossMotivo.trim()}`,
+        fup_motivo_conclusao: `Análise: ${lossMotivo.trim()}`,
       });
       setLossOpen(false);
       setLossMotivo("");
@@ -274,7 +275,7 @@ export const EventoPanel = () => {
 
   const renderEventCard = (evento: Evento, concluded = false) => {
     const lead = getLead(evento.id_lead);
-    const canMarkLoss = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido";
+    const canSendAnalysis = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido" && lead.etapa !== "analise_supervisor";
 
     return (
       <div
@@ -310,7 +311,7 @@ export const EventoPanel = () => {
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {!concluded && canMarkLoss && (
+          {!concluded && canSendAnalysis && (
             <Button
               size="sm"
               variant="outline"
@@ -320,10 +321,10 @@ export const EventoPanel = () => {
                 setLossMotivo("");
                 setLossOpen(true);
               }}
-              className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-              title="Marcar como Perda"
+              className="gap-1 text-xs text-warning border-warning/30 hover:bg-warning/10"
+              title="Enviar para Análise"
             >
-              <Skull className="h-3.5 w-3.5" />
+              <AlertCircle className="h-3.5 w-3.5" />
             </Button>
           )}
           {!concluded && (
@@ -451,14 +452,14 @@ export const EventoPanel = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {canMarkLoss && (
+          {lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido" && lead.etapa !== "analise_supervisor" && (
                     <Button
                       size="sm" variant="outline"
                       onClick={(e) => { e.stopPropagation(); setLossLead(lead!); setLossMotivo(""); setLossOpen(true); }}
-                      className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                      title="Marcar como Perda"
+                      className="gap-1 text-xs text-warning border-warning/30 hover:bg-warning/10"
+                      title="Enviar para Análise"
                     >
-                      <Skull className="h-3.5 w-3.5" />
+                      <AlertCircle className="h-3.5 w-3.5" />
                     </Button>
                   )}
                   {canEncerrar && (
@@ -590,13 +591,13 @@ export const EventoPanel = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Loss modal */}
+      {/* Send to Supervisor Analysis modal */}
       <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Skull className="h-5 w-5 text-destructive" />
-              Marcar como Perda
+              <AlertCircle className="h-5 w-5 text-warning" />
+              Enviar para Análise do Supervisor
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
@@ -604,14 +605,14 @@ export const EventoPanel = () => {
               Cliente: <strong>{lossLead?.nome}</strong>
             </p>
             <p className="text-xs text-muted-foreground">
-              O lead será marcado como "Perdido" e o processo de follow-up será encerrado.
+              O lead será enviado para análise do supervisor, que decidirá se é perda ou desqualificação.
             </p>
             <div>
-              <Label>Motivo da perda</Label>
+              <Label>Motivo do envio para análise</Label>
               <Textarea
                 value={lossMotivo}
                 onChange={(e) => setLossMotivo(e.target.value)}
-                placeholder="Ex: Fez serviço em concorrente, desistiu..."
+                placeholder="Ex: Cliente fez serviço em concorrente, não tem mais interesse..."
                 className="mt-1"
                 rows={3}
                 onKeyDown={(e) => {

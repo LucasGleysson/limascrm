@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      agente_unidades: {
+        Row: {
+          created_at: string
+          id: string
+          id_agente: string
+          id_unidade: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_agente: string
+          id_unidade: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_agente?: string
+          id_unidade?: string
+        }
+        Relationships: []
+      }
       eventos: {
         Row: {
           concluido: boolean

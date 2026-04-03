@@ -26,12 +26,12 @@ const SIDEBAR_TABS = [
   { id: "fichas", label: "Fichas", icon: FileText },
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
-  { id: "dispensa_relatorio", label: "Rel. Dispensa", icon: XCircle },
+  { id: "dispensa_relatorio", label: "Análise", icon: XCircle },
   { id: "metas", label: "Metas", icon: Target },
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos, unidades, profiles, refreshAll } = useLeads();
+  const { leads, eventos, unidades, profiles, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("visao_geral");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
@@ -105,18 +105,30 @@ export const SupervisorDashboard = () => {
     });
   }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
 
-  // Build a map of agent -> unidade_padrao for fallback attribution
+  // Build a map of agent -> unidades using agente_unidades table (many-to-many)
   const agentUnitMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    profiles.forEach((p) => { if (p.unidade_padrao) map[p.id] = p.unidade_padrao; });
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    // Fallback to unidade_padrao
+    profiles.forEach((p) => {
+      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
+        map[p.id] = [p.unidade_padrao];
+      }
+    });
     return map;
-  }, [profiles]);
+  }, [agentUnidades, profiles]);
 
   const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
-    l.id_unidade || agentUnitMap[l.id_agente] || null;
+    l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null) || null;
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
+      // Agents linked to this unit via agente_unidades
+      const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
+      const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
       const passaramNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
@@ -126,19 +138,18 @@ export const SupervisorDashboard = () => {
       const desqAgendados = uLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
       const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
+      const analiseSupervisor = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
-      // Agents assigned to this unit
-      const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       return {
         ...u, total: uLeads.length, passaramNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados,
+        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, analiseSupervisor,
         naoAgendados: uLeads.filter((l) => ["novo"].includes(l.etapa)).length,
         perdidosAntes: uLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
-        txConversao, unitAgents, leads: uLeads,
+        txConversao, unitAgents: uAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, unidades, agentUnitMap, agentes]);
+  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
 
   const globalStats = useMemo(() => {
     const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
@@ -518,7 +529,8 @@ export const SupervisorDashboard = () => {
                     unidadeId={sel.id}
                     unitAgents={sel.unitAgents}
                     allAgents={agentes}
-                    onUpdated={refreshAll}
+                    agentUnidades={agentUnidades}
+                    onUpdated={() => refreshAll()}
                   />
 
                   {sel.unitAgents.length > 0 && (

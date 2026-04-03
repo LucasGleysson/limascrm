@@ -11,14 +11,21 @@ interface Agent {
   unidade_padrao?: string | null;
 }
 
+interface AgentUnidade {
+  id: string;
+  id_agente: string;
+  id_unidade: string;
+}
+
 interface Props {
   unidadeId: string;
   unitAgents: Agent[];
   allAgents: Agent[];
+  agentUnidades: AgentUnidade[];
   onUpdated: () => void;
 }
 
-export const StoreAgentAssigner = ({ unidadeId, unitAgents, allAgents, onUpdated }: Props) => {
+export const StoreAgentAssigner = ({ unidadeId, unitAgents, allAgents, agentUnidades, onUpdated }: Props) => {
   const { toast } = useToast();
   const [assigning, setAssigning] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("");
@@ -31,9 +38,8 @@ export const StoreAgentAssigner = ({ unidadeId, unitAgents, allAgents, onUpdated
     if (!selectedAgent) return;
     setAssigning(true);
     const { error } = await supabase
-      .from("profiles")
-      .update({ unidade_padrao: unidadeId })
-      .eq("id", selectedAgent);
+      .from("agente_unidades")
+      .insert({ id_agente: selectedAgent, id_unidade: unidadeId });
 
     if (error) {
       toast({ title: "Erro ao vincular agente", description: error.message, variant: "destructive" });
@@ -47,9 +53,10 @@ export const StoreAgentAssigner = ({ unidadeId, unitAgents, allAgents, onUpdated
 
   const handleUnassign = async (agentId: string) => {
     const { error } = await supabase
-      .from("profiles")
-      .update({ unidade_padrao: null })
-      .eq("id", agentId);
+      .from("agente_unidades")
+      .delete()
+      .eq("id_agente", agentId)
+      .eq("id_unidade", unidadeId);
 
     if (error) {
       toast({ title: "Erro ao desvincular", description: error.message, variant: "destructive" });

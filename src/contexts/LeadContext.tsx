@@ -3,11 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
 import type { Lead, Evento, Unidade } from "@/data/mockData";
 
+interface AgentUnidade {
+  id: string;
+  id_agente: string;
+  id_unidade: string;
+}
+
 interface LeadContextType {
   leads: Lead[];
   eventos: Evento[];
   unidades: Unidade[];
   profiles: { id: string; nome: string; cargo: string; unidade_padrao?: string | null }[];
+  agentUnidades: AgentUnidade[];
   loading: boolean;
   addLead: (lead: Omit<Lead, "id">) => Promise<string | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
@@ -19,16 +26,33 @@ interface LeadContextType {
 
 const LeadContext = createContext<LeadContextType | undefined>(undefined);
 
+/** Fetch all rows from a query using .range() pagination to bypass the 1000-row PostgREST limit */
+async function fetchAllRows<T>(queryBuilder: any, maxRows = 10000): Promise<T[]> {
+  const allRows: T[] = [];
+  let from = 0;
+  const PAGE = 1000;
+  while (from < maxRows) {
+    const { data, error } = await queryBuilder.range(from, from + PAGE - 1);
+    if (error) { console.error("fetchAllRows error:", error); break; }
+    if (!data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return allRows;
+}
+
 export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const { currentUser } = useRole();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [unidades, setUnidades] = useState<Unidade[]>([]);
   const [profiles, setProfiles] = useState<{ id: string; nome: string; cargo: string; unidade_padrao?: string | null }[]>([]);
+  const [agentUnidades, setAgentUnidades] = useState<AgentUnidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const lastFetchRef = useRef<number>(0);
-  const CACHE_TTL = 30_000; // 30 seconds
+  const CACHE_TTL = 30_000;
   const currentUserRef = useRef(currentUser);
   currentUserRef.current = currentUser;
 
@@ -41,11 +65,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (user?.cargo === "recepcionista" && user.unidade_padrao) {
       query = query.eq("id_unidade", user.unidade_padrao);
     }
-    if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
-      // No date filter — supervisors/gestors need full visibility
-      // Supabase default returns up to 1000 rows; we raise to 5000
-      query = query.limit(5000);
-    }
+    // For gestor/supervisor — no date filter, pagination handles the limit
     return query;
   }, []);
 
@@ -55,7 +75,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (user?.cargo === "agente") {
       query = query.eq("id_usuario", user.id);
     }
-    // Recepcionista only needs pending events view
     if (user?.cargo === "recepcionista") {
       query = query.eq("concluido", false);
     }
@@ -65,20 +84,29 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const fetchAll = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && lastFetchRef.current && now - lastFetchRef.current < CACHE_TTL) {
-      return; // cache still valid
+      return;
     }
 
-    const [leadsRes, eventosRes, unidadesRes, profilesRes] = await Promise.all([
-      buildLeadsQuery(),
-      buildEventosQuery(),
+    const user = currentUserRef.current;
+    const needsPagination = user?.cargo === "gestor" || user?.cargo === "supervisor";
+
+    const [leadsData, eventosData, unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
+      needsPagination
+        ? fetchAllRows<any>(buildLeadsQuery())
+        : buildLeadsQuery().then((r: any) => r.data || []),
+      needsPagination
+        ? fetchAllRows<any>(buildEventosQuery())
+        : buildEventosQuery().then((r: any) => r.data || []),
       supabase.from("unidades").select("*").order("nome"),
       supabase.from("profiles").select("id, nome, cargo, unidade_padrao"),
+      supabase.from("agente_unidades").select("*"),
     ]);
 
-    if (leadsRes.data) setLeads(leadsRes.data.map(mapLead));
-    if (eventosRes.data) setEventos(eventosRes.data.map(mapEvento));
+    setLeads(leadsData.map(mapLead));
+    setEventos(eventosData.map(mapEvento));
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
+    if (agentUnidadesRes.data) setAgentUnidades(agentUnidadesRes.data as AgentUnidade[]);
     lastFetchRef.current = Date.now();
     setLoading(false);
   }, [buildLeadsQuery, buildEventosQuery]);
@@ -107,7 +135,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Skip all DB fetches for recepcionista to save costs (re-enable when ready)
   const isRecepcionista = currentUser?.cargo === "recepcionista";
 
   useEffect(() => {
@@ -120,7 +147,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [authUserId, currentUser, fetchAll, isRecepcionista]);
 
-  // Realtime ONLY for agents — other roles use manual refresh
+  // Realtime ONLY for agents
   useEffect(() => {
     if (!authUserId) return;
     const user = currentUserRef.current;
@@ -195,29 +222,25 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (data) {
       const newLead = mapLead(data);
       setLeads((prev) => [newLead, ...prev]);
-      lastFetchRef.current = 0; // invalidate cache
+      lastFetchRef.current = 0;
     }
     return data?.id || null;
   };
 
   const updateLead = async (id: string, updates: Partial<Lead>) => {
-    // Optimistic update
     setLeads((prev) => prev.map((l) => l.id === id ? { ...l, ...updates } : l));
-    lastFetchRef.current = 0; // invalidate cache
+    lastFetchRef.current = 0;
     const { error } = await supabase.from("leads").update(updates).eq("id", id);
     if (error) {
       console.error("updateLead error:", error);
-      // Revert on error by refetching
       fetchAll(true);
     }
   };
 
   const deleteLead = async (id: string) => {
-    // Optimistic removal
     setLeads((prev) => prev.filter((l) => l.id !== id));
     setEventos((prev) => prev.filter((e) => e.id_lead !== id));
     lastFetchRef.current = 0;
-    // Delete related eventos first, then the lead
     await supabase.from("eventos").delete().eq("id_lead", id);
     const { error } = await supabase.from("leads").delete().eq("id", id);
     if (error) {
@@ -246,7 +269,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   const concluirEvento = useCallback(async (eventoId: string, descricao: string, userId: string) => {
     const now = new Date().toISOString();
-    // Optimistic update
     setEventos((prev) => prev.map((e) => e.id === eventoId ? { ...e, concluido: true, data_conclusao: now, descricao_conclusao: descricao, id_usuario: userId } : e));
     const { error } = await supabase.from("eventos").update({
       concluido: true,
@@ -262,7 +284,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <LeadContext.Provider value={{
-      leads, eventos, unidades, profiles, loading,
+      leads, eventos, unidades, profiles, agentUnidades, loading,
       addLead, updateLead, deleteLead, addEvento, concluirEvento,
       refreshAll: () => isRecepcionista ? Promise.resolve() : fetchAll(true),
     }}>

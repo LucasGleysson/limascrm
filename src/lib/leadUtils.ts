@@ -9,6 +9,7 @@ export const getStatusBadgeClass = (etapa: string): string => {
     na_loja: "bg-warning/15 text-warning border-warning/30",
     concluido: "bg-success/15 text-success border-success/30",
     dispensado: "bg-destructive/15 text-destructive border-destructive/30",
+    analise_supervisor: "bg-warning/15 text-warning border-warning/30",
     desqualificado_novo: "bg-muted text-muted-foreground border-muted",
     desqualificado_agendado: "bg-destructive/15 text-destructive border-destructive/30",
     perdido: "bg-destructive/15 text-destructive border-destructive/30",
@@ -37,6 +38,10 @@ export const isPerdidoAntesLoja = (etapa: string): boolean =>
 /** Check if a lead was lost after going to the store */
 export const isPerdidoDepoisLoja = (etapa: string): boolean =>
   ["dispensado", "perdido"].includes(etapa);
+
+/** Check if a lead is pending supervisor analysis */
+export const isAnaliseSupervisor = (etapa: string): boolean =>
+  etapa === "analise_supervisor";
 
 export const getToday = (): string => new Date().toISOString().split("T")[0];
 

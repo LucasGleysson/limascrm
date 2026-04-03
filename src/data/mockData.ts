@@ -10,6 +10,7 @@ export const ETAPAS_FUNIL = [
   { id: "na_loja", label: "Na Loja", color: "warning" },
   { id: "concluido", label: "Serviço Concluído", color: "success" },
   { id: "dispensado", label: "Dispensado", color: "destructive" },
+  { id: "analise_supervisor", label: "Análise Supervisor", color: "warning" },
   { id: "desqualificado_novo", label: "Desqualificado (Novo)", color: "destructive" },
   { id: "desqualificado_agendado", label: "Desqualificado (Agendado)", color: "destructive" },
   { id: "perdido", label: "Perdido", color: "destructive" },
