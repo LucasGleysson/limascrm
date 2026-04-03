@@ -230,16 +230,16 @@ export const EventoPanel = () => {
     if (!lossLead || !lossMotivo.trim() || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
-      const notas = appendNota(lossLead.notas, "Marcado como Perda", lossMotivo.trim());
+      const notas = appendNota(lossLead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
       const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lossLead.id);
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
       await updateLead(lossLead.id, {
-        etapa: "perdido",
+        etapa: "analise_supervisor",
         notas,
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
         fup_concluido_numero: maxFup,
-        fup_motivo_conclusao: `Perda: ${lossMotivo.trim()}`,
+        fup_motivo_conclusao: `Análise: ${lossMotivo.trim()}`,
       });
       setLossOpen(false);
       setLossMotivo("");
