@@ -105,12 +105,21 @@ export const SupervisorDashboard = () => {
     });
   }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
 
-  // Build a map of agent -> unidade_padrao for fallback attribution
+  // Build a map of agent -> unidades using agente_unidades table (many-to-many)
   const agentUnitMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    profiles.forEach((p) => { if (p.unidade_padrao) map[p.id] = p.unidade_padrao; });
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    // Fallback to unidade_padrao
+    profiles.forEach((p) => {
+      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
+        map[p.id] = [p.unidade_padrao];
+      }
+    });
     return map;
-  }, [profiles]);
+  }, [agentUnidades, profiles]);
 
   const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
     l.id_unidade || agentUnitMap[l.id_agente] || null;
