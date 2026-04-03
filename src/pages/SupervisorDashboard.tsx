@@ -125,8 +125,13 @@ export const SupervisorDashboard = () => {
     l.id_unidade || agentUnitMap[l.id_agente] || null;
 
   const unidadeStats = useMemo(() => {
+    const getLeadUnidadeLocal = (l: { id_unidade?: string | null; id_agente: string }) =>
+      l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null);
     return unidades.map((u) => {
-      const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
+      // Agents linked to this unit via agente_unidades
+      const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
+      const unitAgents = agentes.filter((a) => unitAgentIds.has(a.id));
+      const uLeads = filteredLeads.filter((l) => getLeadUnidadeLocal(l) === u.id);
       const passaramNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
