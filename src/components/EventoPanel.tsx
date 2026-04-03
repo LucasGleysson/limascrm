@@ -275,7 +275,7 @@ export const EventoPanel = () => {
 
   const renderEventCard = (evento: Evento, concluded = false) => {
     const lead = getLead(evento.id_lead);
-    const canMarkLoss = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido";
+    const canSendAnalysis = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido" && lead.etapa !== "analise_supervisor";
 
     return (
       <div
@@ -311,7 +311,7 @@ export const EventoPanel = () => {
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {!concluded && canMarkLoss && (
+          {!concluded && canSendAnalysis && (
             <Button
               size="sm"
               variant="outline"
@@ -321,10 +321,10 @@ export const EventoPanel = () => {
                 setLossMotivo("");
                 setLossOpen(true);
               }}
-              className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-              title="Marcar como Perda"
+              className="gap-1 text-xs text-warning border-warning/30 hover:bg-warning/10"
+              title="Enviar para Análise"
             >
-              <Skull className="h-3.5 w-3.5" />
+              <AlertCircle className="h-3.5 w-3.5" />
             </Button>
           )}
           {!concluded && (
