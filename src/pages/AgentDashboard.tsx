@@ -155,6 +155,93 @@ export const AgentDashboard = () => {
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [allMyLeads, today]);
 
+  // Monthly performance for "Meu Desempenho"
+  const mesAtual = useMemo(() => {
+    const now = new Date();
+    const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const to = endD.toISOString().split("T")[0];
+    return { from, to };
+  }, []);
+
+  const monthLeads = useMemo(
+    () => allMyLeads.filter((l) => l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to),
+    [allMyLeads, mesAtual],
+  );
+
+  const desempenho = useMemo(() => {
+    const total = monthLeads.length;
+    const desqNovos = monthLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const produtivos = total - desqNovos;
+    const agendados = monthLeads.filter((l) =>
+      !["novo", "desqualificado_novo"].includes(l.etapa)
+    ).length;
+    const naLoja = monthLeads.filter((l) =>
+      ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)
+    ).length;
+    const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+
+    // No-Show: agendados cujo data_agendamento já passou e ainda estão como agendado/reagendado
+    const noShow = monthLeads.filter((l) =>
+      ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < today
+    ).length;
+
+    // Business days elapsed
+    const now = new Date();
+    let bizDays = 0;
+    const firstDay = new Date(mesAtual.from + "T12:00:00");
+    for (let d = new Date(firstDay); d <= now; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) bizDays++;
+    }
+    const mediaAgendDia = bizDays > 0 ? agendados / bizDays : 0;
+
+    const txComparecimento = agendados > 0 ? Math.round((naLoja / agendados) * 100) : 0;
+    const txConversao = produtivos > 0 ? Math.round((naLoja / produtivos) * 100) : 0;
+
+    // Resgatados concluídos: leads that have dispensado in notes and are now concluido
+    const resgatados = monthLeads.filter((l) =>
+      l.etapa === "concluido" && (l.notas || "").toLowerCase().includes("reagendado")
+    ).length;
+
+    // Ganhos com FUP: concluídos que passaram por análise
+    const ganhosFup = monthLeads.filter((l) =>
+      l.etapa === "concluido" && (l.notas || "").toLowerCase().includes("análise")
+    ).length;
+
+    return {
+      total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
+      noShow, mediaAgendDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+    };
+  }, [monthLeads, today, mesAtual]);
+
+  // Daily appointments chart data
+  const dailyChartData = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const data: { dia: number; agendamentos: number }[] = [];
+    for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
+      const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
+      const count = monthLeads.filter((l) =>
+        l.data_agendamento === dateStr || (l.data_entrada === dateStr && !["novo", "desqualificado_novo"].includes(l.etapa))
+      ).length;
+      data.push({ dia: d, agendamentos: count });
+    }
+    return data;
+  }, [monthLeads, mesAtual]);
+
+  // Pie data: produtivos que foram na loja vs não
+  const pieDesempenho = useMemo(() => {
+    const foramNaLoja = desempenho.naLoja;
+    const naoFoiNaLoja = desempenho.produtivos - foramNaLoja;
+    return [
+      { name: "Na Loja", value: Math.max(0, foramNaLoja), fill: "hsl(142, 71%, 45%)" },
+      { name: "Não foi", value: Math.max(0, naoFoiNaLoja), fill: "hsl(var(--muted-foreground))" },
+    ].filter((d) => d.value > 0);
+  }, [desempenho]);
+
   // Store meta progress
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
@@ -163,32 +250,7 @@ export const AgentDashboard = () => {
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
 
-  // Store stats for "Minha Loja"
-  const storeStats = useMemo(() => {
-    if (!currentUser.unidade_padrao) return null;
-    const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
-    const storeName = unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || "—";
-    const todayAgendados = storeLeads.filter((l) => l.data_agendamento === today);
-    const passaramNaLoja = storeLeads.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
-    const concluidos = storeLeads.filter((l) => l.etapa === "concluido").length;
-    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
-    return {
-      nome: storeName,
-      totalLeads: storeLeads.length,
-      agendados: storeLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-      confirmados: storeLeads.filter((l) => l.etapa === "confirmado").length,
-      naLoja: storeLeads.filter((l) => l.etapa === "na_loja").length,
-      concluidos,
-      dispensados: storeLeads.filter((l) => l.etapa === "dispensado").length,
-      perdidos: storeLeads.filter((l) => l.etapa === "perdido").length,
-      passaramNaLoja,
-      txConversao,
-      agendadosHoje: todayAgendados.length,
-      confirmadosHoje: todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length,
-    };
-  }, [leads, unidades, currentUser.unidade_padrao, today]);
 
-  
 
   return (
     <div className="flex min-h-screen bg-background">
