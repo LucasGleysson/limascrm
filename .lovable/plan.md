@@ -1,128 +1,87 @@
 
 
-## Plano de Melhorias — AutoCRM Lima's
+## Plano de Ajustes — 6 Correções
 
-### Parte 1: Corrigir Limite de 1000 Fichas (Crítico)
+### 1. LeadDetailSheet — Agente envia para Análise (não Perda)
 
-**Problema:** O Supabase/PostgREST limita respostas a 1000 linhas por requisição. O `.limit(5000)` no código é ignorado pelo servidor.
+**Problema:** O botão (Skull) e modal dizem "Marcar como Perda" e enviam para `perdido` diretamente, mesmo para agentes.
 
-**Solução:** Implementar paginação server-side com `.range()` em loop no `LeadContext.tsx`:
+**Correção em `src/components/LeadDetailSheet.tsx`:**
+- Para agentes (`!isSupervisorOrGestor`): trocar ícone Skull por AlertCircle, texto para "Enviar para Análise", cor warning (não destructive)
+- `handleMarkLoss`: se agente → `analise_supervisor`; se supervisor/gestor → `perdido`
+- Modal: título "Enviar para Análise do Supervisor", texto "será enviado para análise", botão "Enviar para Análise" (warning, ícone AlertCircle)
+- Supervisor/gestor mantém o comportamento atual (Skull, "Confirmar Perda", `perdido`)
 
-```text
-Bloco 1: range(0, 999)    → 1000 registros
-Bloco 2: range(1000, 1999) → até 1000
-Bloco 3: range(2000, 2999) → até 1000
-... até que retorne < 1000 ou atinja 10.000
-```
+### 2. EventoPanel — Botão de análise consistente
 
-Isso será aplicado em:
-- `LeadContext.tsx` — fetch global de leads para supervisor/gestor
-- `MetasUnidadesPanel.tsx` e `MetasAgentesPanel.tsx` — fetch independente mensal (que também pode ultrapassar 1000)
+**Problema:** Linhas 626-627 — botão diz "Confirmar Perda" com Skull no modal de análise.
 
-**Arquivos:** `src/contexts/LeadContext.tsx`, `src/components/MetasUnidadesPanel.tsx`, `src/components/MetasAgentesPanel.tsx`
+**Correção em `src/components/EventoPanel.tsx`:**
+- Trocar botão para: `variant="default"` (ou warning), ícone AlertCircle, texto "Enviar para Análise"
+- Remover Skull desse modal
 
----
+### 3. DispensaReportPanel — Busca, colunas e paginação
 
-### Parte 2: Relação Agente ↔ Loja (Many-to-Many)
+**Correções em `src/components/DispensaReportPanel.tsx`:**
+- Adicionar input de busca por **nome, telefone e OS** (filtro de texto)
+- Trocar coluna "FUP DISPENSA" → "OS" (mostra `lead.numero_os`)
+- Trocar coluna "AÇÕES" → "VERIFICAÇÃO" com Badge (Pendente = `analise_supervisor`, Analisado = já decidido como perdido/desq)
+- Manter botões de decisão inline apenas para leads `analise_supervisor`
+- Adicionar filtros por etapa: dispensado, perdido, desq_agendado, desq_novo, analise_supervisor
+- Adicionar paginação com `usePagination`
 
-**Problema atual:** O campo `profiles.unidade_padrao` (texto, singular) só permite 1 loja por agente. Mas um agente pode atender 2+ lojas e uma loja pode ter 2+ agentes.
+### 4. "Minha Loja" → "Meu Desempenho" (métricas do MÊS)
 
-**Solução:** Criar tabela de junção `agente_unidades`:
+**Substituir completamente a aba `minha_loja` em `src/pages/AgentDashboard.tsx`:**
 
-```sql
-CREATE TABLE public.agente_unidades (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  id_agente uuid NOT NULL,
-  id_unidade uuid NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(id_agente, id_unidade)
-);
-```
+Renomear sidebar tab para "Meu Desempenho" (ícone TrendingUp).
 
-Com RLS para leitura autenticada e gestão por supervisor/gestor.
+Filtrar `allMyLeads` pelo **mês atual** (data_entrada entre 1º e último dia do mês).
 
-**Impacto no código:**
-- `StoreAgentAssigner.tsx` — passa a inserir/deletar na tabela `agente_unidades` ao invés de atualizar `unidade_padrao`
-- `SupervisorDashboard.tsx` e `ManagerDashboard.tsx` — o mapa `agentUnitMap` passa a retornar array de unidades por agente
-- Relatórios "Por Loja" — filtram agentes via `agente_unidades` ao invés de `unidade_padrao`
-- `profiles.unidade_padrao` continua existindo como "loja principal" para sidebar e conveniência, sem ser removido
-- `LeadContext.tsx` — fetch da tabela `agente_unidades` junto com os demais dados
+**Cards KPI:**
+- Leads Recebidos (total mês)
+- Leads Desqualificados (desq_novo)
+- Leads Produtivos (total - desq_novo)
+- Agendamentos feitos (leads que saíram de "novo")
+- Média de agendamentos/dia (meta: 4/dia) com indicador visual
+- Na Loja (concluído + dispensado + perdido + confirmado + reagendado)
+- Concluídos
+- No-Show (agendados cujo `data_agendamento` já passou e etapa ainda é agendado/reagendado)
+- Taxa comparecimento (na loja / agendados)
+- Taxa conversão produtivos (na loja / produtivos)
+- Resgatados Concluídos (leads que foram dispensados e depois concluídos)
+- Ganhos com FUP (leads que passaram por analise_supervisor e depois concluídos)
 
-**Arquivos:** Migration SQL, `src/contexts/LeadContext.tsx`, `src/components/StoreAgentAssigner.tsx`, `src/pages/SupervisorDashboard.tsx`, `src/pages/ManagerDashboard.tsx`
+**Gráficos:**
+- BarChart: agendamentos por dia do mês + linha de média diária (meta 4)
+- PieChart: aproveitamento — produtivos que foram na loja vs não foram
+- Progress bar: progressão da meta do mês (carros concluídos / meta_carros)
 
----
+Remover contadores de status individuais da "Minha Loja".
 
-### Parte 3: Novo Fluxo de "Perda" — Análise do Supervisor
+### 5. Supervisor — Lembretes pendentes
 
-**Mudança de regra de negócio:** Agentes não podem mais marcar leads como "perdido". Quando o follow-up é encerrado, ao invés de ir direto para "perdido", o lead vai para um status intermediário: `analise_supervisor`.
+**Correção em `src/pages/SupervisorDashboard.tsx`:**
+- Na contagem de `fupPendentes` por agente (linhas 85-95), adicionar lembretes pendentes (`tipo === "lembrete"`) com `data_prevista <= todayStr` e lead não concluído
+- Exibir como "Pendentes (FUP + Lembretes)" no resumo por agente
 
-**Alterações:**
+### 6. Divergência de Metas
 
-1. **`EventoPanel.tsx`** — Remover botão "Marcar como Perda" dos agentes. Na função `getEncerrarStatus`, leads que iriam para `perdido` agora vão para `analise_supervisor`.
-
-2. **`FollowUpTrackingPanel.tsx`** — Mesma lógica: `getEncerrarStatus` retorna `analise_supervisor` ao invés de `perdido` para leads pós-loja.
-
-3. **`DispensaReportPanel.tsx`** — Expandir para mostrar leads com `etapa === "analise_supervisor"` com botões de ação para o supervisor decidir: "Manter como Desqualificado" ou "Marcar como Perda".
-
-4. **`leadUtils.ts`** — Adicionar `analise_supervisor` nas funções utilitárias. Este status NÃO conta como "Na Loja" nem como "Perda" até o supervisor decidir.
-
-5. **`mockData.ts`** — Adicionar `analise_supervisor` ao array `ETAPAS_FUNIL`.
-
-**Arquivos:** `src/components/EventoPanel.tsx`, `src/components/FollowUpTrackingPanel.tsx`, `src/components/DispensaReportPanel.tsx`, `src/lib/leadUtils.ts`, `src/data/mockData.ts`
-
----
-
-### Parte 4: Reorganização do Agente (Desempenho)
-
-**Manter as abas atuais** (Leads, Agendamentos, Recepção, Eventos) sem alterar — o usuário confirmou que funcionam bem e não quer perder funcionalidades.
-
-**Adicionar a aba "Desempenho"** unificando "Meu Dia" + "Minha Loja" com seletor de período:
-
-```text
-Abas: Leads | Agendamentos | Recepção | Eventos | Desempenho
-                                                     ↓
-                                          [Hoje | Semana | Mês | Mês Anterior]
-                                          
-  Funil da Safra:
-  Registros → Produtivos → Agendados → Na Loja → Concluídos
-     100         85           60          30         22
-                           tx:70%      tx:50%     tx:73%
-  
-  + Seção "Minha Loja" (quando aplicável)
-```
-
-**Arquivos:** `src/pages/AgentDashboard.tsx`
+**Análise necessária em `MetasAgentesPanel.tsx` e `MetasUnidadesPanel.tsx`:**
+- Garantir que o cálculo de "carros para meta" (concluído + perdido) use a mesma lógica de filtragem por período que a visão "Por Agente" e "Por Loja"
+- Se Metas fazem fetch independente com dual-date, alinhar para que conte apenas leads cujo `data_agendamento` OU `data_entrada` cai no mês selecionado (sem duplicar)
 
 ---
 
-### Parte 5: Reorganização do Supervisor
+### Arquivos modificados
 
-**Unificar "Visão Geral" + "Relatório Diário"** num único "Dashboard" com seletor de data no topo:
-
-```text
-Abas: Dashboard | Agentes | Lojas | Fichas | Follow-ups | Análise | Metas
-                                                            ↓
-                                                  (antigo Rel. Dispensa
-                                                   + análise de perdas)
-```
-
-- **Dashboard:** Cards de KPI + safra diária + resumo por agente, com seletor de período/data
-- **Análise:** Evolução do antigo "Rel. Dispensa" para incluir leads `analise_supervisor` com ações de decisão
-- Demais abas mantêm funcionalidade atual
-
-**Arquivos:** `src/pages/SupervisorDashboard.tsx`, `src/pages/ManagerDashboard.tsx`
-
----
-
-### Resumo de Execução
-
-| Fase | Mudança | Risco | Prioridade |
-|------|---------|-------|------------|
-| 1 | Paginação server-side `.range()` | Baixo | Urgente |
-| 2 | Tabela `agente_unidades` (N:N) | Médio | Alta |
-| 3 | Status `analise_supervisor` | Médio | Alta |
-| 4 | Aba "Desempenho" do agente | Baixo | Média |
-| 5 | Unificar Dashboard do supervisor | Médio | Média |
-
-Cada fase é independente e pode ser implementada sequencialmente sem quebrar as anteriores.
+| Arquivo | Mudança |
+|---------|---------|
+| `LeadDetailSheet.tsx` | Botão perda → análise para agentes |
+| `EventoPanel.tsx` | Texto/ícone do botão de análise |
+| `DispensaReportPanel.tsx` | Busca, colunas OS/Verificação, paginação |
+| `AgentDashboard.tsx` | "Meu Desempenho" com métricas mensais e gráficos |
+| `SupervisorDashboard.tsx` | Incluir lembretes na contagem de pendentes |
+| `MetasAgentesPanel.tsx` | Alinhar contagem de carros para meta |
+| `MetasUnidadesPanel.tsx` | Alinhar contagem de carros para meta |
 
