@@ -11,7 +11,7 @@ import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull, AlertCircle } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -228,8 +228,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (!lossMotivo.trim() || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
-      const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
-      await updateLead(lead.id, { etapa: "perdido", notas });
+      if (isSupervisorOrGestor) {
+        const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
+        await updateLead(lead.id, { etapa: "perdido", notas });
+      } else {
+        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
+        await updateLead(lead.id, { etapa: "analise_supervisor", notas });
+      }
       setLossOpen(false);
       setLossMotivo("");
     } finally {
@@ -302,9 +307,15 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     <Pencil className="h-4 w-4" />
                   </Button>
                   {canMarkLoss && (
-                    <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Marcar como Perda">
-                      <Skull className="h-4 w-4" />
-                    </Button>
+                    isSupervisorOrGestor ? (
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Marcar como Perda">
+                        <Skull className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-warning border-warning/30 hover:bg-warning/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Enviar para Análise">
+                        <AlertCircle className="h-4 w-4" />
+                      </Button>
+                    )
                   )}
                   {canDisqualify && (
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDisqualifyOpen(true)} title="Desqualificar">
@@ -591,20 +602,27 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Loss modal */}
+      {/* Mark as Loss / Send to Analysis modal */}
       <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Skull className="h-5 w-5 text-destructive" /> Marcar como Perda
+              {isSupervisorOrGestor ? (
+                <><Skull className="h-5 w-5 text-destructive" /> Marcar como Perda</>
+              ) : (
+                <><AlertCircle className="h-5 w-5 text-warning" /> Enviar para Análise do Supervisor</>
+              )}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              O lead <strong>{lead?.nome}</strong> será marcado como "Perdido".
+              {isSupervisorOrGestor
+                ? <>O lead <strong>{lead?.nome}</strong> será marcado como "Perdido".</>
+                : <>O lead <strong>{lead?.nome}</strong> será enviado para análise do supervisor.</>
+              }
             </p>
             <div>
-              <Label>Motivo da perda</Label>
+              <Label>{isSupervisorOrGestor ? "Motivo da perda" : "Motivo do envio para análise"}</Label>
               <Textarea
                 value={lossMotivo}
                 onChange={(e) => setLossMotivo(e.target.value)}
@@ -617,9 +635,15 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
-              <Skull className="h-4 w-4" /> Confirmar Perda
-            </Button>
+            {isSupervisorOrGestor ? (
+              <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
+                <Skull className="h-4 w-4" /> Confirmar Perda
+              </Button>
+            ) : (
+              <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+                <AlertCircle className="h-4 w-4" /> Enviar para Análise
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

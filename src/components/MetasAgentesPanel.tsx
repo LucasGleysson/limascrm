@@ -116,24 +116,15 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
-  // Fetch leads specifically for the selected month (independent of context)
+  // Fetch leads specifically for the selected month — use data_entrada only for consistency
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    const week = getWeekRange();
-    // Get leads where data_entrada OR data_agendamento falls in the month or week
-    const earliest = range.from < week.from ? range.from : week.from;
-    const latest = range.to > week.to ? range.to : week.to;
-    const [byEntrada, byAgendamento] = await Promise.all([
-      supabase.from("leads").select("*").gte("data_entrada", earliest).lte("data_entrada", latest),
-      supabase.from("leads").select("*").gte("data_agendamento", earliest).lte("data_agendamento", latest),
-    ]);
-    const allRows = [...(byEntrada.data || []), ...(byAgendamento.data || [])];
-    const seen = new Set<string>();
-    const unique: any[] = [];
-    for (const row of allRows) {
-      if (!seen.has(row.id)) { seen.add(row.id); unique.push(row); }
-    }
-    setMetaLeads(unique);
+    const { data } = await supabase
+      .from("leads")
+      .select("*")
+      .gte("data_entrada", range.from)
+      .lte("data_entrada", range.to);
+    setMetaLeads(data || []);
   }, [mesRef]);
 
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
@@ -146,31 +137,21 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const agentData = useMemo(() => {
-    const isLeadInMonth = (l: any) =>
-      (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
-      (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
-
     return agentes.map((ag) => {
       const meta = metas.find((m) => m.id_agente === ag.id);
       const metaVal = meta?.meta_carros || 0;
 
-      const monthLeadsByEntrada = metaLeads.filter(
+      const monthLeads = metaLeads.filter(
         (l) => l.id_agente === ag.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      const monthLeadsForLoja = metaLeads.filter(
-        (l) => l.id_agente === ag.id && isLeadInMonth(l)
-      );
-      const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
-      const perdidos = monthLeadsForLoja.filter((l) => l.etapa === "perdido").length;
+      const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
       const carrosParaMeta = concluidos + perdidos;
 
-      const isWeekInMonth = (l: any) =>
-        (l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to) ||
-        (l.data_agendamento && l.data_agendamento >= weekRange.from && l.data_agendamento <= weekRange.to);
-      const weekLeadsForLoja = metaLeads.filter(
-        (l) => l.id_agente === ag.id && isWeekInMonth(l)
+      const weekLeads = metaLeads.filter(
+        (l) => l.id_agente === ag.id && l.data_entrada >= weekRange.from && l.data_entrada <= weekRange.to
       );
-      const concluidosSemana = weekLeadsForLoja.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
+      const concluidosSemana = weekLeads.filter((l) => l.etapa === "concluido" || l.etapa === "perdido").length;
 
       const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
       const faltam = Math.max(0, metaVal - carrosParaMeta);
@@ -181,7 +162,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       const metaSemanal = metaVal > 0 ? Math.round(metaVal / (totalBizDays / 5)) : 0;
       const pctSemanal = metaSemanal > 0 ? Math.round((concluidosSemana / metaSemanal) * 100) : 0;
 
-      const totalLeadsMes = monthLeadsByEntrada.length;
+      const totalLeadsMes = monthLeads.length;
       const aproveitamento = totalLeadsMes > 0 ? Math.round((carrosParaMeta / totalLeadsMes) * 100) : 0;
 
       let status: "on_track" | "at_risk" | "behind" | "achieved" = "on_track";

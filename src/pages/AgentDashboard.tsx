@@ -24,8 +24,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Car, CheckCircle2, XCircle, TrendingUp } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Car, CheckCircle2, XCircle, TrendingUp, Flame, Target, AlertTriangle as NoShowIcon } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine, Legend } from "recharts";
 import { ORIGENS } from "@/data/mockData";
 
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
@@ -36,7 +36,7 @@ const SIDEBAR_TABS = [
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
   { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
-  { id: "minha_loja", label: "Minha Loja", icon: MapPin },
+  { id: "minha_loja", label: "Meu Desempenho", icon: TrendingUp },
 ];
 
 export const AgentDashboard = () => {
@@ -155,6 +155,93 @@ export const AgentDashboard = () => {
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [allMyLeads, today]);
 
+  // Monthly performance for "Meu Desempenho"
+  const mesAtual = useMemo(() => {
+    const now = new Date();
+    const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const endD = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const to = endD.toISOString().split("T")[0];
+    return { from, to };
+  }, []);
+
+  const monthLeads = useMemo(
+    () => allMyLeads.filter((l) => l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to),
+    [allMyLeads, mesAtual],
+  );
+
+  const desempenho = useMemo(() => {
+    const total = monthLeads.length;
+    const desqNovos = monthLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const produtivos = total - desqNovos;
+    const agendados = monthLeads.filter((l) =>
+      !["novo", "desqualificado_novo"].includes(l.etapa)
+    ).length;
+    const naLoja = monthLeads.filter((l) =>
+      ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)
+    ).length;
+    const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+
+    // No-Show: agendados cujo data_agendamento já passou e ainda estão como agendado/reagendado
+    const noShow = monthLeads.filter((l) =>
+      ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < today
+    ).length;
+
+    // Business days elapsed
+    const now = new Date();
+    let bizDays = 0;
+    const firstDay = new Date(mesAtual.from + "T12:00:00");
+    for (let d = new Date(firstDay); d <= now; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) bizDays++;
+    }
+    const mediaAgendDia = bizDays > 0 ? agendados / bizDays : 0;
+
+    const txComparecimento = agendados > 0 ? Math.round((naLoja / agendados) * 100) : 0;
+    const txConversao = produtivos > 0 ? Math.round((naLoja / produtivos) * 100) : 0;
+
+    // Resgatados concluídos: leads that have dispensado in notes and are now concluido
+    const resgatados = monthLeads.filter((l) =>
+      l.etapa === "concluido" && (l.notas || "").toLowerCase().includes("reagendado")
+    ).length;
+
+    // Ganhos com FUP: concluídos que passaram por análise
+    const ganhosFup = monthLeads.filter((l) =>
+      l.etapa === "concluido" && (l.notas || "").toLowerCase().includes("análise")
+    ).length;
+
+    return {
+      total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
+      noShow, mediaAgendDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+    };
+  }, [monthLeads, today, mesAtual]);
+
+  // Daily appointments chart data
+  const dailyChartData = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const data: { dia: number; agendamentos: number }[] = [];
+    for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
+      const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
+      const count = monthLeads.filter((l) =>
+        l.data_agendamento === dateStr || (l.data_entrada === dateStr && !["novo", "desqualificado_novo"].includes(l.etapa))
+      ).length;
+      data.push({ dia: d, agendamentos: count });
+    }
+    return data;
+  }, [monthLeads, mesAtual]);
+
+  // Pie data: produtivos que foram na loja vs não
+  const pieDesempenho = useMemo(() => {
+    const foramNaLoja = desempenho.naLoja;
+    const naoFoiNaLoja = desempenho.produtivos - foramNaLoja;
+    return [
+      { name: "Na Loja", value: Math.max(0, foramNaLoja), fill: "hsl(142, 71%, 45%)" },
+      { name: "Não foi", value: Math.max(0, naoFoiNaLoja), fill: "hsl(var(--muted-foreground))" },
+    ].filter((d) => d.value > 0);
+  }, [desempenho]);
+
   // Store meta progress
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
@@ -163,32 +250,7 @@ export const AgentDashboard = () => {
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
 
-  // Store stats for "Minha Loja"
-  const storeStats = useMemo(() => {
-    if (!currentUser.unidade_padrao) return null;
-    const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
-    const storeName = unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || "—";
-    const todayAgendados = storeLeads.filter((l) => l.data_agendamento === today);
-    const passaramNaLoja = storeLeads.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
-    const concluidos = storeLeads.filter((l) => l.etapa === "concluido").length;
-    const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
-    return {
-      nome: storeName,
-      totalLeads: storeLeads.length,
-      agendados: storeLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-      confirmados: storeLeads.filter((l) => l.etapa === "confirmado").length,
-      naLoja: storeLeads.filter((l) => l.etapa === "na_loja").length,
-      concluidos,
-      dispensados: storeLeads.filter((l) => l.etapa === "dispensado").length,
-      perdidos: storeLeads.filter((l) => l.etapa === "perdido").length,
-      passaramNaLoja,
-      txConversao,
-      agendadosHoje: todayAgendados.length,
-      confirmadosHoje: todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length,
-    };
-  }, [leads, unidades, currentUser.unidade_padrao, today]);
 
-  
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -456,64 +518,113 @@ export const AgentDashboard = () => {
         {activeTab === "minha_loja" && (
           <div className="p-6 space-y-6">
             <div>
-              <h1 className="text-2xl font-bold">Minha Loja</h1>
-              <p className="text-muted-foreground text-sm">
-                {storeStats ? `Desempenho de ${storeStats.nome}` : "Nenhuma loja padrão configurada"}
-              </p>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary" /> Meu Desempenho
+              </h1>
+              <p className="text-muted-foreground text-sm">Métricas do mês atual</p>
             </div>
-            {storeStats ? (
-              <>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatsCard title="Total de Leads" value={storeStats.totalLeads} icon={Users} variant="info" />
-                  <StatsCard title="Passaram na Loja" value={storeStats.passaramNaLoja} icon={Car} variant="warning" />
-                  <StatsCard title="Concluídos" value={storeStats.concluidos} icon={CheckCircle2} variant="success" />
-                  <StatsCard title="Taxa Conversão" value={`${storeStats.txConversao}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja → Concluído" />
+
+            {/* KPI Cards Row 1 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Leads Recebidos" value={desempenho.total} icon={Users} variant="info" />
+              <StatsCard title="Desqualificados" value={desempenho.desqNovos} icon={XCircle} variant="destructive" />
+              <StatsCard title="Produtivos" value={desempenho.produtivos} icon={CheckCircle2} variant="primary" subtitle={`${desempenho.total} - ${desempenho.desqNovos} desq.`} />
+              <StatsCard title="Agendamentos" value={desempenho.agendados} icon={CalendarCheck} variant="primary" />
+            </div>
+
+            {/* KPI Cards Row 2 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Média Agend./Dia</p>
+                <p className={`text-3xl font-bold ${desempenho.mediaAgendDia >= 4 ? "text-success" : desempenho.mediaAgendDia >= 3 ? "text-warning" : "text-destructive"}`}>
+                  {desempenho.mediaAgendDia.toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground">Meta: 4/dia</p>
+                <Progress value={Math.min((desempenho.mediaAgendDia / 4) * 100, 100)} className="h-2 mt-2" />
+              </div>
+              <StatsCard title="Na Loja" value={desempenho.naLoja} icon={Car} variant="warning" />
+              <StatsCard title="Concluídos" value={desempenho.concluidos} icon={CheckCircle2} variant="success" />
+              <StatsCard title="No-Show" value={desempenho.noShow} icon={NoShowIcon} variant="destructive" subtitle="Não compareceram" />
+            </div>
+
+            {/* KPI Cards Row 3 - Rates */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Tx. Comparecimento</p>
+                <p className="text-3xl font-bold text-primary">{desempenho.txComparecimento}%</p>
+                <p className="text-xs text-muted-foreground">Na Loja / Agendados</p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Tx. Conversão</p>
+                <p className="text-3xl font-bold text-success">{desempenho.txConversao}%</p>
+                <p className="text-xs text-muted-foreground">Na Loja / Produtivos</p>
+              </div>
+              <div className="rounded-xl border border-success/30 bg-card p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">🔄 Resgatados</p>
+                <p className="text-3xl font-bold text-success">{desempenho.resgatados}</p>
+                <p className="text-xs text-muted-foreground">Dispensados convertidos</p>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-card p-4 text-center">
+                <p className="text-xs text-muted-foreground mb-1">🏆 Ganhos c/ FUP</p>
+                <p className="text-3xl font-bold text-primary">{desempenho.ganhosFup}</p>
+                <p className="text-xs text-muted-foreground">Aprovados pelo supervisor</p>
+              </div>
+            </div>
+
+            {/* Charts */}
+            <div className="grid lg:grid-cols-2 gap-4">
+              {/* Daily appointments bar chart */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h3 className="font-semibold mb-3">📊 Agendamentos por Dia</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="dia" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                      <Tooltip />
+                      <ReferenceLine y={4} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label={{ value: "Meta: 4", position: "right", fontSize: 10, fill: "hsl(var(--destructive))" }} />
+                      <Bar dataKey="agendamentos" name="Agendamentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                 <StatsCard title="Agendados" value={storeStats.agendados} icon={CalendarCheck} variant="primary" />
-                  <StatsCard title="Dispensados" value={storeStats.dispensados} icon={XCircle} variant="destructive" />
-                  <StatsCard title="Agendados Hoje" value={storeStats.agendadosHoje} icon={CalendarDays} variant="info" />
-                </div>
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <h2 className="text-lg font-semibold mb-4">Hoje na {storeStats.nome}</h2>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-primary">{storeStats.agendadosHoje}</p>
-                      <p className="text-xs text-muted-foreground">Agendados Hoje</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-warning">{storeStats.confirmadosHoje}</p>
-                      <p className="text-xs text-muted-foreground">Confirmados Hoje</p>
-                    </div>
+              </div>
+
+              {/* Pie chart: aproveitamento */}
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h3 className="font-semibold mb-3">🎯 Aproveitamento de Produtivos</h3>
+                {pieDesempenho.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieDesempenho} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
+                          {pieDesempenho.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                        </Pie>
+                        <Legend verticalAlign="bottom" height={36} />
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center pt-20">Sem dados suficientes</p>
+                )}
+              </div>
+            </div>
+
+            {/* Meta progress */}
+            {desempenho.concluidos > 0 && (
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Flame className="h-5 w-5 text-warning" /> Progresso da Meta
+                </h3>
+                <div className="flex items-center gap-3">
+                  <Progress value={Math.min((desempenho.concluidos / Math.max(desempenho.produtivos, 1)) * 100, 100)} className="flex-1 h-3" />
+                  <span className="text-sm font-bold">{desempenho.concluidos} concluídos</span>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <h2 className="text-lg font-semibold mb-4">Status da Loja</h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-warning">{storeStats.confirmados}</p>
-                      <p className="text-xs text-muted-foreground">Confirmados</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-warning">{storeStats.naLoja}</p>
-                      <p className="text-xs text-muted-foreground">Na Loja</p>
-                    </div>
-                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-success">{storeStats.concluidos}</p>
-                      <p className="text-xs text-muted-foreground">Concluídos</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-2xl font-bold text-destructive">{storeStats.dispensados}</p>
-                      <p className="text-xs text-muted-foreground">Dispensados</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <MapPin className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                <p>Sua loja padrão ainda não foi configurada.</p>
-                <p className="text-xs mt-1">Peça ao gestor para definir sua loja padrão.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  De {desempenho.produtivos} leads produtivos, {desempenho.concluidos} foram concluídos neste mês
+                </p>
               </div>
             )}
           </div>

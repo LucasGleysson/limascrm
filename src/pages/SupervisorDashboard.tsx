@@ -79,7 +79,9 @@ export const SupervisorDashboard = () => {
       const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
 
       // FUP pendentes: same logic as agent view — only data_prevista <= today and lead eligible
+      // Also include pending reminders (lembretes)
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeadIds.has(e.id_lead));
+      const agLembretes = eventos.filter((e) => e.tipo === "lembrete" && aLeadIds.has(e.id_lead));
       const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
       const leadById = new Map(aLeads.map((l) => [l.id, l]));
       const fupPendentes = agFollowUps.filter((e) => {
@@ -92,6 +94,9 @@ export const SupervisorDashboard = () => {
           return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
         }
         return false;
+      }).length + agLembretes.filter((e) => {
+        if (e.concluido) return false;
+        return e.data_prevista <= todayStr;
       }).length;
 
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
