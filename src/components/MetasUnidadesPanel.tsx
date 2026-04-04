@@ -98,21 +98,15 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
-  // Fetch leads specifically for the selected month (independent of context)
+  // Fetch leads specifically for the selected month — use data_entrada only for consistency
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    // Get leads where data_entrada OR data_agendamento falls in the month
-    const [byEntrada, byAgendamento] = await Promise.all([
-      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
-      supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
-    ]);
-    const allRows = [...(byEntrada.data || []), ...(byAgendamento.data || [])];
-    const seen = new Set<string>();
-    const unique: any[] = [];
-    for (const row of allRows) {
-      if (!seen.has(row.id)) { seen.add(row.id); unique.push(row); }
-    }
-    setMetaLeads(unique);
+    const { data } = await supabase
+      .from("leads")
+      .select("*")
+      .gte("data_entrada", range.from)
+      .lte("data_entrada", range.to);
+    setMetaLeads(data || []);
   }, [mesRef]);
 
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
