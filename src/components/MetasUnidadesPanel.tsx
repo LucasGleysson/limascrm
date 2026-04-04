@@ -117,24 +117,17 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const unitData = useMemo(() => {
-    const isLeadInMonth = (l: any) =>
-      (l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to) ||
-      (l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to);
-
     return unidades.map((u) => {
       const meta = metas.find((m) => m.id_unidade === u.id);
       const metaVal = meta?.meta_carros || 0;
 
-      const monthLeadsByEntrada = metaLeads.filter(
+      const monthLeads = metaLeads.filter(
         (l) => l.id_unidade === u.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
       );
-      const monthLeadsForLoja = metaLeads.filter(
-        (l) => l.id_unidade === u.id && isLeadInMonth(l)
-      );
-      const carrosNaLoja = monthLeadsForLoja.filter((l) => isCarroDoAgente(l.etapa)).length;
-      const carrosParaMeta = monthLeadsForLoja.filter((l) => isCarroParaMeta(l.etapa)).length;
-      const concluidos = monthLeadsForLoja.filter((l) => l.etapa === "concluido").length;
-      const perdidos = monthLeadsForLoja.filter((l) => l.etapa === "perdido").length;
+      const carrosNaLoja = monthLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosParaMeta = monthLeads.filter((l) => isCarroParaMeta(l.etapa)).length;
+      const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
+      const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
 
       const pct = metaVal > 0 ? Math.round((carrosParaMeta / metaVal) * 100) : 0;
       const faltam = Math.max(0, metaVal - carrosParaMeta);
@@ -144,15 +137,14 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
       const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
       const agentBreakdown = unitAgents.map((ag) => {
-        const agLeadsEntrada = monthLeadsByEntrada.filter((l) => l.id_agente === ag.id);
-        const agLeadsLoja = monthLeadsForLoja.filter((l) => l.id_agente === ag.id);
+        const agLeads = monthLeads.filter((l) => l.id_agente === ag.id);
         return {
           nome: ag.nome,
-          total: agLeadsEntrada.length,
-          carrosNaLoja: agLeadsLoja.filter((l) => isCarroDoAgente(l.etapa)).length,
-          carrosParaMeta: agLeadsLoja.filter((l) => isCarroParaMeta(l.etapa)).length,
-          concluidos: agLeadsLoja.filter((l) => l.etapa === "concluido").length,
-          perdidos: agLeadsLoja.filter((l) => l.etapa === "perdido").length,
+          total: agLeads.length,
+          carrosNaLoja: agLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
+          carrosParaMeta: agLeads.filter((l) => isCarroParaMeta(l.etapa)).length,
+          concluidos: agLeads.filter((l) => l.etapa === "concluido").length,
+          perdidos: agLeads.filter((l) => l.etapa === "perdido").length,
         };
       });
 
@@ -167,7 +159,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       return {
         ...u, metaVal, carrosNaLoja, carrosParaMeta, concluidos, perdidos, pct, faltam,
         mediaDiaria, necessarioPorDia, status, diasRestantes,
-        totalLeads: monthLeadsByEntrada.length, agentBreakdown,
+        totalLeads: monthLeads.length, agentBreakdown,
       };
     });
   }, [unidades, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes]);
