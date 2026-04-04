@@ -307,9 +307,15 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     <Pencil className="h-4 w-4" />
                   </Button>
                   {canMarkLoss && (
-                    <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Marcar como Perda">
-                      <Skull className="h-4 w-4" />
-                    </Button>
+                    isSupervisorOrGestor ? (
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Marcar como Perda">
+                        <Skull className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="icon" className="h-8 w-8 text-warning border-warning/30 hover:bg-warning/10" onClick={() => { setLossMotivo(""); setLossOpen(true); }} title="Enviar para Análise">
+                        <AlertCircle className="h-4 w-4" />
+                      </Button>
+                    )
                   )}
                   {canDisqualify && (
                     <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => setDisqualifyOpen(true)} title="Desqualificar">
