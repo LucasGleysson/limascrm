@@ -602,20 +602,27 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Mark as Loss modal */}
+      {/* Mark as Loss / Send to Analysis modal */}
       <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Skull className="h-5 w-5 text-destructive" /> Marcar como Perda
+              {isSupervisorOrGestor ? (
+                <><Skull className="h-5 w-5 text-destructive" /> Marcar como Perda</>
+              ) : (
+                <><AlertCircle className="h-5 w-5 text-warning" /> Enviar para Análise do Supervisor</>
+              )}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              O lead <strong>{lead?.nome}</strong> será marcado como "Perdido".
+              {isSupervisorOrGestor
+                ? <>O lead <strong>{lead?.nome}</strong> será marcado como "Perdido".</>
+                : <>O lead <strong>{lead?.nome}</strong> será enviado para análise do supervisor.</>
+              }
             </p>
             <div>
-              <Label>Motivo da perda</Label>
+              <Label>{isSupervisorOrGestor ? "Motivo da perda" : "Motivo do envio para análise"}</Label>
               <Textarea
                 value={lossMotivo}
                 onChange={(e) => setLossMotivo(e.target.value)}
@@ -628,9 +635,15 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
-              <Skull className="h-4 w-4" /> Confirmar Perda
-            </Button>
+            {isSupervisorOrGestor ? (
+              <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
+                <Skull className="h-4 w-4" /> Confirmar Perda
+              </Button>
+            ) : (
+              <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+                <AlertCircle className="h-4 w-4" /> Enviar para Análise
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

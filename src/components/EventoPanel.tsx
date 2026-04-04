@@ -623,8 +623,8 @@ export const EventoPanel = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
-              <Skull className="h-4 w-4" /> Confirmar Perda
+            <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+              <AlertCircle className="h-4 w-4" /> Enviar para Análise
             </Button>
           </DialogFooter>
         </DialogContent>
