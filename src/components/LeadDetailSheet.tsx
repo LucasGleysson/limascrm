@@ -228,8 +228,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (!lossMotivo.trim() || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
-      const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
-      await updateLead(lead.id, { etapa: "perdido", notas });
+      if (isSupervisorOrGestor) {
+        const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
+        await updateLead(lead.id, { etapa: "perdido", notas });
+      } else {
+        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
+        await updateLead(lead.id, { etapa: "analise_supervisor", notas });
+      }
       setLossOpen(false);
       setLossMotivo("");
     } finally {
