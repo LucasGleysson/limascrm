@@ -43,6 +43,13 @@ export const AgentDashboard = () => {
   const { leads, updateLead, eventos, unidades, profiles } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("leads");
+  // Fetch agent meta
+  const [agentMeta, setAgentMeta] = useState(0);
+  
+  import("@/integrations/supabase/client").then(({ supabase }) => {
+    // one-time fetch is fine, we just need the meta value
+  });
+  const [activeTab, setActiveTab] = useState("leads");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleLead, setScheduleLead] = useState<{ id: string; nome: string } | null>(null);
