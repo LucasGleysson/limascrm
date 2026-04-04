@@ -11,7 +11,7 @@ import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull, AlertCircle } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
