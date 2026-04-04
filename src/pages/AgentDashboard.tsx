@@ -36,7 +36,7 @@ const SIDEBAR_TABS = [
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
   { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
-  { id: "minha_loja", label: "Minha Loja", icon: MapPin },
+  { id: "minha_loja", label: "Meu Desempenho", icon: TrendingUp },
 ];
 
 export const AgentDashboard = () => {
