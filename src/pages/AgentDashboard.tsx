@@ -629,8 +629,6 @@ export const AgentDashboard = () => {
             )}
           </div>
         )}
-          </div>
-        )}
 
         <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} />
         {scheduleLead && (
