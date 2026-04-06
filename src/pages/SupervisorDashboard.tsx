@@ -221,7 +221,7 @@ export const SupervisorDashboard = () => {
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Agendamentos" value={globalStats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+              <StatsCard title="Leads Produtivos" value={globalStats.totalLeads - globalStats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
             </div>
             {/* Na Loja */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

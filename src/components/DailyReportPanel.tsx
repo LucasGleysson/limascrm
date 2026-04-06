@@ -230,8 +230,6 @@ export const DailyReportPanel = () => {
                 {unitStats.map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{u.nome}</td>
-                    <td className="py-3 text-center">{u.totalRegistros}</td>
-                    <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{u.agendados}</td>
                     <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                     <td className="py-3 text-center text-success">{u.concluidos}</td>
