@@ -1,87 +1,75 @@
 
 
-## Plano de Ajustes — 6 Correções
+## Plano de Correções e Melhorias
 
-### 1. LeadDetailSheet — Agente envia para Análise (não Perda)
+### Problema 1: Leads de 30/03 agendados em 01/04 não contam como concluídos
 
-**Problema:** O botão (Skull) e modal dizem "Marcar como Perda" e enviam para `perdido` diretamente, mesmo para agentes.
+**Causa raiz:** No "Meu Desempenho" do agente (linha 168), `monthLeads` filtra por `data_entrada >= mesAtual.from`, ou seja, apenas leads que **entraram** no mês atual. Um lead com `data_entrada = 2025-03-30` e `data_agendamento = 2025-04-01` que está como `concluido` NÃO aparece porque entrou em março.
 
-**Correção em `src/components/LeadDetailSheet.tsx`:**
-- Para agentes (`!isSupervisorOrGestor`): trocar ícone Skull por AlertCircle, texto para "Enviar para Análise", cor warning (não destructive)
-- `handleMarkLoss`: se agente → `analise_supervisor`; se supervisor/gestor → `perdido`
-- Modal: título "Enviar para Análise do Supervisor", texto "será enviado para análise", botão "Enviar para Análise" (warning, ícone AlertCircle)
-- Supervisor/gestor mantém o comportamento atual (Skull, "Confirmar Perda", `perdido`)
+**Correção em `AgentDashboard.tsx`:**
+- O filtro de `monthLeads` para "Meu Desempenho" deve incluir leads cujo `data_entrada` OU `data_agendamento` caia no mês atual (sem duplicar). Mesma lógica dual-date que os painéis de metas deveriam usar.
 
-### 2. EventoPanel — Botão de análise consistente
+**Correção em `MetasAgentesPanel.tsx`:**
+- O `fetchMonthLeads` (linha 120-128) filtra apenas por `data_entrada`. Deve também incluir leads cujo `data_agendamento` caia no mês, para capturar leads que entraram em meses anteriores mas visitaram/concluíram neste mês.
+- Adicionar KPI de "Na Loja" no painel de metas (concluído + dispensado + perdido + confirmado + reagendado)
 
-**Problema:** Linhas 626-627 — botão diz "Confirmar Perda" com Skull no modal de análise.
-
-**Correção em `src/components/EventoPanel.tsx`:**
-- Trocar botão para: `variant="default"` (ou warning), ícone AlertCircle, texto "Enviar para Análise"
-- Remover Skull desse modal
-
-### 3. DispensaReportPanel — Busca, colunas e paginação
-
-**Correções em `src/components/DispensaReportPanel.tsx`:**
-- Adicionar input de busca por **nome, telefone e OS** (filtro de texto)
-- Trocar coluna "FUP DISPENSA" → "OS" (mostra `lead.numero_os`)
-- Trocar coluna "AÇÕES" → "VERIFICAÇÃO" com Badge (Pendente = `analise_supervisor`, Analisado = já decidido como perdido/desq)
-- Manter botões de decisão inline apenas para leads `analise_supervisor`
-- Adicionar filtros por etapa: dispensado, perdido, desq_agendado, desq_novo, analise_supervisor
-- Adicionar paginação com `usePagination`
-
-### 4. "Minha Loja" → "Meu Desempenho" (métricas do MÊS)
-
-**Substituir completamente a aba `minha_loja` em `src/pages/AgentDashboard.tsx`:**
-
-Renomear sidebar tab para "Meu Desempenho" (ícone TrendingUp).
-
-Filtrar `allMyLeads` pelo **mês atual** (data_entrada entre 1º e último dia do mês).
-
-**Cards KPI:**
-- Leads Recebidos (total mês)
-- Leads Desqualificados (desq_novo)
-- Leads Produtivos (total - desq_novo)
-- Agendamentos feitos (leads que saíram de "novo")
-- Média de agendamentos/dia (meta: 4/dia) com indicador visual
-- Na Loja (concluído + dispensado + perdido + confirmado + reagendado)
-- Concluídos
-- No-Show (agendados cujo `data_agendamento` já passou e etapa ainda é agendado/reagendado)
-- Taxa comparecimento (na loja / agendados)
-- Taxa conversão produtivos (na loja / produtivos)
-- Resgatados Concluídos (leads que foram dispensados e depois concluídos)
-- Ganhos com FUP (leads que passaram por analise_supervisor e depois concluídos)
-
-**Gráficos:**
-- BarChart: agendamentos por dia do mês + linha de média diária (meta 4)
-- PieChart: aproveitamento — produtivos que foram na loja vs não foram
-- Progress bar: progressão da meta do mês (carros concluídos / meta_carros)
-
-Remover contadores de status individuais da "Minha Loja".
-
-### 5. Supervisor — Lembretes pendentes
-
-**Correção em `src/pages/SupervisorDashboard.tsx`:**
-- Na contagem de `fupPendentes` por agente (linhas 85-95), adicionar lembretes pendentes (`tipo === "lembrete"`) com `data_prevista <= todayStr` e lead não concluído
-- Exibir como "Pendentes (FUP + Lembretes)" no resumo por agente
-
-### 6. Divergência de Metas
-
-**Análise necessária em `MetasAgentesPanel.tsx` e `MetasUnidadesPanel.tsx`:**
-- Garantir que o cálculo de "carros para meta" (concluído + perdido) use a mesma lógica de filtragem por período que a visão "Por Agente" e "Por Loja"
-- Se Metas fazem fetch independente com dual-date, alinhar para que conte apenas leads cujo `data_agendamento` OU `data_entrada` cai no mês selecionado (sem duplicar)
+**Correção em `MetasUnidadesPanel.tsx`:** mesma lógica dual-date.
 
 ---
 
-### Arquivos modificados
+### Problema 2: Cores dos status nos painéis
+
+**Correção:** Aplicar `getStatusBadgeClass` (de `leadUtils.ts`) consistentemente nos painéis de supervisor e gestor onde status são exibidos como texto sem cor. Adicionar cores semânticas nos cards de KPI e nas tabelas de resumo. Cada status terá cor distinta:
+- Novo: `text-info` (azul)
+- Agendado/Reagendado: `text-purple-500`
+- Confirmado: `text-info`
+- Na Loja: `text-warning` (amarelo)
+- Concluído: `text-success` (verde)
+- Dispensado: `text-orange-500`
+- Perdido: `text-destructive` (vermelho)
+- Desq. Novo: `text-muted-foreground`
+- Desq. Agendado: `text-destructive`
+- Análise Supervisor: `text-warning`
+
+**Arquivos:** `SupervisorDashboard.tsx`, `ManagerDashboard.tsx`, `MetasAgentesPanel.tsx`
+
+---
+
+### Problema 3: Dashboard geral do supervisor/gestor — formato parecido com relatório diário + seletor de mês
+
+**Correção em `SupervisorDashboard.tsx` (aba visao_geral):**
+- Manter o `PeriodFilter` existente (semana, mês, 30 dias, total)
+- Adicionar navegação por mês (setas ← →) quando período = "mes", permitindo ver meses anteriores
+- Reestruturar layout para parecer mais com o DailyReportPanel: cards de KPI no topo, tabela de resumo por agente expandível, resumo por loja
+
+**Correção em `ManagerDashboard.tsx` (aba dashboard):** espelhar o mesmo comportamento.
+
+---
+
+### Problema 4: Relatório adicional do Gestor — visão por Loja, por Agente e por Origem
+
+**Adicionar à aba dashboard do `ManagerDashboard.tsx`:**
+
+**Visão por Loja (tabela):**
+- Colunas: Loja | Na Loja | Concluídos | Dispensados (incl. reagendados) | Perdidos
+
+**Visão por Agente (tabela):**
+- Colunas: Agente | Leads Recebidos | Produtivos | Agendamentos | Na Loja | No-Show
+
+**Visão por Origem (tabela expandida):**
+- Colunas: Origem | Leads | Desq. Novo | Outra Cidade | Na Loja | Dispensados | Agendamentos Feitos | Agendamentos No-Show | Perdidos | Concluídos
+
+**Arquivo:** `ManagerDashboard.tsx`
+
+---
+
+### Resumo de Arquivos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `LeadDetailSheet.tsx` | Botão perda → análise para agentes |
-| `EventoPanel.tsx` | Texto/ícone do botão de análise |
-| `DispensaReportPanel.tsx` | Busca, colunas OS/Verificação, paginação |
-| `AgentDashboard.tsx` | "Meu Desempenho" com métricas mensais e gráficos |
-| `SupervisorDashboard.tsx` | Incluir lembretes na contagem de pendentes |
-| `MetasAgentesPanel.tsx` | Alinhar contagem de carros para meta |
-| `MetasUnidadesPanel.tsx` | Alinhar contagem de carros para meta |
+| `AgentDashboard.tsx` | Fix filtro dual-date no "Meu Desempenho" |
+| `MetasAgentesPanel.tsx` | Fix fetch dual-date + KPI "Na Loja" |
+| `MetasUnidadesPanel.tsx` | Fix fetch dual-date + KPI "Na Loja" |
+| `SupervisorDashboard.tsx` | Cores de status + navegação por mês |
+| `ManagerDashboard.tsx` | Cores + tabelas por Loja/Agente/Origem + navegação por mês |
 
