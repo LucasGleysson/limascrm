@@ -281,7 +281,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     <LeadContext.Provider value={{
       leads, eventos, unidades, profiles, agentUnidades, loading,
       addLead, updateLead, deleteLead, addEvento, concluirEvento,
-      refreshAll: () => isRecepcionista ? Promise.resolve() : fetchAll(true),
+      refreshAll: () => fetchAll(true),
     }}>
       {children}
     </LeadContext.Provider>
