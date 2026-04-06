@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
-import { ORIGENS, ETAPAS_FUNIL, Lead } from "@/data/mockData";
+import { ORIGENS, Lead } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -64,16 +64,17 @@ export const ManagerDashboard = () => {
   const stats = useMemo(() => {
     const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
-    const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+    const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
+    const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, perdidosAntes, taxaConversao };
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, perdidosAntes, taxaConversao };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -84,9 +85,22 @@ export const ManagerDashboard = () => {
   }, [filteredLeads]);
 
   const funnelData = useMemo(() => {
-    return ETAPAS_FUNIL.map((etapa) => ({
-      name: etapa.label, value: filteredLeads.filter((l) => l.etapa === etapa.id).length,
-    })).filter((d) => d.value > 0);
+    const total = filteredLeads.length;
+    const agendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+    const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
+    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
+    return [
+      { name: "Novo Lead", value: total },
+      { name: "Agendamentos", value: agendamentos },
+      { name: "Na Loja", value: naLoja },
+      { name: "Concluídos", value: concluidos },
+      { name: "Dispensados", value: dispensados },
+      { name: "Reagendados", value: reagendados },
+      { name: "Perdidos", value: perdidos },
+    ].filter((d) => d.value > 0);
   }, [filteredLeads]);
 
   // Build a map of agent -> unidades using agente_unidades (many-to-many)
@@ -140,10 +154,11 @@ export const ManagerDashboard = () => {
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
       const carrosNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
         nome: agente.nome, unidade: unidade?.nome || "—",
         novo: aLeads.filter((l) => l.etapa === "novo").length,
-        agendado: aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
+        agendado: totalAgendamentos,
         carrosNaLoja,
         concluido: aLeads.filter((l) => l.etapa === "concluido").length,
         perdidos: aLeads.filter((l) => l.etapa === "perdido").length,
@@ -199,7 +214,7 @@ export const ManagerDashboard = () => {
             {/* Registros e Funil */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={stats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendados" value={stats.agendados} icon={CalendarCheck} variant="primary" />
+              <StatsCard title="Agendamentos" value={stats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Novo Lead" value={stats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
             </div>
             {/* Na Loja */}

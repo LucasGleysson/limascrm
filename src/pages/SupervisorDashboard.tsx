@@ -167,7 +167,7 @@ export const SupervisorDashboard = () => {
   const globalStats = useMemo(() => {
     const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
-    const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+    const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
@@ -176,7 +176,7 @@ export const SupervisorDashboard = () => {
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
-      totalLeads: filteredLeads.length, naLoja, concluidos, agendados,
+      totalLeads: filteredLeads.length, naLoja, concluidos, totalAgendamentos,
       novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
@@ -220,7 +220,7 @@ export const SupervisorDashboard = () => {
             {/* Registros e Funil */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
+              <StatsCard title="Agendamentos" value={globalStats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
             </div>
             {/* Na Loja */}
@@ -263,7 +263,7 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 font-medium">{a.nome}</td>
                         <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
                         <td className="py-3 text-center">{a.total}</td>
-                        <td className="py-3 text-center text-primary">{a.agendados}</td>
+                        <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
                         <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
                          <td className="py-3 text-center text-success">{a.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{a.perdidos}</td>
@@ -306,7 +306,7 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
                         <td className="py-3 text-center">{u.total}</td>
                         <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
-                        <td className="py-3 text-center text-primary">{u.agendados}</td>
+                        <td className="py-3 text-center text-primary">{u.totalAgendamentos}</td>
                         <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                          <td className="py-3 text-center text-success">{u.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{u.perdidos}</td>
