@@ -132,7 +132,8 @@ export const ReceptionistDashboard = () => {
     if (loadingAction) return;
     setLoadingAction(`servico-${lead.id}`);
     try {
-      await updateLead(lead.id, { etapa: "na_loja" });
+      const notas = appendNota(lead.notas, "Em Serviço", "Carro em serviço", currentUser.nome);
+      await updateLead(lead.id, { etapa: "na_loja", notas, id_recepcionista: currentUser.id } as any);
     } finally {
       setLoadingAction(null);
     }
