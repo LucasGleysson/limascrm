@@ -219,10 +219,11 @@ export const SupervisorDashboard = () => {
             </div>
 
             {/* Registros e Funil */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Agendamentos" value={globalStats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Leads Produtivos" value={globalStats.totalLeads - globalStats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
+              <StatsCard title="Aproveitamento" value={`${(globalStats.totalLeads - globalStats.desqNovos) > 0 ? Math.round((globalStats.naLoja / (globalStats.totalLeads - globalStats.desqNovos)) * 100) : 0}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja / Produtivos" />
             </div>
             {/* Na Loja */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
