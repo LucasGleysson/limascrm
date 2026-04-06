@@ -429,6 +429,93 @@ export const SupervisorDashboard = () => {
                 </div>
               );
             })()}
+
+            {/* Relatório por Loja */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4">Relatório por Loja</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium text-muted-foreground">LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PRODUTIVOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">DISP. (incl. reag.)</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const todayStr2 = new Date().toISOString().split("T")[0];
+                      return unidadeStats.map((u) => {
+                        const produtivos = u.total - u.desqNovos;
+                        const dispensadosReag = u.leads.filter((l: Lead) => ["dispensado", "reagendado"].includes(l.etapa)).length;
+                        const noShow = u.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr2).length;
+                        return (
+                          <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
+                            <td className="py-3 text-center">{u.total}</td>
+                            <td className="py-3 text-center text-primary">{produtivos}</td>
+                            <td className="py-3 text-center text-primary">{u.totalAgendamentos}</td>
+                            <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
+                            <td className="py-3 text-center text-success">{u.concluidos}</td>
+                            <td className="py-3 text-center text-purple-500">{dispensadosReag}</td>
+                            <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                            <td className="py-3 text-center text-destructive">{noShow}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Relatório por Agente */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4">Relatório por Agente</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PRODUTIVOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const todayStr3 = new Date().toISOString().split("T")[0];
+                      return agenteStats.map((a) => {
+                        const produtivos = a.total - a.desqNovos;
+                        const noShow = a.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr3).length;
+                        return (
+                          <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 font-medium">{a.nome}</td>
+                            <td className="py-3 text-center">{a.total}</td>
+                            <td className="py-3 text-center text-primary">{produtivos}</td>
+                            <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
+                            <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
+                            <td className="py-3 text-center text-success">{a.concluidos}</td>
+                            <td className="py-3 text-center text-destructive">{a.perdidos}</td>
+                            <td className="py-3 text-center text-destructive">{noShow}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </>
         )}
 
