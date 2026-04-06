@@ -145,7 +145,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!authUserId) return;
     const user = currentUserRef.current;
-    if (user?.cargo !== "agente") return;
+    if (user?.cargo !== "agente" && user?.cargo !== "recepcionista") return;
 
     const channel = supabase
       .channel("lead-changes")
