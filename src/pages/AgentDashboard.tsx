@@ -202,7 +202,7 @@ export const AgentDashboard = () => {
       const dow = d.getDay();
       if (dow !== 0 && dow !== 6) bizDays++;
     }
-    const mediaAgendDia = bizDays > 0 ? agendados / bizDays : 0;
+    const mediaCarrosLojaDia = bizDays > 0 ? naLoja / bizDays : 0;
 
     const txComparecimento = agendados > 0 ? Math.round((naLoja / agendados) * 100) : 0;
     const txConversao = produtivos > 0 ? Math.round((naLoja / produtivos) * 100) : 0;
