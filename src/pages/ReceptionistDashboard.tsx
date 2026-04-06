@@ -149,8 +149,8 @@ export const ReceptionistDashboard = () => {
     if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
-      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
+      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim(), currentUser.nome);
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas, id_recepcionista: currentUser.id } as any);
       await supabase.functions.invoke("generate-followups");
       setDispensarOpen(false);
       setDispensarLead(null);
