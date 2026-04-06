@@ -214,7 +214,7 @@ export const ManagerDashboard = () => {
             {/* Registros e Funil */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={stats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendados" value={stats.agendados} icon={CalendarCheck} variant="primary" />
+              <StatsCard title="Agendamentos" value={stats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Novo Lead" value={stats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
             </div>
             {/* Na Loja */}
