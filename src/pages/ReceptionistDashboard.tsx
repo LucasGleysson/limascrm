@@ -164,13 +164,16 @@ export const ReceptionistDashboard = () => {
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
-      const updates: Partial<Lead> = {
+      const updates: any = {
         etapa: "concluido", checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
         valor_servico: checkoutLead.valor_servico,
+        id_recepcionista: currentUser.id,
       };
       if (checkoutMotivo.trim()) {
-        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim());
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim(), currentUser.nome);
+      } else {
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", "Serviço finalizado", currentUser.nome);
       }
       await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);
