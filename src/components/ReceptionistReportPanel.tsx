@@ -11,7 +11,7 @@ import type { Lead } from "@/data/mockData";
 export const ReceptionistReportPanel = () => {
   const { leads, unidades, profiles } = useLeads();
   const [period, setPeriod] = useState<PeriodKey>("mes");
-  const [mesRef, setMesRef] = useState(() => getMonthRef());
+  const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [selectedRecep, setSelectedRecep] = useState<string | null>(null);
 
