@@ -723,6 +723,7 @@ export const ManagerDashboard = () => {
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
+        {activeTab === "recepcao" && <ReceptionistReportPanel />}
         {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>
