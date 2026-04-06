@@ -154,10 +154,11 @@ export const ManagerDashboard = () => {
       const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
       const carrosNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
         nome: agente.nome, unidade: unidade?.nome || "—",
         novo: aLeads.filter((l) => l.etapa === "novo").length,
-        agendado: aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
+        agendado: totalAgendamentos,
         carrosNaLoja,
         concluido: aLeads.filter((l) => l.etapa === "concluido").length,
         perdidos: aLeads.filter((l) => l.etapa === "perdido").length,
