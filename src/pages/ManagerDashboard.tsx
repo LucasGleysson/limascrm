@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
-  ClipboardList, Target, CheckCircle2, ChevronRight,
+  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull,
 } from "lucide-react";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
@@ -65,9 +65,15 @@ export const ManagerDashboard = () => {
     const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+    const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
+    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
+    const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+    const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
+    const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-    const taxaConversao = filteredLeads.length > 0 ? Math.round((carrosNaLoja / filteredLeads.length) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, perdidosAntes, taxaConversao };
+    const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, agendados, novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, perdidosAntes, taxaConversao };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -190,13 +196,25 @@ export const ManagerDashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-              <StatsCard title="Total de Leads" value={stats.totalLeads} icon={Users} variant="info" />
+            {/* Registros e Funil */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatsCard title="Total de Registros" value={stats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Agendados" value={stats.agendados} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Foram na Loja" value={stats.carrosNaLoja} icon={Car} variant="warning" />
+              <StatsCard title="Novo Lead" value={stats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+            </div>
+            {/* Na Loja */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Na Loja" value={stats.carrosNaLoja} icon={Car} variant="warning" subtitle="Conf+Concl+Disp+Perd+Reag" />
               <StatsCard title="Concluídos" value={stats.concluidos} icon={CheckCircle2} variant="success" />
-              <StatsCard title="Perdidos s/ Loja" value={stats.perdidosAntes} icon={XCircle} variant="destructive" />
-              <StatsCard title="Conversão" value={`${stats.taxaConversao}%`} icon={Percent} variant="primary" />
+              <StatsCard title="Dispensados" value={stats.dispensados} icon={XCircle} variant="warning" />
+              <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
+            </div>
+            {/* Desqualificados */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatsCard title="Desq. Novo" value={stats.desqNovos} icon={XCircle} variant="destructive" />
+              <StatsCard title="Outra Cidade" value={stats.desqOutraCidade} icon={MapPin} variant="warning" />
+              <StatsCard title="Desq. Agendado" value={stats.desqAgendados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Conversão (Loja→Concl.)" value={`${stats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
