@@ -78,21 +78,8 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
           </div>
           {isReceptionist && (
             <div>
-              <Label>Número da OS</Label>
+              <Label>Número da OS <span className="text-muted-foreground text-xs">(opcional)</span></Label>
               <Input value={numeroOs} onChange={(e) => setNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
-            </div>
-          )}
-          {isReceptionist && (
-            <div>
-              <Label>Status</Label>
-              <Select value={etapa} onValueChange={setEtapa}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {receptionistEtapas.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           )}
           <div>
