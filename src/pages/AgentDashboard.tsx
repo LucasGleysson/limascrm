@@ -219,13 +219,17 @@ export const AgentDashboard = () => {
   const dailyChartData = useMemo(() => {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const data: { dia: number; agendamentos: number }[] = [];
+    const naLojaStatuses = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
+    const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
     for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
       const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
-      const count = monthLeads.filter((l) =>
+      const agendamentos = monthLeads.filter((l) =>
         l.data_agendamento === dateStr || (l.data_entrada === dateStr && !["novo", "desqualificado_novo"].includes(l.etapa))
       ).length;
-      data.push({ dia: d, agendamentos: count });
+      const naLoja = monthLeads.filter((l) =>
+        l.data_agendamento === dateStr && naLojaStatuses.includes(l.etapa)
+      ).length;
+      data.push({ dia: d, agendamentos, naLoja });
     }
     return data;
   }, [monthLeads, mesAtual]);
