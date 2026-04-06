@@ -21,6 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
+import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
