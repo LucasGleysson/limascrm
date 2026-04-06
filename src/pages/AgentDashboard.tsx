@@ -574,9 +574,9 @@ export const AgentDashboard = () => {
 
             {/* Charts */}
             <div className="grid lg:grid-cols-2 gap-4">
-              {/* Daily appointments bar chart */}
+              {/* Daily chart */}
               <div className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold mb-3">📊 Agendamentos por Dia</h3>
+                <h3 className="font-semibold mb-3">📊 Agendamentos e Na Loja por Dia</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyChartData}>
@@ -586,6 +586,7 @@ export const AgentDashboard = () => {
                       <Tooltip />
                       <ReferenceLine y={4} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label={{ value: "Meta: 4", position: "right", fontSize: 10, fill: "hsl(var(--destructive))" }} />
                       <Bar dataKey="agendamentos" name="Agendamentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="naLoja" name="Na Loja" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
