@@ -77,13 +77,6 @@ export const AgentDashboard = () => {
 
   const pagination = usePagination(myLeads, { pageSize: 15 });
 
-  const etapaCounts = useMemo(() => {
-    const counts: Record<string, number> = { todos: allMyLeads.length };
-    ETAPAS_FUNIL.forEach((e) => {
-      counts[e.id] = allMyLeads.filter((l) => l.etapa === e.id).length;
-    });
-    return counts;
-  }, [allMyLeads]);
 
   const handleMoveEtapa = async (lead: Lead, novaEtapa: string) => {
     if (novaEtapa === "agendado") {
@@ -202,7 +195,7 @@ export const AgentDashboard = () => {
       const dow = d.getDay();
       if (dow !== 0 && dow !== 6) bizDays++;
     }
-    const mediaAgendDia = bizDays > 0 ? agendados / bizDays : 0;
+    const mediaCarrosLojaDia = bizDays > 0 ? naLoja / bizDays : 0;
 
     const txComparecimento = agendados > 0 ? Math.round((naLoja / agendados) * 100) : 0;
     const txConversao = produtivos > 0 ? Math.round((naLoja / produtivos) * 100) : 0;
@@ -219,7 +212,7 @@ export const AgentDashboard = () => {
 
     return {
       total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
-      noShow, mediaAgendDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+      noShow, mediaCarrosLojaDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
     };
   }, [monthLeads, today, mesAtual]);
 
@@ -282,7 +275,7 @@ export const AgentDashboard = () => {
                   etapaFilter === "todos" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:border-primary/30"
                 }`}
               >
-                Todos ({etapaCounts.todos})
+                Todos
               </button>
               {ETAPAS_FUNIL.map((e) => (
                 <button key={e.id} onClick={() => setEtapaFilter(e.id)}
@@ -290,7 +283,7 @@ export const AgentDashboard = () => {
                     etapaFilter === e.id ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:border-primary/30"
                   }`}
                 >
-                  {e.label} ({etapaCounts[e.id] || 0})
+                  {e.label}
                 </button>
               ))}
             </div>
@@ -541,12 +534,12 @@ export const AgentDashboard = () => {
             {/* KPI Cards Row 2 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Média Agend./Dia</p>
-                <p className={`text-3xl font-bold ${desempenho.mediaAgendDia >= 4 ? "text-success" : desempenho.mediaAgendDia >= 3 ? "text-warning" : "text-destructive"}`}>
-                  {desempenho.mediaAgendDia.toFixed(1)}
+                <p className="text-xs text-muted-foreground mb-1">Média Carros Loja/Dia</p>
+                <p className={`text-3xl font-bold ${desempenho.mediaCarrosLojaDia >= 4 ? "text-success" : desempenho.mediaCarrosLojaDia >= 3 ? "text-warning" : "text-destructive"}`}>
+                  {desempenho.mediaCarrosLojaDia.toFixed(1)}
                 </p>
                 <p className="text-xs text-muted-foreground">Meta: 4/dia</p>
-                <Progress value={Math.min((desempenho.mediaAgendDia / 4) * 100, 100)} className="h-2 mt-2" />
+                <Progress value={Math.min((desempenho.mediaCarrosLojaDia / 4) * 100, 100)} className="h-2 mt-2" />
               </div>
               <StatsCard title="Na Loja" value={desempenho.naLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={desempenho.concluidos} icon={CheckCircle2} variant="success" />
