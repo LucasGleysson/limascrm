@@ -85,9 +85,22 @@ export const ManagerDashboard = () => {
   }, [filteredLeads]);
 
   const funnelData = useMemo(() => {
-    return ETAPAS_FUNIL.map((etapa) => ({
-      name: etapa.label, value: filteredLeads.filter((l) => l.etapa === etapa.id).length,
-    })).filter((d) => d.value > 0);
+    const total = filteredLeads.length;
+    const agendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+    const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
+    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
+    return [
+      { name: "Novo Lead", value: total },
+      { name: "Agendamentos", value: agendamentos },
+      { name: "Na Loja", value: naLoja },
+      { name: "Concluídos", value: concluidos },
+      { name: "Dispensados", value: dispensados },
+      { name: "Reagendados", value: reagendados },
+      { name: "Perdidos", value: perdidos },
+    ].filter((d) => d.value > 0);
   }, [filteredLeads]);
 
   // Build a map of agent -> unidades using agente_unidades (many-to-many)
