@@ -220,7 +220,7 @@ export const SupervisorDashboard = () => {
             {/* Registros e Funil */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
+              <StatsCard title="Agendamentos" value={globalStats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
             </div>
             {/* Na Loja */}
