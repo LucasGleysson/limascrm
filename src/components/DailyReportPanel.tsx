@@ -153,7 +153,7 @@ export const DailyReportPanel = () => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard title="Total de Registros" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
         <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-        <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+        <StatsCard title="Leads Produtivos" value={globalStats.totalRegistros - globalStats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
       </div>
       {/* Na Loja */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
