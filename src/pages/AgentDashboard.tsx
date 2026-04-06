@@ -610,20 +610,18 @@ export const AgentDashboard = () => {
             </div>
 
             {/* Meta progress */}
-            {desempenho.concluidos > 0 && (
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Flame className="h-5 w-5 text-warning" /> Progresso da Meta
-                </h3>
-                <div className="flex items-center gap-3">
-                  <Progress value={Math.min((desempenho.concluidos / Math.max(desempenho.produtivos, 1)) * 100, 100)} className="flex-1 h-3" />
-                  <span className="text-sm font-bold">{desempenho.concluidos} concluídos</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  De {desempenho.produtivos} leads produtivos, {desempenho.concluidos} foram concluídos neste mês
-                </p>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Flame className="h-5 w-5 text-warning" /> Progresso da Meta
+              </h3>
+              <div className="flex items-center gap-3">
+                <Progress value={Math.min((desempenho.concluidos / 75) * 100, 100)} className="flex-1 h-3" />
+                <span className="text-sm font-bold">{desempenho.concluidos} / 75</span>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground mt-2">
+                {Math.round((desempenho.concluidos / 75) * 100)}% da meta de 75 carros atingida neste mês
+              </p>
+            </div>
           </div>
         )}
 
