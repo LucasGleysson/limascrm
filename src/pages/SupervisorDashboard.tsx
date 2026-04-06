@@ -210,9 +210,10 @@ export const SupervisorDashboard = () => {
                 <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
                 <p className="text-muted-foreground text-sm">Visão geral de desempenho</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
               </div>
             </div>
 
