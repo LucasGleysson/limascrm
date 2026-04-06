@@ -513,19 +513,85 @@ export const SupervisorDashboard = () => {
                         const noShow = a.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr3).length;
                         const mediaAgend = (a.totalAgendamentos / elapsed).toFixed(1);
                         const mediaLoja = (a.passaramNaLoja / elapsed).toFixed(1);
+                        const isExpanded = expandedAgente === a.id;
+                        const resgatados = a.leads.filter((l: Lead) => l.etapa === "reagendado").length;
+                        const ganhosFup = a.leads.filter((l: Lead) => l.etapa === "concluido" && l.fup_concluido).length;
+                        const txComparecimento = a.totalAgendamentos > 0 ? Math.round((a.passaramNaLoja / a.totalAgendamentos) * 100) : 0;
+                        const txAproveitamento = produtivos > 0 ? Math.round((a.passaramNaLoja / produtivos) * 100) : 0;
                         return (
-                          <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="py-3 font-medium">{a.nome}</td>
-                            <td className="py-3 text-center">{a.total}</td>
-                            <td className="py-3 text-center text-primary">{produtivos}</td>
-                            <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
-                            <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
-                            <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                            <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
-                            <td className="py-3 text-center text-success">{a.concluidos}</td>
-                            <td className="py-3 text-center text-destructive">{a.perdidos}</td>
-                            <td className="py-3 text-center text-destructive">{noShow}</td>
-                          </tr>
+                          <React.Fragment key={a.id}>
+                            <tr className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/20" : ""}`} onClick={() => setExpandedAgente(isExpanded ? null : a.id)}>
+                              <td className="py-3 font-medium flex items-center gap-1">
+                                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                                {a.nome}
+                              </td>
+                              <td className="py-3 text-center">{a.total}</td>
+                              <td className="py-3 text-center text-primary">{produtivos}</td>
+                              <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
+                              <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
+                              <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
+                              <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
+                              <td className="py-3 text-center text-success">{a.concluidos}</td>
+                              <td className="py-3 text-center text-destructive">{a.perdidos}</td>
+                              <td className="py-3 text-center text-destructive">{noShow}</td>
+                            </tr>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={10} className="p-4 bg-muted/10 border-b border-border">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Leads Recebidos</p>
+                                      <p className="text-lg font-bold">{a.total}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Desqualificados</p>
+                                      <p className="text-lg font-bold text-destructive">{a.desqNovos + a.desqAgendados}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Produtivos</p>
+                                      <p className="text-lg font-bold text-primary">{produtivos}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Agendamentos</p>
+                                      <p className="text-lg font-bold text-primary">{a.totalAgendamentos}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Méd. Loja/Dia</p>
+                                      <p className="text-lg font-bold text-warning">{mediaLoja}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Na Loja</p>
+                                      <p className="text-lg font-bold text-warning">{a.passaramNaLoja}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">No-Show</p>
+                                      <p className="text-lg font-bold text-destructive">{noShow}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Tx Comparecimento</p>
+                                      <p className="text-lg font-bold">{txComparecimento}%</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Aproveitamento</p>
+                                      <p className="text-lg font-bold">{txAproveitamento}%</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Resgatados</p>
+                                      <p className="text-lg font-bold text-info">{resgatados}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Ganhos c/ FUP</p>
+                                      <p className="text-lg font-bold text-success">{ganhosFup}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Dispensados</p>
+                                      <p className="text-lg font-bold text-destructive">{a.dispensados}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       });
                     })()}
