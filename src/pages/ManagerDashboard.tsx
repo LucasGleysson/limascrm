@@ -93,7 +93,7 @@ export const ManagerDashboard = () => {
     const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     return [
-      { name: "Novo Lead", value: total },
+      { name: "Leads Produtivos", value: total - filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length },
       { name: "Agendamentos", value: agendamentos },
       { name: "Na Loja", value: naLoja },
       { name: "Concluídos", value: concluidos },
@@ -215,7 +215,7 @@ export const ManagerDashboard = () => {
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Total de Registros" value={stats.totalLeads} icon={Users} variant="info" />
               <StatsCard title="Agendamentos" value={stats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Novo Lead" value={stats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+              <StatsCard title="Leads Produtivos" value={stats.totalLeads - stats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
             </div>
             {/* Na Loja */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

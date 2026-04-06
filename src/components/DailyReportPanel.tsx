@@ -153,7 +153,7 @@ export const DailyReportPanel = () => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard title="Total de Registros" value={globalStats.totalRegistros} icon={Users} variant="info" subtitle="Criados nesta data" />
         <StatsCard title="Agendados" value={globalStats.agendados} icon={CalendarCheck} variant="primary" />
-        <StatsCard title="Novo Lead" value={globalStats.novos} icon={AlertTriangle} variant="warning" subtitle="Sendo trabalhados" />
+        <StatsCard title="Leads Produtivos" value={globalStats.totalRegistros - globalStats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
       </div>
       {/* Na Loja */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -219,8 +219,6 @@ export const DailyReportPanel = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
@@ -232,8 +230,6 @@ export const DailyReportPanel = () => {
                 {unitStats.map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{u.nome}</td>
-                    <td className="py-3 text-center">{u.totalRegistros}</td>
-                    <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
                     <td className="py-3 text-center text-primary">{u.agendados}</td>
                     <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                     <td className="py-3 text-center text-success">{u.concluidos}</td>
