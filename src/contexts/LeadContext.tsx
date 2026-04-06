@@ -303,6 +303,7 @@ function mapLead(row: any): Lead {
     data_entrada: row.data_entrada,
     id_agente: row.id_agente,
     id_unidade: row.id_unidade,
+    id_recepcionista: row.id_recepcionista,
     data_agendamento: row.data_agendamento,
     numero_os: row.numero_os,
     valor_servico: row.valor_servico ? Number(row.valor_servico) : null,
