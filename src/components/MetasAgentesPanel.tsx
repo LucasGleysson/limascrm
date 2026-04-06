@@ -148,6 +148,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       );
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
       const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+      const naLoja = monthLeads.filter((l) => ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)).length;
       const carrosParaMeta = concluidos + perdidos;
 
       const weekLeads = metaLeads.filter(
