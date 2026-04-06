@@ -164,10 +164,16 @@ export const AgentDashboard = () => {
     return { from, to };
   }, []);
 
-  const monthLeads = useMemo(
-    () => allMyLeads.filter((l) => l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to),
-    [allMyLeads, mesAtual],
-  );
+  const monthLeads = useMemo(() => {
+    const seen = new Set<string>();
+    return allMyLeads.filter((l) => {
+      if (seen.has(l.id)) return false;
+      const entradaInMonth = l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to;
+      const agendInMonth = l.data_agendamento && l.data_agendamento >= mesAtual.from && l.data_agendamento <= mesAtual.to;
+      if (entradaInMonth || agendInMonth) { seen.add(l.id); return true; }
+      return false;
+    });
+  }, [allMyLeads, mesAtual]);
 
   const desempenho = useMemo(() => {
     const total = monthLeads.length;

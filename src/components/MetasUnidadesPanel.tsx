@@ -98,15 +98,17 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
-  // Fetch leads specifically for the selected month — use data_entrada only for consistency
+  // Fetch leads for the selected month — dual-date: data_entrada OR data_agendamento in month
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .gte("data_entrada", range.from)
-      .lte("data_entrada", range.to);
-    setMetaLeads(data || []);
+    const [byEntrada, byAgend] = await Promise.all([
+      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
+      supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
+    ]);
+    const map = new Map<string, any>();
+    (byEntrada.data || []).forEach((l: any) => map.set(l.id, l));
+    (byAgend.data || []).forEach((l: any) => map.set(l.id, l));
+    setMetaLeads(Array.from(map.values()));
   }, [mesRef]);
 
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
