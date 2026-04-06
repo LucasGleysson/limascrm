@@ -282,7 +282,7 @@ export const AgentDashboard = () => {
                   etapaFilter === "todos" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:border-primary/30"
                 }`}
               >
-                Todos ({etapaCounts.todos})
+                Todos
               </button>
               {ETAPAS_FUNIL.map((e) => (
                 <button key={e.id} onClick={() => setEtapaFilter(e.id)}
