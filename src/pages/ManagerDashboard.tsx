@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
 import { ORIGENS, Lead } from "@/data/mockData";
@@ -45,6 +45,7 @@ export const ManagerDashboard = () => {
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
+  const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
 
@@ -458,23 +459,93 @@ export const ManagerDashboard = () => {
                       }
                       const elapsed = Math.max(bizDays, 1);
                       return agenteTable.map((a) => {
-                        const aLeads = filteredLeads.filter((l) => l.id_agente === agentes.find((ag) => ag.nome === a.nome)?.id);
+                        const agenteProfile = agentes.find((ag) => ag.nome === a.nome);
+                        const agenteId = agenteProfile?.id || a.nome;
+                        const aLeads = filteredLeads.filter((l) => l.id_agente === agenteProfile?.id);
                         const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+                        const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
                         const produtivos = aLeads.length - desqNovos;
                         const noShow = aLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
                         const mediaAgend = (a.agendado / elapsed).toFixed(1);
                         const mediaLoja = (a.carrosNaLoja / elapsed).toFixed(1);
+                        const isExpanded = expandedAgente === agenteId;
+                        const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
+                        const resgatados = aLeads.filter((l) => l.etapa === "reagendado").length;
+                        const ganhosFup = aLeads.filter((l) => l.etapa === "concluido" && l.fup_concluido).length;
+                        const txComparecimento = a.agendado > 0 ? Math.round((a.carrosNaLoja / a.agendado) * 100) : 0;
+                        const txAproveitamento = produtivos > 0 ? Math.round((a.carrosNaLoja / produtivos) * 100) : 0;
                         return (
-                          <tr key={a.nome} className="border-b border-border/50 hover:bg-muted/30">
-                            <td className="py-3 font-medium">{a.nome}</td>
-                            <td className="py-3 text-center">{a.total}</td>
-                            <td className="py-3 text-center text-primary">{produtivos}</td>
-                            <td className="py-3 text-center text-primary">{a.agendado}</td>
-                            <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
-                            <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
-                            <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
-                            <td className="py-3 text-center text-destructive">{noShow}</td>
-                          </tr>
+                          <React.Fragment key={a.nome}>
+                            <tr className={`border-b border-border/50 hover:bg-muted/30 cursor-pointer ${isExpanded ? "bg-muted/20" : ""}`} onClick={() => setExpandedAgente(isExpanded ? null : agenteId)}>
+                              <td className="py-3 font-medium flex items-center gap-1">
+                                <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                                {a.nome}
+                              </td>
+                              <td className="py-3 text-center">{a.total}</td>
+                              <td className="py-3 text-center text-primary">{produtivos}</td>
+                              <td className="py-3 text-center text-primary">{a.agendado}</td>
+                              <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
+                              <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
+                              <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
+                              <td className="py-3 text-center text-destructive">{noShow}</td>
+                            </tr>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={8} className="p-4 bg-muted/10 border-b border-border">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Leads Recebidos</p>
+                                      <p className="text-lg font-bold">{a.total}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Desqualificados</p>
+                                      <p className="text-lg font-bold text-destructive">{desqNovos + desqAgendados}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Produtivos</p>
+                                      <p className="text-lg font-bold text-primary">{produtivos}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Agendamentos</p>
+                                      <p className="text-lg font-bold text-primary">{a.agendado}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Méd. Loja/Dia</p>
+                                      <p className="text-lg font-bold text-warning">{mediaLoja}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Na Loja</p>
+                                      <p className="text-lg font-bold text-warning">{a.carrosNaLoja}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">No-Show</p>
+                                      <p className="text-lg font-bold text-destructive">{noShow}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Tx Comparecimento</p>
+                                      <p className="text-lg font-bold">{txComparecimento}%</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Aproveitamento</p>
+                                      <p className="text-lg font-bold">{txAproveitamento}%</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Resgatados</p>
+                                      <p className="text-lg font-bold text-info">{resgatados}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Ganhos c/ FUP</p>
+                                      <p className="text-lg font-bold text-success">{ganhosFup}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border bg-card p-3 text-center">
+                                      <p className="text-xs text-muted-foreground">Dispensados</p>
+                                      <p className="text-lg font-bold text-destructive">{dispensados}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       });
                     })()}

@@ -93,8 +93,7 @@ export const AgentDashboard = () => {
   const dailyStats = useMemo(() => {
     const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
-    const carrosHoje = todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
-    const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
+    const carrosHoje = todayAgendados.filter((l) => ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
       const isEligible = (lead: Lead): boolean => {
         if (lead.fup_concluido) return false;
@@ -110,7 +109,7 @@ export const AgentDashboard = () => {
     const fupsDoneToday = eventos.filter((e) => e.tipo === "followup" && e.concluido && e.data_conclusao && e.data_conclusao.slice(0, 10) === today && allMyLeads.some((l) => l.id === e.id_lead)).length;
     return {
       novos: todayLeads.length, agendados: todayAgendados.length, carros: carrosHoje,
-      concluidos: concluidosHoje, perdidos: dispensadosHoje, eventosPendentes: pendingEvents,
+      perdidos: dispensadosHoje, eventosPendentes: pendingEvents,
       fupsDoneToday,
     };
   }, [allMyLeads, eventos, today]);
@@ -384,11 +383,10 @@ export const AgentDashboard = () => {
               <p className="text-muted-foreground text-sm">Resumo do seu desempenho hoje</p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Novos Leads Hoje" value={dailyStats.novos} icon={Users} variant="info" />
               <StatsCard title="Agendados Hoje" value={dailyStats.agendados} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Foram na Loja" value={dailyStats.carros} icon={Car} variant="warning" />
-              <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Dispensados" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
