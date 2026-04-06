@@ -93,8 +93,7 @@ export const AgentDashboard = () => {
   const dailyStats = useMemo(() => {
     const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
-    const carrosHoje = todayAgendados.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
-    const concluidosHoje = todayAgendados.filter((l) => l.etapa === "concluido").length;
+    const carrosHoje = todayAgendados.filter((l) => ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa)).length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
       const isEligible = (lead: Lead): boolean => {
         if (lead.fup_concluido) return false;
