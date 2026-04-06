@@ -187,10 +187,11 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const globalStats = useMemo(() => {
     const totalMeta = agentData.reduce((s, a) => s + a.metaVal, 0);
     const totalConcluidos = agentData.reduce((s, a) => s + a.carrosParaMeta, 0);
+    const totalNaLoja = agentData.reduce((s, a) => s + a.naLoja, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalConcluidos / totalMeta) * 100) : 0;
     const achieved = agentData.filter((a) => a.status === "achieved").length;
     const behind = agentData.filter((a) => a.status === "behind").length;
-    return { totalMeta, totalConcluidos, totalPct, achieved, behind };
+    return { totalMeta, totalConcluidos, totalNaLoja, totalPct, achieved, behind };
   }, [agentData]);
 
   const handleSave = async () => {
