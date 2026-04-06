@@ -177,7 +177,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       }
 
       return {
-        ...ag, metaVal, concluidos, perdidos, carrosParaMeta, concluidosSemana, pct, faltam,
+        ...ag, metaVal, concluidos, perdidos, naLoja, carrosParaMeta, concluidosSemana, pct, faltam,
         mediaDiaria, necessarioPorDia, metaSemanal, pctSemanal,
         aproveitamento, totalLeadsMes, status, diasRestantes,
       };
