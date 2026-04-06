@@ -211,6 +211,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       checkout: lead.checkout || null,
       is_porta: lead.is_porta || false,
       notas: (lead as any).notas || null,
+      id_recepcionista: (lead as any).id_recepcionista || null,
     }).select("*").single();
     if (error) { console.error("addLead error:", error); return null; }
     if (data) {
