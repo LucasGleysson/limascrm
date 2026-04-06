@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
-  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull,
+  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn,
 } from "lucide-react";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
