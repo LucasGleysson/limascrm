@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Target, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
-  ChevronLeft, ChevronRight, Save, BarChart3, Award, Flame,
+  ChevronLeft, ChevronRight, Save, BarChart3, Award, Flame, Car,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,

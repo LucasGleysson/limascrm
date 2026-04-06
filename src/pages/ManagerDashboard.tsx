@@ -308,19 +308,118 @@ export const ManagerDashboard = () => {
                     <tr className="border-b border-border">
                       <th className="text-left py-2 font-medium text-muted-foreground">ORIGEM</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">CONVERSÃO</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">DESQ. NOVO</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONV.</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {porOrigem.map((o) => (
-                      <tr key={o.origem} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-3 font-medium">{o.origem}</td>
-                        <td className="py-3 text-center">{o.total}</td>
-                        <td className="py-3 text-center text-success">{o.concluidos}</td>
-                        <td className="py-3 text-center">{o.total > 0 ? Math.round((o.concluidos / o.total) * 100) : 0}%</td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const todayStr = new Date().toISOString().split("T")[0];
+                      return ORIGENS.map((origem) => {
+                        const oLeads = filteredLeads.filter((l) => l.origem === origem);
+                        if (oLeads.length === 0) return null;
+                        const desqNovo = oLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+                        const naLoja = oLeads.filter((l) => ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)).length;
+                        const dispensados = oLeads.filter((l) => l.etapa === "dispensado").length;
+                        const agendados = oLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+                        const noShow = oLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
+                        const perdidos = oLeads.filter((l) => l.etapa === "perdido").length;
+                        const concluidos = oLeads.filter((l) => l.etapa === "concluido").length;
+                        const conv = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
+                        return (
+                          <tr key={origem} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 font-medium">{origem}</td>
+                            <td className="py-3 text-center">{oLeads.length}</td>
+                            <td className="py-3 text-center text-muted-foreground">{desqNovo}</td>
+                            <td className="py-3 text-center text-warning">{naLoja}</td>
+                            <td className="py-3 text-center text-purple-500">{dispensados}</td>
+                            <td className="py-3 text-center text-primary">{agendados}</td>
+                            <td className="py-3 text-center text-destructive">{noShow}</td>
+                            <td className="py-3 text-center text-destructive">{perdidos}</td>
+                            <td className="py-3 text-center text-success">{concluidos}</td>
+                            <td className="py-3 text-center font-medium">{conv}%</td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Detailed report: By Loja */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4">Relatório por Loja</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium text-muted-foreground">LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">DISP. (incl. reag.)</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {porUnidade.map((u) => {
+                      const dispensadosReag = u.leads.filter((l: Lead) => ["dispensado", "reagendado"].includes(l.etapa)).length;
+                      return (
+                        <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
+                          <td className="py-3 text-center text-warning">{u.carrosNaLoja}</td>
+                          <td className="py-3 text-center text-success">{u.concluidos}</td>
+                          <td className="py-3 text-center text-purple-500">{dispensadosReag}</td>
+                          <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Detailed report: By Agente */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-lg font-semibold mb-4">Relatório por Agente</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PRODUTIVOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const todayStr = new Date().toISOString().split("T")[0];
+                      return agenteTable.map((a) => {
+                        const aLeads = filteredLeads.filter((l) => l.id_agente === agentes.find((ag) => ag.nome === a.nome)?.id);
+                        const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+                        const produtivos = aLeads.length - desqNovos;
+                        const noShow = aLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
+                        return (
+                          <tr key={a.nome} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 font-medium">{a.nome}</td>
+                            <td className="py-3 text-center">{a.total}</td>
+                            <td className="py-3 text-center text-primary">{produtivos}</td>
+                            <td className="py-3 text-center text-primary">{a.agendado}</td>
+                            <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
+                            <td className="py-3 text-center text-destructive">{noShow}</td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
