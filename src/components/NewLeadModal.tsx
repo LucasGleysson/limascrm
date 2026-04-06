@@ -33,9 +33,8 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
 
   const handleSubmit = async () => {
     if (!nome || !telefone) return;
-    if (isReceptionist && !numeroOs) return;
     const now = new Date().toISOString();
-    const finalEtapa = isReceptionist ? etapa : (isPorta ? "na_loja" : "novo");
+    const finalEtapa = isReceptionist ? "na_loja" : (isPorta ? "na_loja" : "novo");
     await addLead({
       nome,
       telefone: formatPhone(telefone),
@@ -44,10 +43,11 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       data_entrada: now.split("T")[0],
       id_agente: currentUser.id,
       id_unidade: unidadeId || null,
-      is_porta: isPorta || false,
-      checkin: (isReceptionist && etapa === "na_loja") || isPorta ? now : null,
+      is_porta: isPorta || isReceptionist || false,
+      checkin: (isReceptionist || isPorta) ? now : null,
       numero_os: numeroOs || null,
-    });
+      id_recepcionista: isReceptionist ? currentUser.id : null,
+    } as any);
     setNome("");
     setTelefone("");
     setOrigem("");
@@ -56,7 +56,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     onOpenChange(false);
   };
 
-  const canSubmit = nome && telefone && (isReceptionist ? !!numeroOs : (!isPorta ? !!origem : true));
+  const canSubmit = nome && telefone && (!isPorta && !isReceptionist ? !!origem : true);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
