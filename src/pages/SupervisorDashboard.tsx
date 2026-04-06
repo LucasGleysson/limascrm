@@ -40,6 +40,7 @@ export const SupervisorDashboard = () => {
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
 
