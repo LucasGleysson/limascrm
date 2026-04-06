@@ -1,40 +1,78 @@
 
 
-## Plano de Ajustes — 3 Correções
+## Plano de Implementação: Reativação Completa da Recepcionista + Campo `id_recepcionista`
 
-### 1. "Meu Dia" do Agente — Corrigir "Na Loja" e remover card "Concluídos"
+### Resumo
 
-**Problema:** `carrosHoje` (linha 96) filtra `data_agendamento === today` com status `[concluido, dispensado, perdido]`, mas exclui `confirmado` e `na_loja`. "Na Loja" deve incluir todos que foram confirmados naquele dia.
+Implementação completa do perfil de recepcionista com rastreabilidade de quem atendeu cada lead, incluindo novo campo no banco de dados, correção de permissões, e nova aba nos painéis de gestão.
 
-**Correção em `AgentDashboard.tsx`:**
-- Linha 96: adicionar `confirmado` e `na_loja` ao filtro de `carrosHoje`:
-  ```typescript
-  const carrosHoje = todayAgendados.filter((l) =>
-    ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa)
-  ).length;
-  ```
-- Remover o card "Concluídos" (linha 391) e o cálculo `concluidosHoje` (linha 97)
-- Ajustar o grid de 4 para 3 colunas na primeira linha de cards
+### 1. Migration SQL (2 alterações)
 
-### 2. Relatório por Agente expansível (Supervisor e Gestor)
+**a) Nova coluna `id_recepcionista`:**
+```sql
+ALTER TABLE public.leads ADD COLUMN id_recepcionista uuid;
+```
+- Nullable, sem foreign key (mesmo padrão do `id_agente`)
+- Não quebra nada: registros existentes ficam com `NULL`
 
-**Problema:** A tabela de agentes mostra apenas números resumidos. O pedido é que, ao clicar em um agente, apareça um painel detalhado similar ao "Meu Desempenho" do agente.
+**b) Atualizar política INSERT de leads:**
+```sql
+DROP POLICY "Users can insert leads" ON public.leads;
+CREATE POLICY "Users can insert leads" ON public.leads
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    id_agente = auth.uid()
+    OR has_role(auth.uid(), 'gestor'::app_role)
+    OR has_role(auth.uid(), 'supervisor'::app_role)
+    OR has_role(auth.uid(), 'recepcionista'::app_role)
+  );
+```
 
-**Correção em `SupervisorDashboard.tsx` e `ManagerDashboard.tsx`:**
-- Adicionar estado `expandedAgente` para controlar qual linha está expandida
-- Ao clicar na linha do agente, expandir uma seção abaixo com:
-  - KPIs: Leads Recebidos, Desqualificados, Produtivos, Agendamentos
-  - KPIs: Média Carros Loja/Dia, Na Loja, No-Show
-  - Taxas: Comparecimento (Na Loja / Agendados), Conversão (Na Loja / Produtivos)
-  - Resgatados e Ganhos com FUP
-- Calcular métricas usando os leads filtrados daquele agente no período selecionado
-- Usar layout de cards compactos (grid 2x4) dentro da linha expandida
+### 2. Tipo Lead (`mockData.ts`)
+- Adicionar `id_recepcionista?: string | null`
+
+### 3. LeadContext (`LeadContext.tsx`)
+- Remover bloqueio `if (isRecepcionista) { setLoading(false); return; }` (linha 142-144)
+- Habilitar realtime para recepcionistas (além de agentes)
+- Adicionar `id_recepcionista` no `mapLead` e no `addLead`
+
+### 4. Notas rastreáveis (`notasUtils.ts`)
+- Adicionar parâmetro opcional `autor` ao `appendNota`:
+```typescript
+export function appendNota(existing, label, text, autor?: string): string {
+  const prefix = autor ? `[${autor}] ` : "";
+  const entry = `[${timestamp}] ${prefix}${label}: ${text}`;
+  ...
+}
+```
+
+### 5. NewLeadModal (`NewLeadModal.tsx`)
+- Tornar OS opcional para recepcionista (remover `!numeroOs` da validação)
+- Quando `isReceptionist`, incluir `id_recepcionista: currentUser.id` no `addLead`
+- Manter etapa padrão `na_loja` e remover seletor de status
+
+### 6. ReceptionistDashboard (`ReceptionistDashboard.tsx`)
+- Em todas as ações (checkin, emServico, dispensar, checkout): incluir `id_recepcionista: currentUser.id` e passar `currentUser.nome` como `autor` no `appendNota`
+
+### 7. AgentReceptionPanel (`AgentReceptionPanel.tsx`)
+- Mesma lógica: quando o agente faz ações na recepção, não precisa preencher `id_recepcionista` (só recepcionistas preenchem)
+
+### 8. Nova aba "Recepção" no Supervisor e Gestor
+- Adicionar tab `{ id: "recepcao", label: "Recepção", icon: LogIn }` nos `SIDEBAR_TABS` de ambos
+- Conteúdo: tabela de recepcionistas com métricas (check-ins, concluídos, dispensados, total de leads)
+- Filtro por unidade
+- Ao clicar numa recepcionista, expandir detalhes (mesmo padrão da aba "por agente")
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `AgentDashboard.tsx` | Fix Na Loja + remover card Concluídos |
-| `SupervisorDashboard.tsx` | Linha de agente expansível com métricas |
-| `ManagerDashboard.tsx` | Linha de agente expansível com métricas |
+| Migration SQL | `ADD COLUMN id_recepcionista uuid` + RLS INSERT |
+| `mockData.ts` | Campo na interface Lead |
+| `LeadContext.tsx` | Remover bloqueio, realtime, mapear campo |
+| `notasUtils.ts` | Parâmetro `autor` |
+| `NewLeadModal.tsx` | OS opcional, `id_recepcionista` na criação |
+| `ReceptionistDashboard.tsx` | `id_recepcionista` + nome em notas |
+| `SupervisorDashboard.tsx` | Nova aba "Recepção" |
+| `ManagerDashboard.tsx` | Nova aba "Recepção" |
 
