@@ -106,6 +106,7 @@ export type Database = {
           fup_motivo_conclusao: string | null
           id: string
           id_agente: string
+          id_recepcionista: string | null
           id_unidade: string | null
           is_porta: boolean | null
           nome: string
@@ -130,6 +131,7 @@ export type Database = {
           fup_motivo_conclusao?: string | null
           id?: string
           id_agente: string
+          id_recepcionista?: string | null
           id_unidade?: string | null
           is_porta?: boolean | null
           nome: string
@@ -154,6 +156,7 @@ export type Database = {
           fup_motivo_conclusao?: string | null
           id?: string
           id_agente?: string
+          id_recepcionista?: string | null
           id_unidade?: string | null
           is_porta?: boolean | null
           nome?: string
