@@ -42,6 +42,7 @@ export const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
 
@@ -50,10 +51,15 @@ export const ManagerDashboard = () => {
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
-    const { from } = getDateRangeForPeriod(period);
-    if (from) result = result.filter((l) => l.data_entrada >= from);
+    if (period === "mes") {
+      const range = getMonthRange(mesRef);
+      result = result.filter((l) => l.data_entrada >= range.from && l.data_entrada <= range.to);
+    } else {
+      const { from } = getDateRangeForPeriod(period);
+      if (from) result = result.filter((l) => l.data_entrada >= from);
+    }
     return result;
-  }, [leads, unidadeFilter, period]);
+  }, [leads, unidadeFilter, period, mesRef]);
 
   const stats = useMemo(() => {
     const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
