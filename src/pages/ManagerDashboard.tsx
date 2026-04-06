@@ -30,6 +30,7 @@ const SIDEBAR_TABS = [
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
   { id: "metas", label: "Metas", icon: Target },
+  { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "usuarios", label: "Usuários", icon: Users },
 ];
 
