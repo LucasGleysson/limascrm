@@ -383,11 +383,10 @@ export const AgentDashboard = () => {
               <p className="text-muted-foreground text-sm">Resumo do seu desempenho hoje</p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Novos Leads Hoje" value={dailyStats.novos} icon={Users} variant="info" />
               <StatsCard title="Agendados Hoje" value={dailyStats.agendados} icon={CalendarCheck} variant="primary" />
               <StatsCard title="Foram na Loja" value={dailyStats.carros} icon={Car} variant="warning" />
-              <StatsCard title="Concluídos" value={dailyStats.concluidos} icon={CheckCircle2} variant="success" />
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <StatsCard title="Dispensados" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
