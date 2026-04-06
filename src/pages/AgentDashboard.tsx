@@ -290,7 +290,7 @@ export const AgentDashboard = () => {
                     etapaFilter === e.id ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:border-primary/30"
                   }`}
                 >
-                  {e.label} ({etapaCounts[e.id] || 0})
+                  {e.label}
                 </button>
               ))}
             </div>
