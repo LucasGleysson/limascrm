@@ -541,12 +541,12 @@ export const AgentDashboard = () => {
             {/* KPI Cards Row 2 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Média Agend./Dia</p>
-                <p className={`text-3xl font-bold ${desempenho.mediaAgendDia >= 4 ? "text-success" : desempenho.mediaAgendDia >= 3 ? "text-warning" : "text-destructive"}`}>
-                  {desempenho.mediaAgendDia.toFixed(1)}
+                <p className="text-xs text-muted-foreground mb-1">Média Carros Loja/Dia</p>
+                <p className={`text-3xl font-bold ${desempenho.mediaCarrosLojaDia >= 4 ? "text-success" : desempenho.mediaCarrosLojaDia >= 3 ? "text-warning" : "text-destructive"}`}>
+                  {desempenho.mediaCarrosLojaDia.toFixed(1)}
                 </p>
                 <p className="text-xs text-muted-foreground">Meta: 4/dia</p>
-                <Progress value={Math.min((desempenho.mediaAgendDia / 4) * 100, 100)} className="h-2 mt-2" />
+                <Progress value={Math.min((desempenho.mediaCarrosLojaDia / 4) * 100, 100)} className="h-2 mt-2" />
               </div>
               <StatsCard title="Na Loja" value={desempenho.naLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={desempenho.concluidos} icon={CheckCircle2} variant="success" />
