@@ -219,7 +219,7 @@ export const AgentDashboard = () => {
 
     return {
       total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
-      noShow, mediaAgendDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+      noShow, mediaCarrosLojaDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
     };
   }, [monthLeads, today, mesAtual]);
 
