@@ -121,8 +121,8 @@ export const ReceptionistDashboard = () => {
     setLoadingAction(`checkin-${lead.id}`);
     try {
       const now = new Date().toISOString();
-      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja");
-      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas });
+      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja", currentUser.nome);
+      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas, id_recepcionista: currentUser.id } as any);
     } finally {
       setLoadingAction(null);
     }
