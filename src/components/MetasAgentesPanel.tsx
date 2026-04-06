@@ -263,7 +263,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <Target className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
           <p className="text-2xl font-bold">{globalStats.totalMeta}</p>
@@ -273,6 +273,11 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalConcluidos}</p>
           <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
+        </div>
+        <div className="rounded-xl border border-warning/30 bg-card p-4 text-center">
+          <Flame className="h-5 w-5 mx-auto text-warning mb-1" />
+          <p className="text-2xl font-bold text-warning">{globalStats.totalNaLoja}</p>
+          <p className="text-xs text-muted-foreground">Na Loja</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />

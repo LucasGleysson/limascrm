@@ -169,10 +169,11 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);
     const totalCarros = unitData.reduce((s, u) => s + u.carrosParaMeta, 0);
+    const totalNaLoja = unitData.reduce((s, u) => s + u.carrosNaLoja, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalCarros / totalMeta) * 100) : 0;
     const achieved = unitData.filter((u) => u.status === "achieved").length;
     const behind = unitData.filter((u) => u.status === "behind").length;
-    return { totalMeta, totalCarros, totalPct, achieved, behind };
+    return { totalMeta, totalCarros, totalNaLoja, totalPct, achieved, behind };
   }, [unitData]);
 
   const handleSave = async () => {
