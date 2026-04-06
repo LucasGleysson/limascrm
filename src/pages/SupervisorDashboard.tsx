@@ -167,7 +167,7 @@ export const SupervisorDashboard = () => {
   const globalStats = useMemo(() => {
     const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
-    const agendados = filteredLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
+    const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
@@ -176,7 +176,7 @@ export const SupervisorDashboard = () => {
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
-      totalLeads: filteredLeads.length, naLoja, concluidos, agendados,
+      totalLeads: filteredLeads.length, naLoja, concluidos, totalAgendamentos,
       novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
     };
   }, [filteredLeads]);
