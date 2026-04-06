@@ -93,7 +93,7 @@ export const ManagerDashboard = () => {
     const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
     const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     return [
-      { name: "Novo Lead", value: total },
+      { name: "Leads Produtivos", value: total - filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length },
       { name: "Agendamentos", value: agendamentos },
       { name: "Na Loja", value: naLoja },
       { name: "Concluídos", value: concluidos },
