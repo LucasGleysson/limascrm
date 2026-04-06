@@ -10,6 +10,7 @@ import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
   RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle,
 } from "lucide-react";
+import type { Lead } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { FichasPanel } from "@/components/FichasPanel";
