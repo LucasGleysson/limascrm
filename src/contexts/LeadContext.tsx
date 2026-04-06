@@ -135,17 +135,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isRecepcionista = currentUser?.cargo === "recepcionista";
-
   useEffect(() => {
     if (authUserId && currentUser) {
-      if (isRecepcionista) {
-        setLoading(false);
-        return;
-      }
       fetchAll();
     }
-  }, [authUserId, currentUser, fetchAll, isRecepcionista]);
+  }, [authUserId, currentUser, fetchAll]);
 
   // Realtime ONLY for agents
   useEffect(() => {
