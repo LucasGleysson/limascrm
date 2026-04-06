@@ -219,13 +219,17 @@ export const AgentDashboard = () => {
   const dailyChartData = useMemo(() => {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const data: { dia: number; agendamentos: number }[] = [];
+    const naLojaStatuses = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
+    const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
     for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
       const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
-      const count = monthLeads.filter((l) =>
+      const agendamentos = monthLeads.filter((l) =>
         l.data_agendamento === dateStr || (l.data_entrada === dateStr && !["novo", "desqualificado_novo"].includes(l.etapa))
       ).length;
-      data.push({ dia: d, agendamentos: count });
+      const naLoja = monthLeads.filter((l) =>
+        l.data_agendamento === dateStr && naLojaStatuses.includes(l.etapa)
+      ).length;
+      data.push({ dia: d, agendamentos, naLoja });
     }
     return data;
   }, [monthLeads, mesAtual]);
@@ -570,9 +574,9 @@ export const AgentDashboard = () => {
 
             {/* Charts */}
             <div className="grid lg:grid-cols-2 gap-4">
-              {/* Daily appointments bar chart */}
+              {/* Daily chart */}
               <div className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold mb-3">📊 Agendamentos por Dia</h3>
+                <h3 className="font-semibold mb-3">📊 Agendamentos e Na Loja por Dia</h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyChartData}>
@@ -582,6 +586,7 @@ export const AgentDashboard = () => {
                       <Tooltip />
                       <ReferenceLine y={4} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label={{ value: "Meta: 4", position: "right", fontSize: 10, fill: "hsl(var(--destructive))" }} />
                       <Bar dataKey="agendamentos" name="Agendamentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="naLoja" name="Na Loja" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
