@@ -438,25 +438,41 @@ export const ManagerDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PRODUTIVOS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">MÉD. AGEND./DIA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">MÉD. LOJA/DIA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(() => {
                       const todayStr = new Date().toISOString().split("T")[0];
+                      // Calculate business days elapsed in period
+                      const pRange = period === "mes" ? getMonthRange(mesRef) : getDateRangeForPeriod(period);
+                      const rangeStart = new Date((pRange.from || todayStr) + "T00:00:00");
+                      const rangeEnd = new Date(Math.min(new Date((pRange.to || todayStr) + "T00:00:00").getTime(), new Date().setHours(0,0,0,0)));
+                      let bizDays = 0;
+                      for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+                        const dow = d.getDay();
+                        if (dow !== 0 && dow !== 6) bizDays++;
+                      }
+                      const elapsed = Math.max(bizDays, 1);
                       return agenteTable.map((a) => {
                         const aLeads = filteredLeads.filter((l) => l.id_agente === agentes.find((ag) => ag.nome === a.nome)?.id);
                         const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
                         const produtivos = aLeads.length - desqNovos;
                         const noShow = aLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
+                        const mediaAgend = (a.agendado / elapsed).toFixed(1);
+                        const mediaLoja = (a.carrosNaLoja / elapsed).toFixed(1);
                         return (
                           <tr key={a.nome} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-3 font-medium">{a.nome}</td>
                             <td className="py-3 text-center">{a.total}</td>
                             <td className="py-3 text-center text-primary">{produtivos}</td>
                             <td className="py-3 text-center text-primary">{a.agendado}</td>
+                            <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
                             <td className="py-3 text-center text-warning">{a.carrosNaLoja}</td>
+                            <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
                             <td className="py-3 text-center text-destructive">{noShow}</td>
                           </tr>
                         );
