@@ -77,13 +77,6 @@ export const AgentDashboard = () => {
 
   const pagination = usePagination(myLeads, { pageSize: 15 });
 
-  const etapaCounts = useMemo(() => {
-    const counts: Record<string, number> = { todos: allMyLeads.length };
-    ETAPAS_FUNIL.forEach((e) => {
-      counts[e.id] = allMyLeads.filter((l) => l.etapa === e.id).length;
-    });
-    return counts;
-  }, [allMyLeads]);
 
   const handleMoveEtapa = async (lead: Lead, novaEtapa: string) => {
     if (novaEtapa === "agendado") {
