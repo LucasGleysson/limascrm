@@ -487,7 +487,9 @@ export const SupervisorDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PRODUTIVOS</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">MÉD. AGEND./DIA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">MÉD. LOJA/DIA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NO-SHOW</th>
@@ -496,16 +498,29 @@ export const SupervisorDashboard = () => {
                   <tbody>
                     {(() => {
                       const todayStr3 = new Date().toISOString().split("T")[0];
+                      // Calculate business days elapsed in period
+                      const rangeStart = new Date(periodRange.from + "T00:00:00");
+                      const rangeEnd = new Date(Math.min(new Date(periodRange.to + "T00:00:00").getTime(), new Date().setHours(0,0,0,0)));
+                      let bizDays = 0;
+                      for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+                        const dow = d.getDay();
+                        if (dow !== 0 && dow !== 6) bizDays++;
+                      }
+                      const elapsed = Math.max(bizDays, 1);
                       return agenteStats.map((a) => {
                         const produtivos = a.total - a.desqNovos;
                         const noShow = a.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr3).length;
+                        const mediaAgend = (a.totalAgendamentos / elapsed).toFixed(1);
+                        const mediaLoja = (a.passaramNaLoja / elapsed).toFixed(1);
                         return (
                           <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-3 font-medium">{a.nome}</td>
                             <td className="py-3 text-center">{a.total}</td>
                             <td className="py-3 text-center text-primary">{produtivos}</td>
                             <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
+                            <td className="py-3 text-center text-muted-foreground">{mediaAgend}</td>
                             <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
+                            <td className="py-3 text-center text-muted-foreground">{mediaLoja}</td>
                             <td className="py-3 text-center text-success">{a.concluidos}</td>
                             <td className="py-3 text-center text-destructive">{a.perdidos}</td>
                             <td className="py-3 text-center text-destructive">{noShow}</td>
