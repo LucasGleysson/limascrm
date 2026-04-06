@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
-import { ORIGENS, ETAPAS_FUNIL } from "@/data/mockData";
+import { ORIGENS, ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
