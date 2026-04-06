@@ -185,6 +185,7 @@ export const ManagerDashboard = () => {
               <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
                 {UnidadeFilterSelect}
               </div>
             </div>
