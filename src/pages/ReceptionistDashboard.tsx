@@ -121,8 +121,8 @@ export const ReceptionistDashboard = () => {
     setLoadingAction(`checkin-${lead.id}`);
     try {
       const now = new Date().toISOString();
-      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja");
-      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas });
+      const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja", currentUser.nome);
+      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas, id_recepcionista: currentUser.id } as any);
     } finally {
       setLoadingAction(null);
     }
@@ -132,7 +132,8 @@ export const ReceptionistDashboard = () => {
     if (loadingAction) return;
     setLoadingAction(`servico-${lead.id}`);
     try {
-      await updateLead(lead.id, { etapa: "na_loja" });
+      const notas = appendNota(lead.notas, "Em Serviço", "Carro em serviço", currentUser.nome);
+      await updateLead(lead.id, { etapa: "na_loja", notas, id_recepcionista: currentUser.id } as any);
     } finally {
       setLoadingAction(null);
     }
@@ -148,8 +149,8 @@ export const ReceptionistDashboard = () => {
     if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
-      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
+      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim(), currentUser.nome);
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas, id_recepcionista: currentUser.id } as any);
       await supabase.functions.invoke("generate-followups");
       setDispensarOpen(false);
       setDispensarLead(null);
@@ -163,13 +164,16 @@ export const ReceptionistDashboard = () => {
     setLoadingAction("checkout");
     try {
       const now = new Date().toISOString();
-      const updates: Partial<Lead> = {
+      const updates: any = {
         etapa: "concluido", checkout: now,
         tags_servico: tags.length > 0 ? tags : checkoutLead.tags_servico,
         valor_servico: checkoutLead.valor_servico,
+        id_recepcionista: currentUser.id,
       };
       if (checkoutMotivo.trim()) {
-        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim());
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", checkoutMotivo.trim(), currentUser.nome);
+      } else {
+        updates.notas = appendNota(checkoutLead.notas, "Check-out", "Serviço finalizado", currentUser.nome);
       }
       await updateLead(checkoutLead.id, updates);
       setCheckoutOpen(false);

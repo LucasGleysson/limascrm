@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
-  RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle,
+  RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle, LogIn,
 } from "lucide-react";
 import type { Lead } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -20,6 +20,7 @@ import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
+import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const SIDEBAR_TABS = [
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
   { id: "dispensa_relatorio", label: "Análise", icon: XCircle },
+  { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "metas", label: "Metas", icon: Target },
 ];
 
@@ -790,6 +792,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "dispensa_relatorio" && <DispensaReportPanel />}
+        {activeTab === "recepcao" && <ReceptionistReportPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
       </main>
     </div>

@@ -135,23 +135,17 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isRecepcionista = currentUser?.cargo === "recepcionista";
-
   useEffect(() => {
     if (authUserId && currentUser) {
-      if (isRecepcionista) {
-        setLoading(false);
-        return;
-      }
       fetchAll();
     }
-  }, [authUserId, currentUser, fetchAll, isRecepcionista]);
+  }, [authUserId, currentUser, fetchAll]);
 
   // Realtime ONLY for agents
   useEffect(() => {
     if (!authUserId) return;
     const user = currentUserRef.current;
-    if (user?.cargo !== "agente") return;
+    if (user?.cargo !== "agente" && user?.cargo !== "recepcionista") return;
 
     const channel = supabase
       .channel("lead-changes")
@@ -217,6 +211,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       checkout: lead.checkout || null,
       is_porta: lead.is_porta || false,
       notas: (lead as any).notas || null,
+      id_recepcionista: (lead as any).id_recepcionista || null,
     }).select("*").single();
     if (error) { console.error("addLead error:", error); return null; }
     if (data) {
@@ -286,7 +281,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     <LeadContext.Provider value={{
       leads, eventos, unidades, profiles, agentUnidades, loading,
       addLead, updateLead, deleteLead, addEvento, concluirEvento,
-      refreshAll: () => isRecepcionista ? Promise.resolve() : fetchAll(true),
+      refreshAll: () => fetchAll(true),
     }}>
       {children}
     </LeadContext.Provider>
@@ -309,6 +304,7 @@ function mapLead(row: any): Lead {
     data_entrada: row.data_entrada,
     id_agente: row.id_agente,
     id_unidade: row.id_unidade,
+    id_recepcionista: row.id_recepcionista,
     data_agendamento: row.data_agendamento,
     numero_os: row.numero_os,
     valor_servico: row.valor_servico ? Number(row.valor_servico) : null,

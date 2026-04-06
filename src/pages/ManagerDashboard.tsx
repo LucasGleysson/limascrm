@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
-  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull,
+  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn,
 } from "lucide-react";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
@@ -21,6 +21,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
+import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const SIDEBAR_TABS = [
   { id: "diario", label: "Relatório Diário", icon: Calendar },
   { id: "followups", label: "Follow-ups", icon: ClipboardList },
   { id: "metas", label: "Metas", icon: Target },
+  { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "usuarios", label: "Usuários", icon: Users },
 ];
 
@@ -721,6 +723,7 @@ export const ManagerDashboard = () => {
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
+        {activeTab === "recepcao" && <ReceptionistReportPanel />}
         {activeTab === "usuarios" && <UserManagement />}
       </main>
     </div>
