@@ -18,6 +18,7 @@ import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
+import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -36,6 +37,7 @@ export const SupervisorDashboard = () => {
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
@@ -46,10 +48,16 @@ export const SupervisorDashboard = () => {
     </Button>
   );
 
-  const periodRange = useMemo(() => getDateRangeForPeriod(period), [period]);
+  const periodRange = useMemo(() => {
+    if (period === "mes") {
+      return getMonthRange(mesRef);
+    }
+    return getDateRangeForPeriod(period);
+  }, [period, mesRef]);
   const filteredLeads = useMemo(() => {
     if (!periodRange.from) return leads;
-    return leads.filter((l) => l.data_entrada >= periodRange.from!);
+    const to = periodRange.to;
+    return leads.filter((l) => l.data_entrada >= periodRange.from! && l.data_entrada <= to);
   }, [leads, periodRange]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
@@ -202,9 +210,10 @@ export const SupervisorDashboard = () => {
                 <h1 className="text-2xl font-bold">Painel do Supervisor</h1>
                 <p className="text-muted-foreground text-sm">Visão geral de desempenho</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
               </div>
             </div>
 

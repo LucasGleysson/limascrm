@@ -20,6 +20,7 @@ import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
+import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 
 const SIDEBAR_TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -41,6 +42,7 @@ export const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
+  const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
 
@@ -49,10 +51,15 @@ export const ManagerDashboard = () => {
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
-    const { from } = getDateRangeForPeriod(period);
-    if (from) result = result.filter((l) => l.data_entrada >= from);
+    if (period === "mes") {
+      const range = getMonthRange(mesRef);
+      result = result.filter((l) => l.data_entrada >= range.from && l.data_entrada <= range.to);
+    } else {
+      const { from } = getDateRangeForPeriod(period);
+      if (from) result = result.filter((l) => l.data_entrada >= from);
+    }
     return result;
-  }, [leads, unidadeFilter, period]);
+  }, [leads, unidadeFilter, period, mesRef]);
 
   const stats = useMemo(() => {
     const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
@@ -178,6 +185,7 @@ export const ManagerDashboard = () => {
               <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
                 {UnidadeFilterSelect}
               </div>
             </div>
