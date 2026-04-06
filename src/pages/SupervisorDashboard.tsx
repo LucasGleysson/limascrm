@@ -306,7 +306,7 @@ export const SupervisorDashboard = () => {
                         <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
                         <td className="py-3 text-center">{u.total}</td>
                         <td className="py-3 text-center text-warning">{u.naoAgendados}</td>
-                        <td className="py-3 text-center text-primary">{u.agendados}</td>
+                        <td className="py-3 text-center text-primary">{u.totalAgendamentos}</td>
                         <td className="py-3 text-center text-warning">{u.passaramNaLoja}</td>
                          <td className="py-3 text-center text-success">{u.concluidos}</td>
                         <td className="py-3 text-center text-destructive">{u.perdidos}</td>
