@@ -219,8 +219,6 @@ export const DailyReportPanel = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
-                  <th className="text-center py-2 font-medium text-muted-foreground">NÃO AGEND.</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">AGENDADOS</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                   <th className="text-center py-2 font-medium text-muted-foreground">CONCLUÍDOS</th>
