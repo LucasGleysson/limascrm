@@ -18,6 +18,7 @@ import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
+import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
