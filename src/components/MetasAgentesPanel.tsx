@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Target, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
-  ChevronLeft, ChevronRight, Save, BarChart3, Award, Flame,
+  ChevronLeft, ChevronRight, Save, BarChart3, Award, Flame, Car,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -116,15 +116,17 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
-  // Fetch leads specifically for the selected month — use data_entrada only for consistency
+  // Fetch leads for the selected month — dual-date: data_entrada OR data_agendamento in month
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .gte("data_entrada", range.from)
-      .lte("data_entrada", range.to);
-    setMetaLeads(data || []);
+    const [byEntrada, byAgend] = await Promise.all([
+      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
+      supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
+    ]);
+    const map = new Map<string, any>();
+    (byEntrada.data || []).forEach((l: any) => map.set(l.id, l));
+    (byAgend.data || []).forEach((l: any) => map.set(l.id, l));
+    setMetaLeads(Array.from(map.values()));
   }, [mesRef]);
 
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
@@ -146,6 +148,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       );
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
       const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+      const naLoja = monthLeads.filter((l) => ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)).length;
       const carrosParaMeta = concluidos + perdidos;
 
       const weekLeads = metaLeads.filter(
@@ -174,7 +177,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       }
 
       return {
-        ...ag, metaVal, concluidos, perdidos, carrosParaMeta, concluidosSemana, pct, faltam,
+        ...ag, metaVal, concluidos, perdidos, naLoja, carrosParaMeta, concluidosSemana, pct, faltam,
         mediaDiaria, necessarioPorDia, metaSemanal, pctSemanal,
         aproveitamento, totalLeadsMes, status, diasRestantes,
       };
@@ -184,10 +187,11 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
   const globalStats = useMemo(() => {
     const totalMeta = agentData.reduce((s, a) => s + a.metaVal, 0);
     const totalConcluidos = agentData.reduce((s, a) => s + a.carrosParaMeta, 0);
+    const totalNaLoja = agentData.reduce((s, a) => s + a.naLoja, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalConcluidos / totalMeta) * 100) : 0;
     const achieved = agentData.filter((a) => a.status === "achieved").length;
     const behind = agentData.filter((a) => a.status === "behind").length;
-    return { totalMeta, totalConcluidos, totalPct, achieved, behind };
+    return { totalMeta, totalConcluidos, totalNaLoja, totalPct, achieved, behind };
   }, [agentData]);
 
   const handleSave = async () => {
@@ -259,7 +263,7 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <Target className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
           <p className="text-2xl font-bold">{globalStats.totalMeta}</p>
@@ -269,6 +273,11 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalConcluidos}</p>
           <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
+        </div>
+        <div className="rounded-xl border border-warning/30 bg-card p-4 text-center">
+          <Flame className="h-5 w-5 mx-auto text-warning mb-1" />
+          <p className="text-2xl font-bold text-warning">{globalStats.totalNaLoja}</p>
+          <p className="text-xs text-muted-foreground">Na Loja</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />

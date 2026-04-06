@@ -98,15 +98,17 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   useEffect(() => { fetchMetas(); }, [fetchMetas]);
 
-  // Fetch leads specifically for the selected month — use data_entrada only for consistency
+  // Fetch leads for the selected month — dual-date: data_entrada OR data_agendamento in month
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    const { data } = await supabase
-      .from("leads")
-      .select("*")
-      .gte("data_entrada", range.from)
-      .lte("data_entrada", range.to);
-    setMetaLeads(data || []);
+    const [byEntrada, byAgend] = await Promise.all([
+      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
+      supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
+    ]);
+    const map = new Map<string, any>();
+    (byEntrada.data || []).forEach((l: any) => map.set(l.id, l));
+    (byAgend.data || []).forEach((l: any) => map.set(l.id, l));
+    setMetaLeads(Array.from(map.values()));
   }, [mesRef]);
 
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
@@ -167,10 +169,11 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);
     const totalCarros = unitData.reduce((s, u) => s + u.carrosParaMeta, 0);
+    const totalNaLoja = unitData.reduce((s, u) => s + u.carrosNaLoja, 0);
     const totalPct = totalMeta > 0 ? Math.round((totalCarros / totalMeta) * 100) : 0;
     const achieved = unitData.filter((u) => u.status === "achieved").length;
     const behind = unitData.filter((u) => u.status === "behind").length;
-    return { totalMeta, totalCarros, totalPct, achieved, behind };
+    return { totalMeta, totalCarros, totalNaLoja, totalPct, achieved, behind };
   }, [unitData]);
 
   const handleSave = async () => {
@@ -230,7 +233,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <Target className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
           <p className="text-2xl font-bold">{globalStats.totalMeta}</p>
@@ -240,6 +243,11 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
           <BarChart3 className="h-5 w-5 mx-auto text-primary mb-1" />
           <p className="text-2xl font-bold text-primary">{globalStats.totalCarros}</p>
           <p className="text-xs text-muted-foreground">Meta (Concl.+Perd.)</p>
+        </div>
+        <div className="rounded-xl border border-warning/30 bg-card p-4 text-center">
+          <MapPin className="h-5 w-5 mx-auto text-warning mb-1" />
+          <p className="text-2xl font-bold text-warning">{globalStats.totalNaLoja}</p>
+          <p className="text-xs text-muted-foreground">Na Loja</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />
