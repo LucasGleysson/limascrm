@@ -42,7 +42,8 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
 
   // === 1. Vehicle Flow Stats ===
   const flowStats = useMemo(() => {
-    const foramNaLoja = filteredLeads.filter((l) => isCarroDoAgente(l.etapa));
+    const naLojaStatuses = ["concluido", "confirmado", "dispensado", "perdido", "reagendado"];
+    const foramNaLoja = filteredLeads.filter((l) => naLojaStatuses.includes(l.etapa));
     const portaPassaram = foramNaLoja.filter((l) => l.is_porta);
     const telePassaram = foramNaLoja.filter((l) => !l.is_porta);
 
@@ -122,7 +123,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
   const unitFlow = useMemo(() => {
     return unidades.map((u) => {
       const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
-      const foramNaLoja = unitLeads.filter((l) => isCarroDoAgente(l.etapa));
+      const foramNaLoja = unitLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa));
       const portaUnit = foramNaLoja.filter((l) => l.is_porta).length;
       const teleUnit = foramNaLoja.filter((l) => !l.is_porta).length;
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
@@ -165,7 +166,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
     return agents.map((a) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === a.id);
       const total = aLeads.length;
-      const carrosNaLoja = aLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
+      const carrosNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
       const perdidosDepois = aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;

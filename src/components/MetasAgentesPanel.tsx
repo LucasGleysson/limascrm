@@ -143,9 +143,12 @@ export const MetasAgentesPanel = ({ profiles }: Props) => {
       const meta = metas.find((m) => m.id_agente === ag.id);
       const metaVal = meta?.meta_carros || 0;
 
-      const monthLeads = metaLeads.filter(
-        (l) => l.id_agente === ag.id && l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to
-      );
+      const monthLeads = metaLeads.filter((l) => {
+        if (l.id_agente !== ag.id) return false;
+        const entradaIn = l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to;
+        const agendIn = l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to;
+        return entradaIn || agendIn;
+      });
       const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
       const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
       const naLoja = monthLeads.filter((l) => ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)).length;
