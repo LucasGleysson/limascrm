@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { usePagination } from "@/hooks/usePagination";
+import { TablePagination } from "@/components/TablePagination";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { SERVICOS_TAGS, Lead, ETAPAS_FUNIL } from "@/data/mockData";
@@ -366,17 +368,32 @@ export const ReceptionistDashboard = () => {
                   <Input placeholder="Buscar por nome, telefone ou OS..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} className="pl-10" />
                 </div>
               </div>
-              <Input type="date" value={clientDateFilter} onChange={(e) => setClientDateFilter(e.target.value)} className="w-[160px]" />
               <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {ETAPAS_FUNIL.map((e) => (
+                  <SelectItem value="todos">Todos Status</SelectItem>
+                  {ETAPAS_FUNIL.filter((e) => OS_STATUSES.includes(e.id)).map((e) => (
                     <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-medium">Entrada:</span>
+              <Input type="date" value={clientEntradaStart} onChange={(e) => setClientEntradaStart(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground">até</span>
+              <Input type="date" value={clientEntradaEnd} onChange={(e) => setClientEntradaEnd(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground font-medium ml-2">Agendamento:</span>
+              <Input type="date" value={clientAgendStart} onChange={(e) => setClientAgendStart(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground">até</span>
+              <Input type="date" value={clientAgendEnd} onChange={(e) => setClientAgendEnd(e.target.value)} className="w-[140px] h-8 text-xs" />
+              {(clientEntradaStart || clientEntradaEnd || clientAgendStart || clientAgendEnd) && (
+                <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => { setClientEntradaStart(""); setClientEntradaEnd(""); setClientAgendStart(""); setClientAgendEnd(""); }}>Limpar datas</Button>
+              )}
+            </div>
+
+            <p className="text-muted-foreground text-xs">{filteredClients.length} clientes encontrados</p>
 
             <div className="rounded-xl border bg-card">
               <Table>
