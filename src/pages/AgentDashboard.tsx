@@ -219,16 +219,27 @@ export const AgentDashboard = () => {
   const dailyChartData = useMemo(() => {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const naLojaStatuses = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
+    const naLojaStatuses = ["confirmado", "concluido", "dispensado", "perdido", "reagendado"];
     const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
     for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
       const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
       const agendamentos = monthLeads.filter((l) =>
         l.data_agendamento === dateStr
       ).length;
-      const naLoja = monthLeads.filter((l) =>
-        l.data_agendamento === dateStr && naLojaStatuses.includes(l.etapa)
-      ).length;
+      const naLoja = monthLeads.filter((l) => {
+        if (!naLojaStatuses.includes(l.etapa)) return false;
+        const agendInRange = l.data_agendamento && l.data_agendamento >= mesAtual.from && l.data_agendamento <= mesAtual.to;
+        const entradaInRange = l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to;
+        let refDate: string;
+        if (l.data_agendamento && agendInRange) {
+          refDate = l.data_agendamento;
+        } else if (entradaInRange) {
+          refDate = l.data_entrada;
+        } else {
+          refDate = l.data_agendamento || l.data_entrada;
+        }
+        return refDate === dateStr;
+      }).length;
       data.push({ dia: d, agendamentos, naLoja });
     }
     return data;
