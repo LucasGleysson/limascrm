@@ -102,6 +102,9 @@ export const ReceptionistDashboard = () => {
     return items;
   }, [agendGroups, agendFilter, agendSearch]);
 
+  // Statuses that have an OS (post-scheduling)
+  const OS_STATUSES = ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+
   const filteredClients = useMemo(() => {
     let filtered = unitLeads;
     if (clientSearch) {
@@ -110,14 +113,17 @@ export const ReceptionistDashboard = () => {
         l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (l.numero_os && l.numero_os.toLowerCase().includes(q))
       );
     }
-    if (clientDateFilter) {
-      filtered = filtered.filter((l) => l.data_entrada === clientDateFilter || l.data_agendamento === clientDateFilter);
-    }
+    if (clientEntradaStart) filtered = filtered.filter((l) => l.data_entrada >= clientEntradaStart);
+    if (clientEntradaEnd) filtered = filtered.filter((l) => l.data_entrada <= clientEntradaEnd);
+    if (clientAgendStart) filtered = filtered.filter((l) => l.data_agendamento && l.data_agendamento >= clientAgendStart);
+    if (clientAgendEnd) filtered = filtered.filter((l) => l.data_agendamento && l.data_agendamento <= clientAgendEnd);
     if (clientStatusFilter !== "todos") {
       filtered = filtered.filter((l) => l.etapa === clientStatusFilter);
     }
     return filtered;
-  }, [unitLeads, clientSearch, clientDateFilter, clientStatusFilter]);
+  }, [unitLeads, clientSearch, clientEntradaStart, clientEntradaEnd, clientAgendStart, clientAgendEnd, clientStatusFilter]);
+
+  const clientPagination = usePagination(filteredClients, { pageSize: 20 });
 
   const handleCheckin = async (lead: Lead) => {
     if (loadingAction) return;
