@@ -577,7 +577,17 @@ export const AgentDashboard = () => {
               {/* Daily chart */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <h3 className="font-semibold mb-3">📊 Agendamentos e Na Loja por Dia</h3>
-                <div className="h-64">
+                <div className="flex gap-4 mb-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm" style={{ background: "hsl(var(--primary))" }} />
+                    <span className="text-muted-foreground">Agendamentos: <strong className="text-foreground">{dailyChartData.reduce((s, d) => s + d.agendamentos, 0)}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm" style={{ background: "hsl(142, 71%, 45%)" }} />
+                    <span className="text-muted-foreground">Na Loja: <strong className="text-foreground">{dailyChartData.reduce((s, d) => s + d.naLoja, 0)}</strong></span>
+                  </div>
+                </div>
+                <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
