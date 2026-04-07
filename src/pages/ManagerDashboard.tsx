@@ -50,6 +50,7 @@ export const ManagerDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
+  const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
 
