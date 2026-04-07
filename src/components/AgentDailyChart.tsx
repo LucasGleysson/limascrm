@@ -22,7 +22,17 @@ export const AgentDailyChart: React.FC<AgentDailyChartProps> = ({ leads, periodF
       const agendamentos = leads.filter((l) => l.data_agendamento === dateStr).length;
       const naLoja = leads.filter((l) => {
         if (!naLojaStatuses.includes(l.etapa)) return false;
-        const refDate = l.data_agendamento || l.data_entrada;
+        // Use the date within the period range as reference
+        const agendInRange = l.data_agendamento && l.data_agendamento >= periodFrom && l.data_agendamento <= periodTo;
+        const entradaInRange = l.data_entrada >= periodFrom && l.data_entrada <= periodTo;
+        let refDate: string;
+        if (l.data_agendamento && agendInRange) {
+          refDate = l.data_agendamento;
+        } else if (entradaInRange) {
+          refDate = l.data_entrada;
+        } else {
+          refDate = l.data_agendamento || l.data_entrada;
+        }
         return refDate === dateStr;
       }).length;
       data.push({ dia: dayNum, agendamentos, naLoja });
