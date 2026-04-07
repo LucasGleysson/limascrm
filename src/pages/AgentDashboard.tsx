@@ -224,7 +224,7 @@ export const AgentDashboard = () => {
     for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
       const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
       const agendamentos = monthLeads.filter((l) =>
-        l.data_agendamento === dateStr || (l.data_entrada === dateStr && !["novo", "desqualificado_novo"].includes(l.etapa))
+        l.data_agendamento === dateStr
       ).length;
       const naLoja = monthLeads.filter((l) =>
         l.data_agendamento === dateStr && naLojaStatuses.includes(l.etapa)
