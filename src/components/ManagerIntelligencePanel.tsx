@@ -99,7 +99,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
   // === 4. Conversion metrics ===
   const conversion = useMemo(() => {
     const teleEnviados = tele.length;
-    const teleCheckin = tele.filter((l) => isCarroDoAgente(l.etapa)).length;
+    const teleCheckin = tele.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
     const teleNoShow = tele.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const teleConcluidos = tele.filter((l) => l.etapa === "concluido").length;
     const teleDispensados = tele.filter((l) => l.etapa === "dispensado").length;
