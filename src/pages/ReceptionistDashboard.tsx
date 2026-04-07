@@ -395,7 +395,7 @@ export const ReceptionistDashboard = () => {
 
             <p className="text-muted-foreground text-xs">{filteredClients.length} clientes encontrados</p>
 
-            <div className="rounded-xl border bg-card">
+            <div className="rounded-xl border bg-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -403,14 +403,15 @@ export const ReceptionistDashboard = () => {
                     <TableHead>Telefone</TableHead>
                     <TableHead>OS</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Agendamento</TableHead>
+                    <TableHead>Entrada</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell></TableRow>
+                  {clientPagination.paginatedItems.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell></TableRow>
                   ) : (
-                    filteredClients.map((lead) => {
+                    clientPagination.paginatedItems.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
                       return (
                         <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
@@ -422,6 +423,7 @@ export const ReceptionistDashboard = () => {
                               {etapa?.label || lead.etapa}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-xs">{lead.data_agendamento ? <span className="text-primary font-medium">{formatDateBR(lead.data_agendamento)}</span> : "—"}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">{formatDateBR(lead.data_entrada)}</TableCell>
                         </TableRow>
                       );
@@ -429,6 +431,11 @@ export const ReceptionistDashboard = () => {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={clientPagination.currentPage} totalPages={clientPagination.totalPages}
+                totalItems={clientPagination.totalItems} pageSize={clientPagination.pageSize}
+                onPageChange={clientPagination.goToPage} hasNextPage={clientPagination.hasNextPage} hasPrevPage={clientPagination.hasPrevPage}
+              />
             </div>
           </>
         )}
