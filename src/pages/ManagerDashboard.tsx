@@ -167,6 +167,52 @@ export const ManagerDashboard = () => {
     });
   }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
 
+  const periodRange = useMemo(() => {
+    if (period === "mes") return getMonthRange(mesRef);
+    return getDateRangeForPeriod(period);
+  }, [period, mesRef]);
+
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const tomorrowStr = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; }, []);
+
+  const agenteStats = useMemo(() => {
+    return agentes.map((agente) => {
+      const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
+      const aLeadIds = new Set(aLeads.map((l) => l.id));
+      const passaramNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+      const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+      const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
+      const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
+      const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
+      const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
+      const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
+      const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
+      const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeadIds.has(e.id_lead));
+      const agLembretes = eventos.filter((e) => e.tipo === "lembrete" && aLeadIds.has(e.id_lead));
+      const fupConcluidos = agFollowUps.filter((e) => e.concluido).length;
+      const leadById = new Map(aLeads.map((l) => [l.id, l]));
+      const fupPendentes = agFollowUps.filter((e) => {
+        if (e.concluido || e.data_prevista > todayStr) return false;
+        const lead = leadById.get(e.id_lead);
+        if (!lead || lead.fup_concluido) return false;
+        if (lead.etapa === "dispensado" || lead.etapa === "novo") return true;
+        if (["agendado", "reagendado"].includes(lead.etapa)) return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
+        return false;
+      }).length + agLembretes.filter((e) => !e.concluido && e.data_prevista <= todayStr).length;
+      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      return {
+        ...agente, unidadeNome: unidade?.nome || "—",
+        total: aLeads.length, passaramNaLoja, concluidos, totalAgendamentos,
+        dispensados, perdidos, desqNovos, desqAgendados, perdidosAntes,
+        txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
+      };
+    });
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
+
+  const selectedAgent = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
+
 
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
