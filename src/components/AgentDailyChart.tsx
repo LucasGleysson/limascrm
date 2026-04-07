@@ -13,14 +13,18 @@ export const AgentDailyChart: React.FC<AgentDailyChartProps> = ({ leads, periodF
     const now = new Date();
     const fromDate = new Date(periodFrom + "T00:00:00");
     const toDate = new Date(Math.min(new Date(periodTo + "T00:00:00").getTime(), now.getTime()));
-    const naLojaStatuses = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
+    const naLojaStatuses = ["concluido", "confirmado", "dispensado", "perdido", "reagendado"];
     const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
 
     for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split("T")[0];
       const dayNum = d.getDate();
       const agendamentos = leads.filter((l) => l.data_agendamento === dateStr).length;
-      const naLoja = leads.filter((l) => l.data_agendamento === dateStr && naLojaStatuses.includes(l.etapa)).length;
+      const naLoja = leads.filter((l) => {
+        if (!naLojaStatuses.includes(l.etapa)) return false;
+        const refDate = l.data_agendamento || l.data_entrada;
+        return refDate === dateStr;
+      }).length;
       data.push({ dia: dayNum, agendamentos, naLoja });
     }
     return data;
