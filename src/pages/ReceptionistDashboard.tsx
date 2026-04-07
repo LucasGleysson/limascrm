@@ -45,7 +45,10 @@ export const ReceptionistDashboard = () => {
   const [dispensarMotivo, setDispensarMotivo] = useState("");
 
   const [clientSearch, setClientSearch] = useState("");
-  const [clientDateFilter, setClientDateFilter] = useState("");
+  const [clientEntradaStart, setClientEntradaStart] = useState("");
+  const [clientEntradaEnd, setClientEntradaEnd] = useState("");
+  const [clientAgendStart, setClientAgendStart] = useState("");
+  const [clientAgendEnd, setClientAgendEnd] = useState("");
   const [clientStatusFilter, setClientStatusFilter] = useState("todos");
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
