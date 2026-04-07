@@ -54,12 +54,26 @@ export const ManagerDashboard = () => {
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
+    let from: string | null = null;
+    let to: string | null = null;
     if (period === "mes") {
       const range = getMonthRange(mesRef);
-      result = result.filter((l) => l.data_entrada >= range.from && l.data_entrada <= range.to);
+      from = range.from;
+      to = range.to;
     } else {
-      const { from } = getDateRangeForPeriod(period);
-      if (from) result = result.filter((l) => l.data_entrada >= from);
+      const range = getDateRangeForPeriod(period);
+      from = range.from;
+      to = range.to;
+    }
+    if (from) {
+      const seen = new Set<string>();
+      result = result.filter((l) => {
+        if (seen.has(l.id)) return false;
+        const entradaIn = l.data_entrada >= from! && l.data_entrada <= to!;
+        const agendIn = l.data_agendamento && l.data_agendamento >= from! && l.data_agendamento <= to!;
+        if (entradaIn || agendIn) { seen.add(l.id); return true; }
+        return false;
+      });
     }
     return result;
   }, [leads, unidadeFilter, period, mesRef]);

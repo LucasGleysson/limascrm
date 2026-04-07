@@ -23,7 +23,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
   const { currentUser } = useRole();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [origem, setOrigem] = useState(isPorta ? "Porta" : "Instagram");
+  const [origem, setOrigem] = useState((isPorta || isReceptionist) ? "Porta" : "Instagram");
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
 

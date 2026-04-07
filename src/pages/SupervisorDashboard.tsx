@@ -59,8 +59,16 @@ export const SupervisorDashboard = () => {
   }, [period, mesRef]);
   const filteredLeads = useMemo(() => {
     if (!periodRange.from) return leads;
+    const from = periodRange.from!;
     const to = periodRange.to;
-    return leads.filter((l) => l.data_entrada >= periodRange.from! && l.data_entrada <= to);
+    const seen = new Set<string>();
+    return leads.filter((l) => {
+      if (seen.has(l.id)) return false;
+      const entradaIn = l.data_entrada >= from && l.data_entrada <= to;
+      const agendIn = l.data_agendamento && l.data_agendamento >= from && l.data_agendamento <= to;
+      if (entradaIn || agendIn) { seen.add(l.id); return true; }
+      return false;
+    });
   }, [leads, periodRange]);
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
