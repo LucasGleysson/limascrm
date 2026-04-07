@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { usePagination } from "@/hooks/usePagination";
+import { TablePagination } from "@/components/TablePagination";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { SERVICOS_TAGS, Lead, ETAPAS_FUNIL } from "@/data/mockData";
@@ -45,7 +47,10 @@ export const ReceptionistDashboard = () => {
   const [dispensarMotivo, setDispensarMotivo] = useState("");
 
   const [clientSearch, setClientSearch] = useState("");
-  const [clientDateFilter, setClientDateFilter] = useState("");
+  const [clientEntradaStart, setClientEntradaStart] = useState("");
+  const [clientEntradaEnd, setClientEntradaEnd] = useState("");
+  const [clientAgendStart, setClientAgendStart] = useState("");
+  const [clientAgendEnd, setClientAgendEnd] = useState("");
   const [clientStatusFilter, setClientStatusFilter] = useState("todos");
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -99,6 +104,9 @@ export const ReceptionistDashboard = () => {
     return items;
   }, [agendGroups, agendFilter, agendSearch]);
 
+  // Statuses that have an OS (post-scheduling)
+  const OS_STATUSES = ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+
   const filteredClients = useMemo(() => {
     let filtered = unitLeads;
     if (clientSearch) {
@@ -107,14 +115,17 @@ export const ReceptionistDashboard = () => {
         l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (l.numero_os && l.numero_os.toLowerCase().includes(q))
       );
     }
-    if (clientDateFilter) {
-      filtered = filtered.filter((l) => l.data_entrada === clientDateFilter || l.data_agendamento === clientDateFilter);
-    }
+    if (clientEntradaStart) filtered = filtered.filter((l) => l.data_entrada >= clientEntradaStart);
+    if (clientEntradaEnd) filtered = filtered.filter((l) => l.data_entrada <= clientEntradaEnd);
+    if (clientAgendStart) filtered = filtered.filter((l) => l.data_agendamento && l.data_agendamento >= clientAgendStart);
+    if (clientAgendEnd) filtered = filtered.filter((l) => l.data_agendamento && l.data_agendamento <= clientAgendEnd);
     if (clientStatusFilter !== "todos") {
       filtered = filtered.filter((l) => l.etapa === clientStatusFilter);
     }
     return filtered;
-  }, [unitLeads, clientSearch, clientDateFilter, clientStatusFilter]);
+  }, [unitLeads, clientSearch, clientEntradaStart, clientEntradaEnd, clientAgendStart, clientAgendEnd, clientStatusFilter]);
+
+  const clientPagination = usePagination(filteredClients, { pageSize: 20 });
 
   const handleCheckin = async (lead: Lead) => {
     if (loadingAction) return;
@@ -357,19 +368,34 @@ export const ReceptionistDashboard = () => {
                   <Input placeholder="Buscar por nome, telefone ou OS..." value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} className="pl-10" />
                 </div>
               </div>
-              <Input type="date" value={clientDateFilter} onChange={(e) => setClientDateFilter(e.target.value)} className="w-[160px]" />
               <Select value={clientStatusFilter} onValueChange={setClientStatusFilter}>
-                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {ETAPAS_FUNIL.map((e) => (
+                  <SelectItem value="todos">Todos Status</SelectItem>
+                  {ETAPAS_FUNIL.filter((e) => OS_STATUSES.includes(e.id)).map((e) => (
                     <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="rounded-xl border bg-card">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-medium">Entrada:</span>
+              <Input type="date" value={clientEntradaStart} onChange={(e) => setClientEntradaStart(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground">até</span>
+              <Input type="date" value={clientEntradaEnd} onChange={(e) => setClientEntradaEnd(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground font-medium ml-2">Agendamento:</span>
+              <Input type="date" value={clientAgendStart} onChange={(e) => setClientAgendStart(e.target.value)} className="w-[140px] h-8 text-xs" />
+              <span className="text-muted-foreground">até</span>
+              <Input type="date" value={clientAgendEnd} onChange={(e) => setClientAgendEnd(e.target.value)} className="w-[140px] h-8 text-xs" />
+              {(clientEntradaStart || clientEntradaEnd || clientAgendStart || clientAgendEnd) && (
+                <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => { setClientEntradaStart(""); setClientEntradaEnd(""); setClientAgendStart(""); setClientAgendEnd(""); }}>Limpar datas</Button>
+              )}
+            </div>
+
+            <p className="text-muted-foreground text-xs">{filteredClients.length} clientes encontrados</p>
+
+            <div className="rounded-xl border bg-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -377,14 +403,15 @@ export const ReceptionistDashboard = () => {
                     <TableHead>Telefone</TableHead>
                     <TableHead>OS</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead>Agendamento</TableHead>
+                    <TableHead>Entrada</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell></TableRow>
+                  {clientPagination.paginatedItems.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum cliente encontrado.</TableCell></TableRow>
                   ) : (
-                    filteredClients.map((lead) => {
+                    clientPagination.paginatedItems.map((lead) => {
                       const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
                       return (
                         <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
@@ -396,6 +423,7 @@ export const ReceptionistDashboard = () => {
                               {etapa?.label || lead.etapa}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-xs">{lead.data_agendamento ? <span className="text-primary font-medium">{formatDateBR(lead.data_agendamento)}</span> : "—"}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">{formatDateBR(lead.data_entrada)}</TableCell>
                         </TableRow>
                       );
@@ -403,6 +431,11 @@ export const ReceptionistDashboard = () => {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={clientPagination.currentPage} totalPages={clientPagination.totalPages}
+                totalItems={clientPagination.totalItems} pageSize={clientPagination.pageSize}
+                onPageChange={clientPagination.goToPage} hasNextPage={clientPagination.hasNextPage} hasPrevPage={clientPagination.hasPrevPage}
+              />
             </div>
           </>
         )}
