@@ -782,7 +782,95 @@ export const ManagerDashboard = () => {
           </>
         )}
 
-        {activeTab === "fichas" && <FichasPanel />}
+        {activeTab === "por_agente" && (
+          <>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
+                <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
+              </div>
+              <div className="flex items-center gap-3">{RefreshButton}<PeriodFilter value={period} onChange={setPeriod} />{period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}</div>
+            </div>
+            <div className="space-y-2">
+              {agenteStats.map((ag) => (
+                <div key={ag.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer ${selectedAgente === ag.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
+                  onClick={() => setSelectedAgente(selectedAgente === ag.id ? null : ag.id)}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{ag.nome}</span>
+                      <span className="text-xs text-muted-foreground">({ag.unidadeNome})</span>
+                    </div>
+                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                      <span>{ag.total} leads</span>
+                      <span className="text-primary">{ag.totalAgendamentos} agend.</span>
+                      <span className="text-warning">{ag.passaramNaLoja} loja</span>
+                      <span className="text-success">{ag.concluidos} concl.</span>
+                      <span className="text-destructive">{ag.perdidos} perd.</span>
+                      <span className="font-medium">{ag.txAgendamento}% ag. | {ag.txConversao}% conv.</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 text-xs">
+                    <p className="text-success">{ag.fupConcluidos} FUP ✓</p>
+                    {ag.fupPendentes > 0 && <p className="text-warning">{ag.fupPendentes} FUP ⏳</p>}
+                  </div>
+                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedAgente === ag.id ? "rotate-90" : ""}`} />
+                </div>
+              ))}
+            </div>
+            {selectedAgent && (() => {
+              const todayStr4 = new Date().toISOString().split("T")[0];
+              const produtivos = selectedAgent.total - selectedAgent.desqNovos;
+              const noShow = selectedAgent.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr4).length;
+              const resgatados = selectedAgent.leads.filter((l: Lead) => l.etapa === "reagendado").length;
+              const ganhosFup = selectedAgent.leads.filter((l: Lead) => l.etapa === "concluido" && l.fup_concluido).length;
+              const txComparecimento = selectedAgent.totalAgendamentos > 0 ? Math.round((selectedAgent.passaramNaLoja / selectedAgent.totalAgendamentos) * 100) : 0;
+              const txAproveitamento = produtivos > 0 ? Math.round((selectedAgent.passaramNaLoja / produtivos) * 100) : 0;
+              const rangeStart = new Date(periodRange.from + "T00:00:00");
+              const rangeEnd = new Date(Math.min(new Date(periodRange.to + "T00:00:00").getTime(), new Date().setHours(0,0,0,0)));
+              let bizDays = 0;
+              for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+                const dow = d.getDay(); if (dow !== 0 && dow !== 6) bizDays++;
+              }
+              const elapsed = Math.max(bizDays, 1);
+              const mediaAgend = (selectedAgent.totalAgendamentos / elapsed).toFixed(1);
+              const mediaLoja = (selectedAgent.passaramNaLoja / elapsed).toFixed(1);
+              return (
+                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
+                  <h3 className="font-semibold text-lg">{selectedAgent.nome} — {selectedAgent.unidadeNome}</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selectedAgent.total}</p><p className="text-xs text-muted-foreground">Leads Recebidos</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.desqNovos + selectedAgent.desqAgendados}</p><p className="text-xs text-muted-foreground">Desqualificados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{produtivos}</p><p className="text-xs text-muted-foreground">Produtivos</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selectedAgent.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selectedAgent.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{noShow}</p><p className="text-xs text-muted-foreground">No-Show</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-muted-foreground">{mediaAgend}</p><p className="text-xs text-muted-foreground">Méd. Agend./Dia</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-muted-foreground">{mediaLoja}</p><p className="text-xs text-muted-foreground">Méd. Loja/Dia</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{txComparecimento}%</p><p className="text-xs text-muted-foreground">Tx Comparecimento</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{txAproveitamento}%</p><p className="text-xs text-muted-foreground">Aproveitamento</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-info">{resgatados}</p><p className="text-xs text-muted-foreground">Resgatados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{ganhosFup}</p><p className="text-xs text-muted-foreground">Ganhos c/ FUP</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selectedAgent.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selectedAgent.fupConcluidos}</p><p className="text-xs text-muted-foreground">FUPs Concluídos</p></div>
+                  </div>
+                  <AgentDailyChart leads={selectedAgent.leads} periodFrom={periodRange.from} periodTo={periodRange.to} />
+                </div>
+              );
+            })()}
+          </>
+        )}
+
+
         {activeTab === "diario" && <DailyReportPanel />}
         {activeTab === "followups" && <FollowUpTrackingPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
