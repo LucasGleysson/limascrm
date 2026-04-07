@@ -150,7 +150,7 @@ export const ManagerDashboard = () => {
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
       const carrosNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
-      const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+      const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
       const desqAgendados = uLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
@@ -181,7 +181,7 @@ export const ManagerDashboard = () => {
       const aLeadIds = new Set(aLeads.map((l) => l.id));
       const passaramNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
-      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
+      const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = aLeads.filter((l) => l.etapa === "perdido").length;
       const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
