@@ -21,6 +21,7 @@ import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLo
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
+import { AgentDailyChart } from "@/components/AgentDailyChart";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -790,6 +791,7 @@ export const SupervisorDashboard = () => {
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selected.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selected.fupConcluidos}</p><p className="text-xs text-muted-foreground">FUPs Concluídos</p></div>
                   </div>
+                  <AgentDailyChart leads={selected.leads} periodFrom={periodRange.from} periodTo={periodRange.to} />
                 </div>
               );
             })()}
