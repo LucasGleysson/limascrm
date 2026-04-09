@@ -313,6 +313,7 @@ function mapLead(row: any): Lead {
     checkout: row.checkout,
     is_porta: row.is_porta,
     notas: row.notas,
+    tags_motivo: row.tags_motivo,
     fup_concluido: row.fup_concluido || false,
     fup_concluido_em: row.fup_concluido_em,
     fup_concluido_numero: row.fup_concluido_numero,
