@@ -3,7 +3,6 @@ import { useLeads } from "@/contexts/LeadContext";
 import { usePagination } from "@/hooks/usePagination";
 import { useRole } from "@/contexts/RoleContext";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
-import { foiNaLoja, getStatusBadgeClass } from "@/lib/leadUtils";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { ScheduleModal } from "@/components/ScheduleModal";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";

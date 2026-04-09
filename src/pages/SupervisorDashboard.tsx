@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { ETAPAS_FUNIL } from "@/data/mockData";
-import { foiNaLoja, isPerdidoAntesLoja } from "@/lib/leadUtils";
+import { foiNaLoja, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -18,7 +18,7 @@ import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { DispensaReportPanel } from "@/components/DispensaReportPanel";
-import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
