@@ -179,7 +179,7 @@ export const ManagerDashboard = () => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const aLeadIds = new Set(aLeads.map((l) => l.id));
-      const passaramNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+      const passaramNaLoja = aLeads.filter((l) => foiNaLoja(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;

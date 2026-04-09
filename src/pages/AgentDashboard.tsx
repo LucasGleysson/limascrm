@@ -125,7 +125,7 @@ export const AgentDashboard = () => {
     const desqualificados = cohort.filter((l) => ["desqualificado_novo", "desqualificado_agendado"].includes(l.etapa)).length;
     const produtivos = total - desqualificados;
     const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado_agendado", "desqualificado"].includes(l.etapa)).length;
-    const naLojaOuSuperior = cohort.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
     return {
       total,
