@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { ETAPAS_FUNIL } from "@/data/mockData";
+import { foiNaLoja, isPerdidoAntesLoja } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -84,7 +85,7 @@ export const SupervisorDashboard = () => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const aLeadIds = new Set(aLeads.map((l) => l.id));
-      const passaramNaLoja = aLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+      const passaramNaLoja = aLeads.filter((l) => foiNaLoja(l.etapa)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const agendados = aLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length;
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
@@ -155,7 +156,7 @@ export const SupervisorDashboard = () => {
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const passaramNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+      const passaramNaLoja = uLeads.filter((l) => foiNaLoja(l.etapa)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
@@ -177,7 +178,7 @@ export const SupervisorDashboard = () => {
   }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
 
   const globalStats = useMemo(() => {
-    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
@@ -680,7 +681,7 @@ export const SupervisorDashboard = () => {
                         <tbody>
                           {sel.unitAgents.map((ag) => {
                             const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLoja = agLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+                            const agNaLoja = agLeads.filter((l) => foiNaLoja(l.etapa)).length;
                             const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
                             const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
