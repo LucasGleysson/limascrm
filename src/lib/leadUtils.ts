@@ -21,7 +21,7 @@ export const getStatusBadgeClass = (etapa: string): string => {
 
 /** Check if a lead went to the store (confirmado+) */
 export const foiNaLoja = (etapa: string): boolean =>
-  ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(etapa);
+  ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"].includes(etapa);
 
 /** Na Loja = Concluído + Dispensado + Perdido */
 export const isCarroDoAgente = (etapa: string): boolean =>

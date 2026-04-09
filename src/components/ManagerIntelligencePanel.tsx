@@ -9,7 +9,7 @@ import {
   PieChart, Pie, Cell, Legend, CartesianGrid
 } from "recharts";
 import type { Lead, Unidade } from "@/data/mockData";
-import { isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { foiNaLoja, isCarroDoAgente, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 
 interface Props {
   filteredLeads: Lead[];
@@ -42,8 +42,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
 
   // === 1. Vehicle Flow Stats ===
   const flowStats = useMemo(() => {
-    const naLojaStatuses = ["concluido", "confirmado", "dispensado", "perdido", "reagendado"];
-    const foramNaLoja = filteredLeads.filter((l) => naLojaStatuses.includes(l.etapa));
+    const foramNaLoja = filteredLeads.filter((l) => foiNaLoja(l.etapa));
     const portaPassaram = foramNaLoja.filter((l) => l.is_porta);
     const telePassaram = foramNaLoja.filter((l) => !l.is_porta);
 
