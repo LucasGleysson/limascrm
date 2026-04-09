@@ -205,14 +205,17 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const handleDisqualify = async () => {
-    if (!disqualifyMotivo.trim()) return;
+    if (!disqualifyMotivo.trim() && disqualifyTags.length === 0) return;
     const status = getDisqualifyStatus();
     const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
     let motivo = disqualifyMotivo.trim();
     if (disqualifyOutraCidade) motivo = `[Outra Cidade] ${motivo}`;
-    const notas = appendNota(lead.notas, label, motivo);
-    await updateLead(lead.id, { etapa: status, notas });
+    const tagsText = disqualifyTags.length > 0 ? `[${disqualifyTags.join(", ")}]` : "";
+    const fullMotivo = [tagsText, motivo].filter(Boolean).join(" ");
+    const notas = appendNota(lead.notas, label, fullMotivo);
+    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags.length > 0 ? disqualifyTags : null } as any);
     setDisqualifyMotivo("");
+    setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setDisqualifyOpen(false);
   };
