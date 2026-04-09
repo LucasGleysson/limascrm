@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
 import { ORIGENS, Lead } from "@/data/mockData";
+import { foiNaLoja, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -18,7 +19,6 @@ import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
@@ -82,7 +82,7 @@ export const ManagerDashboard = () => {
   }, [leads, unidadeFilter, period, mesRef]);
 
   const stats = useMemo(() => {
-    const carrosNaLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+    const carrosNaLoja = filteredLeads.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
@@ -107,7 +107,7 @@ export const ManagerDashboard = () => {
   const funnelData = useMemo(() => {
     const total = filteredLeads.length;
     const agendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
-    const naLoja = filteredLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+    const naLoja = filteredLeads.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
     const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
     const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
@@ -149,7 +149,7 @@ export const ManagerDashboard = () => {
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
-      const carrosNaLoja = uLeads.filter((l) => ["concluido", "confirmado", "dispensado", "perdido", "reagendado"].includes(l.etapa)).length;
+      const carrosNaLoja = uLeads.filter((l) => foiNaLoja(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;

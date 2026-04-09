@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import type { Lead } from "@/data/mockData";
+import { foiNaLoja } from "@/lib/leadUtils";
 
 interface AgentDailyChartProps {
   leads: Lead[];
@@ -13,7 +14,6 @@ export const AgentDailyChart: React.FC<AgentDailyChartProps> = ({ leads, periodF
     const now = new Date();
     const fromDate = new Date(periodFrom + "T00:00:00");
     const toDate = new Date(Math.min(new Date(periodTo + "T00:00:00").getTime(), now.getTime()));
-    const naLojaStatuses = ["concluido", "confirmado", "dispensado", "perdido", "reagendado"];
     const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
 
     for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
@@ -21,7 +21,7 @@ export const AgentDailyChart: React.FC<AgentDailyChartProps> = ({ leads, periodF
       const dayNum = d.getDate();
       const agendamentos = leads.filter((l) => l.data_agendamento === dateStr).length;
       const naLoja = leads.filter((l) => {
-        if (!naLojaStatuses.includes(l.etapa)) return false;
+        if (!foiNaLoja(l.etapa)) return false;
         // Use the date within the period range as reference
         const agendInRange = l.data_agendamento && l.data_agendamento >= periodFrom && l.data_agendamento <= periodTo;
         const entradaInRange = l.data_entrada >= periodFrom && l.data_entrada <= periodTo;

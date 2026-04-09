@@ -3,7 +3,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronDown, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
-import { isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { foiNaLoja, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
@@ -25,8 +25,7 @@ export const DailyReportPanel = () => {
   // This ensures metrics are stable even when check-in is registered late (next day, etc.).
   const passaramNaLojaNoDia = useMemo(() => {
     return leads.filter((l) => {
-      const naLojaEtapas = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado"];
-      if (!naLojaEtapas.includes(l.etapa)) return false;
+      if (!foiNaLoja(l.etapa)) return false;
       // Primary: use data_agendamento as the real event date
       if (l.data_agendamento) return l.data_agendamento === dateStr;
       // Walk-ins without appointment: use checkin date, then data_entrada

@@ -93,7 +93,7 @@ export const AgentDashboard = () => {
   const dailyStats = useMemo(() => {
     const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
-    const carrosHoje = todayAgendados.filter((l) => ["confirmado", "na_loja", "concluido", "dispensado", "perdido"].includes(l.etapa)).length;
+    const carrosHoje = todayAgendados.filter((l) => foiNaLoja(l.etapa)).length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
       const isEligible = (lead: Lead): boolean => {
         if (lead.fup_concluido) return false;
@@ -174,9 +174,7 @@ export const AgentDashboard = () => {
     const agendados = monthLeads.filter((l) =>
       !["novo", "desqualificado_novo"].includes(l.etapa)
     ).length;
-    const naLoja = monthLeads.filter((l) =>
-      ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)
-    ).length;
+    const naLoja = monthLeads.filter((l) => foiNaLoja(l.etapa)).length;
     const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
     const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
@@ -219,7 +217,6 @@ export const AgentDashboard = () => {
   const dailyChartData = useMemo(() => {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const naLojaStatuses = ["confirmado", "concluido", "dispensado", "perdido", "reagendado"];
     const data: { dia: number; agendamentos: number; naLoja: number }[] = [];
     for (let d = 1; d <= Math.min(daysInMonth, now.getDate()); d++) {
       const dateStr = `${mesAtual.from.slice(0, 8)}${String(d).padStart(2, "0")}`;
@@ -227,7 +224,7 @@ export const AgentDashboard = () => {
         l.data_agendamento === dateStr
       ).length;
       const naLoja = monthLeads.filter((l) => {
-        if (!naLojaStatuses.includes(l.etapa)) return false;
+        if (!foiNaLoja(l.etapa)) return false;
         const agendInRange = l.data_agendamento && l.data_agendamento >= mesAtual.from && l.data_agendamento <= mesAtual.to;
         const entradaInRange = l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to;
         let refDate: string;
