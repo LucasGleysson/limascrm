@@ -1,57 +1,62 @@
 
 
-## Plano: Tags de Motivo — com edição posterior
+## Auditoria: Contagem "Na Loja" nos Dashboards
 
-### Resumo
+### Problema identificado
 
-Implementar `tags_motivo` como campo estruturado na base, com seleção no momento da ação (dispensa/perda/desqualificação) **e** edição posterior na ficha do cliente.
+Há **inconsistência na lista de status** que define "passou na loja" entre os diferentes painéis. Cada local usa uma combinação ligeiramente diferente:
 
-### 1. Migration SQL
-
-```sql
-ALTER TABLE public.leads ADD COLUMN tags_motivo text[] DEFAULT NULL;
+```text
+Arquivo                          | Status usados para "Na Loja"
+---------------------------------|--------------------------------------------
+leadUtils.ts (foiNaLoja)         | confirmado, na_loja, concluido, dispensado, perdido
+                                 | ❌ falta "reagendado"
+                                 |
+DailyReportPanel                 | confirmado, na_loja, concluido, dispensado, perdido, reagendado
+                                 | ✅ inclui na_loja + reagendado
+                                 |
+ManagerDashboard (cards+funil)   | confirmado, concluido, dispensado, perdido, reagendado
+                                 | ❌ falta "na_loja"
+                                 |
+SupervisorDashboard              | confirmado, concluido, dispensado, perdido, reagendado
+                                 | ❌ falta "na_loja"
+                                 |
+AgentDashboard (desempenho)      | confirmado, concluido, dispensado, perdido, reagendado
+                                 | ❌ falta "na_loja"
+                                 |
+AgentDailyChart (gráfico)        | confirmado, concluido, dispensado, perdido, reagendado
+                                 | ❌ falta "na_loja"
+                                 |
+ManagerIntelligencePanel         | confirmado, concluido, dispensado, perdido, reagendado
+                                 | ❌ falta "na_loja"
 ```
 
-### 2. Constantes (`mockData.ts`)
+O status `na_loja` é um status intermediário real (cliente está fisicamente na loja mas ainda não concluiu). Se não for contado, clientes em atendimento ativo são ignorados da métrica "Na Loja".
 
-- **`TAGS_MOTIVO_OS`**: "Loja Cheia", "Aguardando Orçamento", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peça"
-- **`TAGS_MOTIVO_NOVO`**: "Não Fazemos Serviço", "Retirada de Peças", "Delicado", "Outra Cidade", "Em Breve"
+O status `reagendado` indica resgate — o cliente já esteve na loja. Deve ser contado.
 
-### 3. Interface Lead + mapLead
+### Solução
 
-Adicionar `tags_motivo?: string[] | null` na interface e no mapeamento do `LeadContext.tsx`.
+Padronizar **todos os locais** para usar a mesma lista canônica, atualizando a função utilitária `foiNaLoja` e substituindo listas inline por chamadas a essa função.
 
-### 4. Componente reutilizável `MotivoTagSelector`
-
-Badges clicáveis (igual tags de serviço) que recebe lista de opções e retorna selecionadas.
-
-### 5. Integração nos modais de ação
-
-| Modal | Arquivo | Tags |
-|-------|---------|------|
-| Desqualificar (novo) | `LeadDetailSheet.tsx` | `TAGS_MOTIVO_NOVO` |
-| Desqualificar (agendado) | `LeadDetailSheet.tsx` | `TAGS_MOTIVO_OS` |
-| Marcar como Perda | `LeadDetailSheet.tsx`, `EventoPanel.tsx` | `TAGS_MOTIVO_OS` |
-| Dispensar | `AgentReceptionPanel.tsx`, `ReceptionistDashboard.tsx` | `TAGS_MOTIVO_OS` |
-
-### 6. Edição posterior na ficha do cliente
-
-No `LeadDetailSheet.tsx`, quando o lead estiver em status terminal (dispensado, perdido, desqualificado*), exibir as `tags_motivo` como badges com um botão "Editar" ao lado. Ao clicar, abre um mini-modal ou inline editor com o `MotivoTagSelector` pré-preenchido, permitindo adicionar/remover tags e salvar via `updateLead`.
-
-### 7. Exibição visual
-
-Tags de motivo aparecem na ficha com cor `destructive`/`outline` vermelho, visualmente distintas das tags de serviço.
+**Lista canônica (6 status):**
+`confirmado`, `na_loja`, `concluido`, `dispensado`, `perdido`, `reagendado`
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | `ADD COLUMN tags_motivo text[]` |
-| `mockData.ts` | Interface Lead + constantes |
-| `LeadContext.tsx` | mapLead + addLead/updateLead |
-| Novo `MotivoTagSelector.tsx` | Componente reutilizável |
-| `LeadDetailSheet.tsx` | Tags nos modais + exibição editável |
-| `AgentReceptionPanel.tsx` | Tags no modal de dispensar |
-| `ReceptionistDashboard.tsx` | Tags no modal de dispensar |
-| `EventoPanel.tsx` | Tags no modal de perda |
+| `src/lib/leadUtils.ts` | Adicionar `reagendado` à função `foiNaLoja` |
+| `src/pages/ManagerDashboard.tsx` | Substituir lista inline por `foiNaLoja` (2 locais) |
+| `src/pages/SupervisorDashboard.tsx` | Substituir listas inline por `foiNaLoja` (3 locais) |
+| `src/pages/AgentDashboard.tsx` | Substituir lista inline no `desempenho` e `dailyChartData` por `foiNaLoja` |
+| `src/components/AgentDailyChart.tsx` | Substituir lista inline por `foiNaLoja` |
+| `src/components/ManagerIntelligencePanel.tsx` | Substituir lista inline por `foiNaLoja` |
+| `src/components/DailyReportPanel.tsx` | Substituir lista inline por `foiNaLoja` (já está correto, apenas centralizar) |
+
+### Impacto esperado
+
+- Clientes com status `na_loja` (em atendimento) passam a ser contados em **todos** os dashboards, não apenas no Relatório Diário
+- Clientes `reagendado` passam a ser contados na função utilitária `foiNaLoja` (já eram contados nos dashboards mas não na função)
+- Contagens entre cards e gráficos ficam 100% alinhadas em todos os perfis
 
