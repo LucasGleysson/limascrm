@@ -236,21 +236,29 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const handleMarkLoss = async () => {
-    if (!lossMotivo.trim() || markingLossRef.current) return;
+    if ((!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
+      const tagsText = lossTags.length > 0 ? `[${lossTags.join(", ")}]` : "";
+      const fullMotivo = [tagsText, lossMotivo.trim()].filter(Boolean).join(" ");
       if (isSupervisorOrGestor) {
-        const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
-        await updateLead(lead.id, { etapa: "perdido", notas });
+        const notas = appendNota(lead.notas, "Marcado como Perda", fullMotivo);
+        await updateLead(lead.id, { etapa: "perdido", notas, tags_motivo: lossTags.length > 0 ? lossTags : lead.tags_motivo } as any);
       } else {
-        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
-        await updateLead(lead.id, { etapa: "analise_supervisor", notas });
+        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", fullMotivo);
+        await updateLead(lead.id, { etapa: "analise_supervisor", notas, tags_motivo: lossTags.length > 0 ? lossTags : lead.tags_motivo } as any);
       }
       setLossOpen(false);
       setLossMotivo("");
+      setLossTags([]);
     } finally {
       markingLossRef.current = false;
     }
+  };
+
+  const handleSaveMotivoTags = async () => {
+    await updateLead(lead.id, { tags_motivo: editMotivoTags.length > 0 ? editMotivoTags : null } as any);
+    setEditMotivoTagsOpen(false);
   };
 
   const handleAddNota = async () => {
