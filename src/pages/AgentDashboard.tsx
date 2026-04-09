@@ -256,7 +256,7 @@ export const AgentDashboard = () => {
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
-    const carrosNaLoja = storeLeads.filter((l) => ["concluido", "dispensado", "perdido"].includes(l.etapa)).length;
+    const carrosNaLoja = storeLeads.filter((l) => foiNaLoja(l.etapa)).length;
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
 
