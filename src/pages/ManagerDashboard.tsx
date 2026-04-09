@@ -433,7 +433,7 @@ export const ManagerDashboard = () => {
                         const oLeads = filteredLeads.filter((l) => l.origem === origem);
                         if (oLeads.length === 0) return null;
                         const desqNovo = oLeads.filter((l) => l.etapa === "desqualificado_novo").length;
-                        const naLoja = oLeads.filter((l) => ["concluido", "dispensado", "perdido", "confirmado", "reagendado"].includes(l.etapa)).length;
+                        const naLoja = oLeads.filter((l) => foiNaLoja(l.etapa)).length;
                         const dispensados = oLeads.filter((l) => l.etapa === "dispensado").length;
                         const agendados = oLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                         const noShow = oLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;

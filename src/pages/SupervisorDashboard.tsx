@@ -338,7 +338,7 @@ export const SupervisorDashboard = () => {
                 const cohort = filteredLeads.filter((l) => l.id_agente === ag.id && (l.created_at ? l.created_at.slice(0, 10) : l.data_entrada) === todayStr);
                 const total = cohort.length;
                 const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
-                const naLoja = cohort.filter((l) => isCarroDoAgente(l.etapa)).length;
+                const naLoja = cohort.filter((l) => foiNaLoja(l.etapa)).length;
                 const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
                 const unidade = unidades.find((u) => u.id === ag.unidade_padrao);
                 return { ...ag, unidadeNome: unidade?.nome || "—", total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
