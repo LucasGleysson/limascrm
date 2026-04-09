@@ -615,8 +615,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
       )}
 
       {/* Disqualify modal */}
-      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim())}>
+      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim() && disqualifyTags.length === 0)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
@@ -626,7 +626,17 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
             <p className="text-sm text-muted-foreground">
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
-            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo da desqualificação..." rows={3} />
+            <div>
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={lead.etapa === "novo" ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  selected={disqualifyTags}
+                  onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo adicional (opcional se tag selecionada)..." rows={3} />
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="outra-cidade"
@@ -639,14 +649,14 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
+            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim() && disqualifyTags.length === 0}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Mark as Loss / Send to Analysis modal */}
-      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
+      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) { setLossMotivo(""); setLossTags([]); } setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -665,6 +675,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               }
             </p>
             <div>
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={TAGS_MOTIVO_OS}
+                  selected={lossTags}
+                  onToggle={(tag) => setLossTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <div>
               <Label>{isSupervisorOrGestor ? "Motivo da perda" : "Motivo do envio para análise"}</Label>
               <Textarea
                 value={lossMotivo}
@@ -672,21 +692,43 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 placeholder="Ex: Fez serviço em concorrente, desistiu..."
                 rows={3}
                 className="mt-1"
-                onKeyDown={(e) => handleKeyDown(e, handleMarkLoss, !lossMotivo.trim())}
+                onKeyDown={(e) => handleKeyDown(e, handleMarkLoss, !lossMotivo.trim() && lossTags.length === 0)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossTags([]); setLossOpen(false); }}>Cancelar</Button>
             {isSupervisorOrGestor ? (
-              <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
+              <Button variant="destructive" onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2">
                 <Skull className="h-4 w-4" /> Confirmar Perda
               </Button>
             ) : (
-              <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+              <Button onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
                 <AlertCircle className="h-4 w-4" /> Enviar para Análise
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit motivo tags modal */}
+      <Dialog open={editMotivoTagsOpen} onOpenChange={setEditMotivoTagsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Tags de Motivo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <MotivoTagSelector
+              tags={["desqualificado_novo"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+              selected={editMotivoTags}
+              onToggle={(tag) => setEditMotivoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMotivoTagsOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveMotivoTags} className="gap-2">
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
