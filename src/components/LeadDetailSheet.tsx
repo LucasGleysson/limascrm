@@ -498,6 +498,30 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </div>
                 )}
 
+                {/* Tags de motivo */}
+                {(lead.tags_motivo && lead.tags_motivo.length > 0) || ["dispensado", "perdido", "desqualificado_novo", "desqualificado_agendado", "analise_supervisor"].includes(lead.etapa) ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Motivo</Label>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs" onClick={() => {
+                        setEditMotivoTags(lead.tags_motivo || []);
+                        setEditMotivoTagsOpen(true);
+                      }}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {lead.tags_motivo && lead.tags_motivo.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {lead.tags_motivo.map((t) => (
+                          <Badge key={t} variant="destructive" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nenhuma tag de motivo adicionada</p>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Notas + Timeline section */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
