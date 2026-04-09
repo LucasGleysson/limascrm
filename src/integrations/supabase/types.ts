@@ -113,6 +113,7 @@ export type Database = {
           notas: string | null
           numero_os: string | null
           origem: string
+          tags_motivo: string[] | null
           tags_servico: string[] | null
           telefone: string
           updated_at: string
@@ -138,6 +139,7 @@ export type Database = {
           notas?: string | null
           numero_os?: string | null
           origem?: string
+          tags_motivo?: string[] | null
           tags_servico?: string[] | null
           telefone: string
           updated_at?: string
@@ -163,6 +165,7 @@ export type Database = {
           notas?: string | null
           numero_os?: string | null
           origem?: string
+          tags_motivo?: string[] | null
           tags_servico?: string[] | null
           telefone?: string
           updated_at?: string
