@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
+import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO } from "@/data/mockData";
+import { MotivoTagSelector } from "./MotivoTagSelector";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
@@ -42,11 +43,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [disqualifyOpen, setDisqualifyOpen] = useState(false);
   const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
+  const [disqualifyTags, setDisqualifyTags] = useState<string[]>([]);
   const [disqualifyOutraCidade, setDisqualifyOutraCidade] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
   const [lossOpen, setLossOpen] = useState(false);
   const [lossMotivo, setLossMotivo] = useState("");
+  const [lossTags, setLossTags] = useState<string[]>([]);
   const markingLossRef = useRef(false);
+
+  const [editMotivoTagsOpen, setEditMotivoTagsOpen] = useState(false);
+  const [editMotivoTags, setEditMotivoTags] = useState<string[]>([]);
 
   const [editNome, setEditNome] = useState("");
   const [editTelefone, setEditTelefone] = useState("");
@@ -75,6 +81,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setScheduleOpen(false);
     setDisqualifyOpen(false);
     setDisqualifyMotivo("");
+    setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setNewNota("");
     setCreateEventOpen(false);
@@ -83,6 +90,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setStatusChangeOpen(false);
     setLossOpen(false);
     setLossMotivo("");
+    setLossTags([]);
     creatingEventRef.current = false;
     markingLossRef.current = false;
   }, [lead?.id]);
@@ -197,14 +205,17 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const handleDisqualify = async () => {
-    if (!disqualifyMotivo.trim()) return;
+    if (!disqualifyMotivo.trim() && disqualifyTags.length === 0) return;
     const status = getDisqualifyStatus();
     const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
     let motivo = disqualifyMotivo.trim();
     if (disqualifyOutraCidade) motivo = `[Outra Cidade] ${motivo}`;
-    const notas = appendNota(lead.notas, label, motivo);
-    await updateLead(lead.id, { etapa: status, notas });
+    const tagsText = disqualifyTags.length > 0 ? `[${disqualifyTags.join(", ")}]` : "";
+    const fullMotivo = [tagsText, motivo].filter(Boolean).join(" ");
+    const notas = appendNota(lead.notas, label, fullMotivo);
+    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags.length > 0 ? disqualifyTags : null } as any);
     setDisqualifyMotivo("");
+    setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setDisqualifyOpen(false);
   };
@@ -225,21 +236,29 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const handleMarkLoss = async () => {
-    if (!lossMotivo.trim() || markingLossRef.current) return;
+    if ((!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
+      const tagsText = lossTags.length > 0 ? `[${lossTags.join(", ")}]` : "";
+      const fullMotivo = [tagsText, lossMotivo.trim()].filter(Boolean).join(" ");
       if (isSupervisorOrGestor) {
-        const notas = appendNota(lead.notas, "Marcado como Perda", lossMotivo.trim());
-        await updateLead(lead.id, { etapa: "perdido", notas });
+        const notas = appendNota(lead.notas, "Marcado como Perda", fullMotivo);
+        await updateLead(lead.id, { etapa: "perdido", notas, tags_motivo: lossTags.length > 0 ? lossTags : lead.tags_motivo } as any);
       } else {
-        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
-        await updateLead(lead.id, { etapa: "analise_supervisor", notas });
+        const notas = appendNota(lead.notas, "Enviado para Análise do Supervisor", fullMotivo);
+        await updateLead(lead.id, { etapa: "analise_supervisor", notas, tags_motivo: lossTags.length > 0 ? lossTags : lead.tags_motivo } as any);
       }
       setLossOpen(false);
       setLossMotivo("");
+      setLossTags([]);
     } finally {
       markingLossRef.current = false;
     }
+  };
+
+  const handleSaveMotivoTags = async () => {
+    await updateLead(lead.id, { tags_motivo: editMotivoTags.length > 0 ? editMotivoTags : null } as any);
+    setEditMotivoTagsOpen(false);
   };
 
   const handleAddNota = async () => {
@@ -479,6 +498,30 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   </div>
                 )}
 
+                {/* Tags de motivo */}
+                {(lead.tags_motivo && lead.tags_motivo.length > 0) || ["dispensado", "perdido", "desqualificado_novo", "desqualificado_agendado", "analise_supervisor"].includes(lead.etapa) ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Motivo</Label>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs" onClick={() => {
+                        setEditMotivoTags(lead.tags_motivo || []);
+                        setEditMotivoTagsOpen(true);
+                      }}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {lead.tags_motivo && lead.tags_motivo.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {lead.tags_motivo.map((t) => (
+                          <Badge key={t} variant="destructive" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Nenhuma tag de motivo adicionada</p>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Notas + Timeline section */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -572,8 +615,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
       )}
 
       {/* Disqualify modal */}
-      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim())}>
+      <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim() && disqualifyTags.length === 0)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
@@ -583,7 +626,17 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
             <p className="text-sm text-muted-foreground">
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
-            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo da desqualificação..." rows={3} />
+            <div>
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={lead.etapa === "novo" ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  selected={disqualifyTags}
+                  onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo adicional (opcional se tag selecionada)..." rows={3} />
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="outra-cidade"
@@ -596,14 +649,14 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim()}>Confirmar</Button>
+            <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim() && disqualifyTags.length === 0}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Mark as Loss / Send to Analysis modal */}
-      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
+      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) { setLossMotivo(""); setLossTags([]); } setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -622,6 +675,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               }
             </p>
             <div>
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={TAGS_MOTIVO_OS}
+                  selected={lossTags}
+                  onToggle={(tag) => setLossTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <div>
               <Label>{isSupervisorOrGestor ? "Motivo da perda" : "Motivo do envio para análise"}</Label>
               <Textarea
                 value={lossMotivo}
@@ -629,21 +692,43 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 placeholder="Ex: Fez serviço em concorrente, desistiu..."
                 rows={3}
                 className="mt-1"
-                onKeyDown={(e) => handleKeyDown(e, handleMarkLoss, !lossMotivo.trim())}
+                onKeyDown={(e) => handleKeyDown(e, handleMarkLoss, !lossMotivo.trim() && lossTags.length === 0)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossTags([]); setLossOpen(false); }}>Cancelar</Button>
             {isSupervisorOrGestor ? (
-              <Button variant="destructive" onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2">
+              <Button variant="destructive" onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2">
                 <Skull className="h-4 w-4" /> Confirmar Perda
               </Button>
             ) : (
-              <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+              <Button onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
                 <AlertCircle className="h-4 w-4" /> Enviar para Análise
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit motivo tags modal */}
+      <Dialog open={editMotivoTagsOpen} onOpenChange={setEditMotivoTagsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Tags de Motivo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <MotivoTagSelector
+              tags={["desqualificado_novo"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+              selected={editMotivoTags}
+              onToggle={(tag) => setEditMotivoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMotivoTagsOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveMotivoTags} className="gap-2">
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

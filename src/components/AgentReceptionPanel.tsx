@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
-import { SERVICOS_TAGS, Lead } from "@/data/mockData";
+import { SERVICOS_TAGS, Lead, TAGS_MOTIVO_OS } from "@/data/mockData";
+import { MotivoTagSelector } from "./MotivoTagSelector";
 import { StatsCard } from "@/components/StatsCard";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export const AgentReceptionPanel = () => {
   const [dispensarOpen, setDispensarOpen] = useState(false);
   const [dispensarLead, setDispensarLead] = useState<Lead | null>(null);
   const [dispensarMotivo, setDispensarMotivo] = useState("");
+  const [dispensarTags, setDispensarTags] = useState<string[]>([]);
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -99,15 +101,17 @@ export const AgentReceptionPanel = () => {
   };
 
   const handleDispensarOpen = (lead: Lead) => {
-    setDispensarLead(lead); setDispensarMotivo(""); setDispensarOpen(true);
+    setDispensarLead(lead); setDispensarMotivo(""); setDispensarTags([]); setDispensarOpen(true);
   };
 
   const handleDispensarSubmit = async () => {
-    if (!dispensarLead || !dispensarMotivo.trim() || loadingAction) return;
+    if (!dispensarLead || (!dispensarMotivo.trim() && dispensarTags.length === 0) || loadingAction) return;
     setLoadingAction("dispensar");
     try {
-      const notas = appendNota(dispensarLead.notas, "Dispensado", dispensarMotivo.trim());
-      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas });
+      const tagsText = dispensarTags.length > 0 ? `[${dispensarTags.join(", ")}]` : "";
+      const fullMotivo = [tagsText, dispensarMotivo.trim()].filter(Boolean).join(" ");
+      const notas = appendNota(dispensarLead.notas, "Dispensado", fullMotivo);
+      await updateLead(dispensarLead.id, { etapa: "dispensado", checkout: null, tags_servico: null, notas, tags_motivo: dispensarTags.length > 0 ? dispensarTags : null } as any);
       await supabase.functions.invoke("generate-followups");
       setDispensarOpen(false);
       setDispensarLead(null);
@@ -275,7 +279,7 @@ export const AgentReceptionPanel = () => {
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
       <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, !dispensarMotivo.trim() || loadingAction === "dispensar")}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, !dispensarMotivo.trim() && dispensarTags.length === 0 || loadingAction === "dispensar")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-destructive" /> Dispensar: {dispensarLead?.nome}
@@ -283,13 +287,23 @@ export const AgentReceptionPanel = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Motivo da dispensa <span className="text-destructive">*</span></Label>
-              <Textarea value={dispensarMotivo} onChange={(e) => setDispensarMotivo(e.target.value)} placeholder="Descreva o motivo..." className="mt-1" />
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={TAGS_MOTIVO_OS}
+                  selected={dispensarTags}
+                  onToggle={(tag) => setDispensarTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Motivo da dispensa</Label>
+              <Textarea value={dispensarMotivo} onChange={(e) => setDispensarMotivo(e.target.value)} placeholder="Descreva o motivo (opcional se tag selecionada)..." className="mt-1" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={!dispensarMotivo.trim() || loadingAction === "dispensar"}>
+            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={(!dispensarMotivo.trim() && dispensarTags.length === 0) || loadingAction === "dispensar"}>
               {loadingAction === "dispensar" ? "Aguarde..." : "Confirmar"}
             </Button>
           </DialogFooter>

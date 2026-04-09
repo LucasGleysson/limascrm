@@ -27,6 +27,14 @@ export const SERVICOS_TAGS = [
   "Amortecedor", "Freio", "Óleo", "Alinhamento", "Balanceamento", "Cambagem", "Homocinética"
 ];
 
+export const TAGS_MOTIVO_OS = [
+  "Loja Cheia", "Aguardando Orçamento", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peça"
+];
+
+export const TAGS_MOTIVO_NOVO = [
+  "Não Fazemos Serviço", "Retirada de Peças", "Delicado", "Outra Cidade", "Em Breve"
+];
+
 export type UserRole = "agente" | "recepcionista" | "supervisor" | "gestor";
 
 export interface Lead {
@@ -47,6 +55,7 @@ export interface Lead {
   is_porta?: boolean | null;
   notas?: string | null;
   id_recepcionista?: string | null;
+  tags_motivo?: string[] | null;
   fup_concluido?: boolean;
   fup_concluido_em?: string | null;
   fup_concluido_numero?: number | null;

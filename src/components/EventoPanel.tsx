@@ -13,7 +13,8 @@ import { TablePagination } from "@/components/TablePagination";
 import { usePagination } from "@/hooks/usePagination";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag, Skull, XCircle, Search } from "lucide-react";
-import { Evento, Lead, ETAPAS_FUNIL } from "@/data/mockData";
+import { Evento, Lead, ETAPAS_FUNIL, TAGS_MOTIVO_OS } from "@/data/mockData";
+import { MotivoTagSelector } from "./MotivoTagSelector";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { formatPhone } from "@/lib/phoneUtils";
@@ -43,6 +44,7 @@ export const EventoPanel = () => {
   const [lossOpen, setLossOpen] = useState(false);
   const [lossLead, setLossLead] = useState<Lead | null>(null);
   const [lossMotivo, setLossMotivo] = useState("");
+  const [lossTags, setLossTags] = useState<string[]>([]);
 
   const [fupSearch, setFupSearch] = useState("");
   const [fupCategoryFilter, setFupCategoryFilter] = useState<string | null>(null);
@@ -227,10 +229,12 @@ export const EventoPanel = () => {
   };
 
   const handleMarkLoss = async () => {
-    if (!lossLead || !lossMotivo.trim() || markingLossRef.current) return;
+    if (!lossLead || (!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
-      const notas = appendNota(lossLead.notas, "Enviado para Análise do Supervisor", lossMotivo.trim());
+      const tagsText = lossTags.length > 0 ? `[${lossTags.join(", ")}]` : "";
+      const fullMotivo = [tagsText, lossMotivo.trim()].filter(Boolean).join(" ");
+      const notas = appendNota(lossLead.notas, "Enviado para Análise do Supervisor", fullMotivo);
       const fups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === lossLead.id);
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
       await updateLead(lossLead.id, {
@@ -239,10 +243,12 @@ export const EventoPanel = () => {
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
         fup_concluido_numero: maxFup,
-        fup_motivo_conclusao: `Análise: ${lossMotivo.trim()}`,
-      });
+        fup_motivo_conclusao: `Análise: ${fullMotivo}`,
+        tags_motivo: lossTags.length > 0 ? lossTags : null,
+      } as any);
       setLossOpen(false);
       setLossMotivo("");
+      setLossTags([]);
       setLossLead(null);
     } finally {
       markingLossRef.current = false;
@@ -592,7 +598,7 @@ export const EventoPanel = () => {
       </Dialog>
 
       {/* Send to Supervisor Analysis modal */}
-      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) setLossMotivo(""); setLossOpen(v); }}>
+      <Dialog open={lossOpen} onOpenChange={(v) => { if (!v) { setLossMotivo(""); setLossTags([]); } setLossOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -608,6 +614,16 @@ export const EventoPanel = () => {
               O lead será enviado para análise do supervisor, que decidirá se é perda ou desqualificação.
             </p>
             <div>
+              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <div className="mt-1.5">
+                <MotivoTagSelector
+                  tags={TAGS_MOTIVO_OS}
+                  selected={lossTags}
+                  onToggle={(tag) => setLossTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                />
+              </div>
+            </div>
+            <div>
               <Label>Motivo do envio para análise</Label>
               <Textarea
                 value={lossMotivo}
@@ -616,14 +632,14 @@ export const EventoPanel = () => {
                 className="mt-1"
                 rows={3}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && lossMotivo.trim()) { e.preventDefault(); handleMarkLoss(); }
+                  if (e.key === "Enter" && !e.shiftKey && (lossMotivo.trim() || lossTags.length > 0)) { e.preventDefault(); handleMarkLoss(); }
                 }}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossOpen(false); }}>Cancelar</Button>
-            <Button onClick={handleMarkLoss} disabled={!lossMotivo.trim() || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+            <Button variant="outline" onClick={() => { setLossMotivo(""); setLossTags([]); setLossOpen(false); }}>Cancelar</Button>
+            <Button onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
               <AlertCircle className="h-4 w-4" /> Enviar para Análise
             </Button>
           </DialogFooter>
