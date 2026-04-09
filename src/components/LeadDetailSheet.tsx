@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS } from "@/data/mockData";
+import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO } from "@/data/mockData";
+import { MotivoTagSelector } from "./MotivoTagSelector";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
@@ -42,11 +43,16 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [disqualifyOpen, setDisqualifyOpen] = useState(false);
   const [disqualifyMotivo, setDisqualifyMotivo] = useState("");
+  const [disqualifyTags, setDisqualifyTags] = useState<string[]>([]);
   const [disqualifyOutraCidade, setDisqualifyOutraCidade] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
   const [lossOpen, setLossOpen] = useState(false);
   const [lossMotivo, setLossMotivo] = useState("");
+  const [lossTags, setLossTags] = useState<string[]>([]);
   const markingLossRef = useRef(false);
+
+  const [editMotivoTagsOpen, setEditMotivoTagsOpen] = useState(false);
+  const [editMotivoTags, setEditMotivoTags] = useState<string[]>([]);
 
   const [editNome, setEditNome] = useState("");
   const [editTelefone, setEditTelefone] = useState("");
@@ -75,6 +81,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setScheduleOpen(false);
     setDisqualifyOpen(false);
     setDisqualifyMotivo("");
+    setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setNewNota("");
     setCreateEventOpen(false);
@@ -83,6 +90,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setStatusChangeOpen(false);
     setLossOpen(false);
     setLossMotivo("");
+    setLossTags([]);
     creatingEventRef.current = false;
     markingLossRef.current = false;
   }, [lead?.id]);
