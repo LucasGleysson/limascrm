@@ -19,7 +19,6 @@ import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { DispensaReportPanel } from "@/components/DispensaReportPanel";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
-import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";

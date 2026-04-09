@@ -20,7 +20,6 @@ import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
 import { MetasUnidadesPanel } from "@/components/MetasUnidadesPanel";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
-import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
