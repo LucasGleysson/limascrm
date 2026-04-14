@@ -138,17 +138,17 @@ function SummaryCard({ icon: Icon, label, value, variant }: {
   variant: "warning" | "info" | "success" | "destructive";
 }) {
   const variantClasses: Record<string, string> = {
-    warning: "border-warning/40 bg-warning/10 text-warning",
-    info: "border-info/40 bg-info/10 text-info",
-    success: "border-success/40 bg-success/10 text-success",
-    destructive: "border-destructive/40 bg-destructive/10 text-destructive",
+    warning: "border-warning bg-warning/20 text-warning",
+    info: "border-info bg-info/20 text-info",
+    success: "border-success bg-success/20 text-success",
+    destructive: "border-destructive bg-destructive/20 text-destructive",
   };
   return (
-    <Card className={cn("p-3 xl:p-5 flex items-center gap-3 xl:gap-4 border-2", variantClasses[variant])}>
-      <Icon className="h-7 w-7 xl:h-10 xl:w-10 shrink-0" />
+    <Card className={cn("p-3 xl:p-5 flex items-center gap-3 xl:gap-4 border-2 shadow-lg", variantClasses[variant])}>
+      <Icon className="h-7 w-7 xl:h-10 xl:w-10 shrink-0 drop-shadow-md" />
       <div>
-        <p className="text-xs xl:text-base font-medium opacity-80">{label}</p>
-        <p className="text-2xl xl:text-4xl font-bold tabular-nums">{value}</p>
+        <p className="text-xs xl:text-base font-semibold opacity-90">{label}</p>
+        <p className="text-3xl xl:text-5xl font-extrabold tabular-nums drop-shadow-sm">{value}</p>
       </div>
     </Card>
   );
