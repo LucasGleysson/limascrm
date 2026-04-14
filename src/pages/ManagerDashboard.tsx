@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
-  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn,
+  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn, Monitor, PanelLeftClose, PanelLeft,
 } from "lucide-react";
+import { TVDashboardPanel } from "@/components/TVDashboardPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
