@@ -191,7 +191,7 @@ function UnitCard({ data }: {
       )}
 
       {/* Unit name */}
-      <h2 className="text-base xl:text-xl font-bold tracking-wide mb-2 xl:mb-3 text-center">{unidade.nome}</h2>
+      <h2 className="text-xl xl:text-3xl font-bold tracking-wide mb-2 xl:mb-3 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
       <div className="relative w-28 h-28 xl:w-40 xl:h-40">
