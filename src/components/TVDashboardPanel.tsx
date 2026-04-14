@@ -93,37 +93,37 @@ export const TVDashboardPanel: React.FC = () => {
   const dateStr = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Car className="h-8 w-8 text-primary" />
+          <Car className="h-10 w-10 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Painel do Dia</h1>
-            <p className="text-muted-foreground text-sm">Acompanhamento em tempo real</p>
+            <h1 className="text-4xl font-bold tracking-tight">Painel do Dia</h1>
+            <p className="text-muted-foreground text-base">Acompanhamento em tempo real</p>
           </div>
         </div>
         <div className="flex items-center gap-4 text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            <span className="text-lg font-medium">{dateStr}</span>
+            <Calendar className="h-6 w-6" />
+            <span className="text-xl font-medium">{dateStr}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            <span className="text-lg font-mono font-semibold tabular-nums">{clockStr}</span>
+            <Clock className="h-6 w-6" />
+            <span className="text-xl font-mono font-semibold tabular-nums">{clockStr}</span>
           </div>
         </div>
       </div>
 
       {/* Global summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-5">
         <SummaryCard icon={Car} label="Na Loja" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
         <SummaryCard icon={Calendar} label="Agendados Hoje" value={globalStats.totalAgendados} variant="info" />
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
-      {/* Unit cards grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+      {/* Unit cards grid — 3 columns for bigger cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
         {unitStats.map((us) => (
           <UnitCard key={us.unidade.id} data={us} />
         ))}
@@ -146,11 +146,11 @@ function SummaryCard({ icon: Icon, label, value, variant }: {
     destructive: "border-destructive/40 bg-destructive/10 text-destructive",
   };
   return (
-    <Card className={cn("p-4 flex items-center gap-4 border-2", variantClasses[variant])}>
-      <Icon className="h-8 w-8 shrink-0" />
+    <Card className={cn("p-5 flex items-center gap-4 border-2", variantClasses[variant])}>
+      <Icon className="h-10 w-10 shrink-0" />
       <div>
-        <p className="text-sm font-medium opacity-80">{label}</p>
-        <p className="text-3xl font-bold tabular-nums">{value}</p>
+        <p className="text-base font-medium opacity-80">{label}</p>
+        <p className="text-4xl font-bold tabular-nums">{value}</p>
       </div>
     </Card>
   );
@@ -177,7 +177,7 @@ function UnitCard({ data }: {
   return (
     <Card
       className={cn(
-        "relative flex flex-col items-center p-5 border-2 transition-all duration-500",
+        "relative flex flex-col items-center p-8 border-2 transition-all duration-500",
         metaBatida
           ? "border-success/60 bg-success/5 shadow-[0_0_20px_hsl(var(--success)/0.2)]"
           : quaseLa
@@ -187,24 +187,24 @@ function UnitCard({ data }: {
     >
       {/* Trophy badge */}
       {metaBatida && (
-        <div className="absolute -top-3 -right-3 bg-success text-success-foreground rounded-full p-1.5 shadow-lg animate-fade-in">
-          <Trophy className="h-5 w-5" />
+        <div className="absolute -top-4 -right-4 bg-success text-success-foreground rounded-full p-2 shadow-lg animate-fade-in">
+          <Trophy className="h-7 w-7" />
         </div>
       )}
 
       {/* Unit name */}
-      <h2 className="text-lg font-bold tracking-wide mb-2 text-center">{unidade.nome}</h2>
+      <h2 className="text-2xl font-bold tracking-wide mb-4 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
-      <div className="relative w-44 h-44">
+      <div className="relative w-52 h-52">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={40}
-              outerRadius={60}
+              innerRadius={55}
+              outerRadius={80}
               dataKey="value"
               stroke="none"
             >
@@ -218,38 +218,38 @@ function UnitCard({ data }: {
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={cn(
-              "text-3xl font-bold tabular-nums leading-none",
+              "text-5xl font-bold tabular-nums leading-none",
               metaBatida ? "text-success" : quaseLa ? "text-warning animate-pulse" : "text-foreground"
             )}
           >
             {naLoja}
           </span>
-          <span className="text-xs text-muted-foreground">/{META_DIARIA}</span>
+          <span className="text-base text-muted-foreground mt-1">/{META_DIARIA}</span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full mt-3">
+      <div className="w-full mt-4">
         <Progress
           value={pct}
-          className={cn("h-2.5", metaBatida ? "[&>div]:bg-success" : quaseLa ? "[&>div]:bg-warning" : "")}
+          className={cn("h-3", metaBatida ? "[&>div]:bg-success" : quaseLa ? "[&>div]:bg-warning" : "")}
         />
       </div>
 
       {/* Stats row */}
-      <div className="flex items-center justify-between w-full mt-3 text-sm">
-        <div className="flex items-center gap-1.5">
-          <Calendar className="h-4 w-4 text-info" />
+      <div className="flex items-center justify-between w-full mt-5 text-lg">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-info" />
           <span className="text-muted-foreground">Agend:</span>
-          <span className="font-semibold">{agendados}</span>
+          <span className="font-bold">{agendados}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {metaBatida ? (
-            <span className="font-bold text-success">Meta! 🎉</span>
+            <span className="font-bold text-success text-xl">Meta! 🎉</span>
           ) : (
             <>
               <span className="text-muted-foreground">Falta:</span>
-              <span className={cn("font-bold", quaseLa ? "text-warning" : "text-destructive")}>{faltam}</span>
+              <span className={cn("font-bold text-xl", quaseLa ? "text-warning" : "text-destructive")}>{faltam}</span>
             </>
           )}
         </div>
