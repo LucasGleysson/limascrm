@@ -20,7 +20,7 @@ const DONUT_COLORS = {
 const UNIT_ORDER = ["Laranjeiras", "Grandville", "Patrocínio", "Araguari", "Catalão"];
 
 export const TVDashboardPanel: React.FC = () => {
-  const { leads, unidades } = useLeads();
+  const { leads, unidades, refreshAll } = useLeads();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -30,9 +30,12 @@ export const TVDashboardPanel: React.FC = () => {
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setTick((p) => p + 1), 60000);
-    return () => clearInterval(t);
-  }, []);
+    const interval = setInterval(() => {
+      setTick((p) => p + 1);
+      refreshAll();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [refreshAll]);
 
   const hoje = getToday();
 
