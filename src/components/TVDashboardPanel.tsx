@@ -4,7 +4,7 @@ import { foiNaLoja, getToday } from "@/lib/leadUtils";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Trophy, Calendar, Car, Clock, TrendingUp, Flame } from "lucide-react";
+import { Trophy, Calendar, Car, Clock, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const META_DIARIA = 4;
