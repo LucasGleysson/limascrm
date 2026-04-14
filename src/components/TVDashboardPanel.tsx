@@ -23,13 +23,11 @@ export const TVDashboardPanel: React.FC = () => {
   const { leads, unidades } = useLeads();
   const [now, setNow] = useState(new Date());
 
-  // Real-time clock
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Auto-refresh every 60s (re-trigger useMemo)
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setTick((p) => p + 1), 60000);
@@ -46,7 +44,7 @@ export const TVDashboardPanel: React.FC = () => {
 
   const unitStats = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    tick; // dependency for refresh
+    tick;
     return orderedUnidades.map((u) => {
       const uLeads = leads.filter(
         (l) => l.id_unidade === u.id && (l.data_agendamento === hoje || l.data_entrada === hoje)
@@ -93,37 +91,37 @@ export const TVDashboardPanel: React.FC = () => {
   const dateStr = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 xl:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Car className="h-10 w-10 text-primary" />
+        <div className="flex items-center gap-2 xl:gap-3">
+          <Car className="h-7 w-7 xl:h-10 xl:w-10 text-primary" />
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Painel do Dia</h1>
-            <p className="text-muted-foreground text-base">Acompanhamento em tempo real</p>
+            <h1 className="text-2xl xl:text-4xl font-bold tracking-tight">Painel do Dia</h1>
+            <p className="text-muted-foreground text-xs xl:text-base">Acompanhamento em tempo real</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-6 w-6" />
-            <span className="text-xl font-medium">{dateStr}</span>
+        <div className="flex items-center gap-3 xl:gap-4 text-muted-foreground">
+          <div className="flex items-center gap-1.5 xl:gap-2">
+            <Calendar className="h-4 w-4 xl:h-6 xl:w-6" />
+            <span className="text-sm xl:text-xl font-medium">{dateStr}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-6 w-6" />
-            <span className="text-xl font-mono font-semibold tabular-nums">{clockStr}</span>
+          <div className="flex items-center gap-1.5 xl:gap-2">
+            <Clock className="h-4 w-4 xl:h-6 xl:w-6" />
+            <span className="text-sm xl:text-xl font-mono font-semibold tabular-nums">{clockStr}</span>
           </div>
         </div>
       </div>
 
       {/* Global summary */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-3 gap-3 xl:gap-5">
         <SummaryCard icon={Car} label="Na Loja" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
         <SummaryCard icon={Calendar} label="Agendados Hoje" value={globalStats.totalAgendados} variant="info" />
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
-      {/* Unit cards grid — 3 columns for bigger cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Unit cards grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 xl:gap-5">
         {unitStats.map((us) => (
           <UnitCard key={us.unidade.id} data={us} />
         ))}
@@ -146,11 +144,11 @@ function SummaryCard({ icon: Icon, label, value, variant }: {
     destructive: "border-destructive/40 bg-destructive/10 text-destructive",
   };
   return (
-    <Card className={cn("p-5 flex items-center gap-4 border-2", variantClasses[variant])}>
-      <Icon className="h-10 w-10 shrink-0" />
+    <Card className={cn("p-3 xl:p-5 flex items-center gap-3 xl:gap-4 border-2", variantClasses[variant])}>
+      <Icon className="h-7 w-7 xl:h-10 xl:w-10 shrink-0" />
       <div>
-        <p className="text-base font-medium opacity-80">{label}</p>
-        <p className="text-4xl font-bold tabular-nums">{value}</p>
+        <p className="text-xs xl:text-base font-medium opacity-80">{label}</p>
+        <p className="text-2xl xl:text-4xl font-bold tabular-nums">{value}</p>
       </div>
     </Card>
   );
@@ -177,7 +175,7 @@ function UnitCard({ data }: {
   return (
     <Card
       className={cn(
-        "relative flex flex-col items-center p-8 border-2 transition-all duration-500",
+        "relative flex flex-col items-center p-4 xl:p-6 border-2 transition-all duration-500",
         metaBatida
           ? "border-success/60 bg-success/5 shadow-[0_0_20px_hsl(var(--success)/0.2)]"
           : quaseLa
@@ -187,24 +185,24 @@ function UnitCard({ data }: {
     >
       {/* Trophy badge */}
       {metaBatida && (
-        <div className="absolute -top-4 -right-4 bg-success text-success-foreground rounded-full p-2 shadow-lg animate-fade-in">
-          <Trophy className="h-7 w-7" />
+        <div className="absolute -top-3 -right-3 xl:-top-4 xl:-right-4 bg-success text-success-foreground rounded-full p-1.5 xl:p-2 shadow-lg animate-fade-in">
+          <Trophy className="h-5 w-5 xl:h-7 xl:w-7" />
         </div>
       )}
 
       {/* Unit name */}
-      <h2 className="text-2xl font-bold tracking-wide mb-4 text-center">{unidade.nome}</h2>
+      <h2 className="text-base xl:text-xl font-bold tracking-wide mb-2 xl:mb-3 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
-      <div className="relative w-52 h-52">
+      <div className="relative w-28 h-28 xl:w-40 xl:h-40">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={55}
-              outerRadius={80}
+              innerRadius="55%"
+              outerRadius="80%"
               dataKey="value"
               stroke="none"
             >
@@ -218,38 +216,38 @@ function UnitCard({ data }: {
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={cn(
-              "text-5xl font-bold tabular-nums leading-none",
+              "text-3xl xl:text-5xl font-bold tabular-nums leading-none",
               metaBatida ? "text-success" : quaseLa ? "text-warning animate-pulse" : "text-foreground"
             )}
           >
             {naLoja}
           </span>
-          <span className="text-base text-muted-foreground mt-1">/{META_DIARIA}</span>
+          <span className="text-xs xl:text-base text-muted-foreground mt-0.5">/{META_DIARIA}</span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full mt-4">
+      <div className="w-full mt-2 xl:mt-3">
         <Progress
           value={pct}
-          className={cn("h-3", metaBatida ? "[&>div]:bg-success" : quaseLa ? "[&>div]:bg-warning" : "")}
+          className={cn("h-2 xl:h-3", metaBatida ? "[&>div]:bg-success" : quaseLa ? "[&>div]:bg-warning" : "")}
         />
       </div>
 
       {/* Stats row */}
-      <div className="flex items-center justify-between w-full mt-5 text-lg">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-info" />
-          <span className="text-muted-foreground">Agend:</span>
+      <div className="flex items-center justify-between w-full mt-3 xl:mt-4 text-sm xl:text-base">
+        <div className="flex items-center gap-1 xl:gap-2">
+          <Calendar className="h-3.5 w-3.5 xl:h-5 xl:w-5 text-info" />
+          <span className="text-muted-foreground text-xs xl:text-sm">Agend:</span>
           <span className="font-bold">{agendados}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 xl:gap-2">
           {metaBatida ? (
-            <span className="font-bold text-success text-xl">Meta! 🎉</span>
+            <span className="font-bold text-success text-sm xl:text-lg">Meta! 🎉</span>
           ) : (
             <>
-              <span className="text-muted-foreground">Falta:</span>
-              <span className={cn("font-bold text-xl", quaseLa ? "text-warning" : "text-destructive")}>{faltam}</span>
+              <span className="text-muted-foreground text-xs xl:text-sm">Falta:</span>
+              <span className={cn("font-bold text-sm xl:text-lg", quaseLa ? "text-warning" : "text-destructive")}>{faltam}</span>
             </>
           )}
         </div>
