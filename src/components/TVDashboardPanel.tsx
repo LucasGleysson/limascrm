@@ -116,15 +116,14 @@ export const TVDashboardPanel: React.FC = () => {
       </div>
 
       {/* Global summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <SummaryCard icon={Car} label="Na Loja" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
         <SummaryCard icon={Calendar} label="Agendados Hoje" value={globalStats.totalAgendados} variant="info" />
-        <SummaryCard icon={TrendingUp} label="Concluídos" value={globalStats.totalConcluidos} variant="success" />
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
       {/* Unit cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
         {unitStats.map((us) => (
           <UnitCard key={us.unidade.id} data={us} />
         ))}
@@ -197,7 +196,7 @@ function UnitCard({ data }: {
       <h2 className="text-lg font-bold tracking-wide mb-2 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
-      <div className="relative w-36 h-36">
+      <div className="relative w-44 h-44">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
