@@ -26,6 +26,7 @@ import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 
 const SIDEBAR_TABS = [
+  { id: "painel_tv", label: "Painel TV", icon: Monitor },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "por_loja", label: "Por Loja", icon: MapPin },
   { id: "por_agente", label: "Por Agente", icon: Users },
