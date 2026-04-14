@@ -262,9 +262,21 @@ export const ManagerDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
+      {!sidebarHidden && <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />}
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Sidebar toggle button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-3 left-3 z-50"
+          onClick={() => setSidebarHidden((p) => !p)}
+          title={sidebarHidden ? "Mostrar menu" : "Ocultar menu"}
+        >
+          {sidebarHidden ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+        </Button>
+
+        {activeTab === "painel_tv" && <TVDashboardPanel />}
         {activeTab === "dashboard" && (
           <>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
