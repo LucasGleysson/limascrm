@@ -61,11 +61,15 @@ export const TVDashboardPanel: React.FC = () => {
       const metaBatida = naLoja >= META_DIARIA;
       const quaseLa = faltam === 1;
 
+      const totalNaLojaU = naLoja;
+      const restante = Math.max(0, META_DIARIA - totalNaLojaU);
+
       const pieData = [
         { name: "Concluído", value: concluidos, color: DONUT_COLORS.concluido },
         { name: "Em Loja", value: emLoja, color: DONUT_COLORS.na_loja },
         { name: "Dispensado", value: dispensados, color: DONUT_COLORS.dispensado },
         { name: "Perdido", value: perdidos, color: DONUT_COLORS.perdido },
+        { name: "Restante", value: restante, color: DONUT_COLORS.outros },
       ].filter((d) => d.value > 0);
 
       if (pieData.length === 0) {
