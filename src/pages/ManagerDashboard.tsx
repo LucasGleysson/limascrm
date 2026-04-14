@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
-  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn,
+  ClipboardList, Target, CheckCircle2, ChevronRight, AlertTriangle, Skull, LogIn, Monitor, PanelLeftClose, PanelLeft,
 } from "lucide-react";
+import { TVDashboardPanel } from "@/components/TVDashboardPanel";
 import { FichasPanel } from "@/components/FichasPanel";
 import { DailyReportPanel } from "@/components/DailyReportPanel";
 import { FollowUpTrackingPanel } from "@/components/FollowUpTrackingPanel";
@@ -25,6 +26,7 @@ import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 
 const SIDEBAR_TABS = [
+  { id: "painel_tv", label: "Painel TV", icon: Monitor },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "por_loja", label: "Por Loja", icon: MapPin },
   { id: "por_agente", label: "Por Agente", icon: Users },
@@ -44,6 +46,7 @@ const PIE_COLORS = [
 export const ManagerDashboard = () => {
   const { leads, unidades, profiles, eventos, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
@@ -259,9 +262,21 @@ export const ManagerDashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
+      {!sidebarHidden && <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />}
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        {/* Sidebar toggle button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed top-3 left-3 z-50"
+          onClick={() => setSidebarHidden((p) => !p)}
+          title={sidebarHidden ? "Mostrar menu" : "Ocultar menu"}
+        >
+          {sidebarHidden ? <PanelLeft className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+        </Button>
+
+        {activeTab === "painel_tv" && <TVDashboardPanel />}
         {activeTab === "dashboard" && (
           <>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
