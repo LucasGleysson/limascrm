@@ -46,7 +46,7 @@ const PIE_COLORS = [
 export const ManagerDashboard = () => {
   const { leads, unidades, profiles, eventos, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [unidadeFilter, setUnidadeFilter] = useState("todas");
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [refreshing, setRefreshing] = useState(false);
