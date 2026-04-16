@@ -1,98 +1,39 @@
 
 
-## Painel de Exibição (TV Dashboard) — Central de Atendimento
+## Causa raiz
 
-### Conceito
+No `LeadContext`, a busca de eventos para **gestor/supervisor** usa `fetchAllRows` (paginação que ultrapassa o limite de 1000 do PostgREST), mas para **agente** não. Maria Eduarda tem **1.074 eventos** no total — o cliente carrega só os 1.000 primeiros (ordenados por `data_prevista ASC`, ou seja, os mais antigos, já concluídos), perdendo 74 eventos recentes onde estão vários follow-ups pendentes. Resultado: contagem do agente fica abaixo dos 61 reais.
 
-Um painel visual de alto impacto, otimizado para exibição em telas grandes (TVs, monitores), seguindo as melhores práticas de wallboards de vendas:
+Confirmei via SQL:
+- A lógica de filtro está idêntica nos dois painéis (ambas dão 61).
+- A diferença é exclusivamente na **quantidade de eventos carregada no cliente**.
 
-- **Fontes grandes e legíveis à distância** (mínimo 24px para números, 18px para labels)
-- **Cores semânticas fortes** — verde para meta batida, amarelo para em progresso, vermelho para atraso
-- **Atualização em tempo real** via dados do LeadContext
-- **Layout limpo** com foco em 5-6 métricas máximas por card
-- **Elementos motivacionais** — animações sutis, ícones de conquista, barra de progresso visual
+O mesmo risco existe para `leads` do agente quando ultrapassa 1.000 (ainda não é o caso da Maria Eduarda, mas pode acontecer).
 
-### Layout
+## Plano de correção
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│ [☰ Toggle Sidebar]  🚗 AutoCRM — Painel do Dia  📅 14/04│
-│                      ⏰ 14:32 (atualiza a cada 60s)     │
-├──────────────────────────────────────────────────────────┤
-│  RESUMO GERAL (barra horizontal)                        │
-│  [🚗 Total Na Loja: 18/20] [📅 Agendados Hoje: 25]     │
-│  [✅ Concluídos: 12] [⏳ Faltam: 2 para meta]           │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │LARANJEI.│ │GRANDVIL.│ │PATROCÍN│ │ARAGUARI │       │
-│  │         │ │         │ │         │ │         │       │
-│  │  [PIE]  │ │  [PIE]  │ │  [PIE]  │ │  [PIE]  │       │
-│  │  3/4    │ │  5/4 🏆│ │  2/4    │ │  4/4 ✅│       │
-│  │         │ │         │ │         │ │         │       │
-│  │Agend: 6 │ │Agend: 8 │ │Agend: 4 │ │Agend: 7 │       │
-│  │Falta: 1 │ │Meta! 🎉│ │Falta: 2 │ │Meta! ✅│       │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘       │
-│                    ┌─────────┐                           │
-│                    │ CATALÃO │                           │
-│                    │  [PIE]  │                           │
-│                    │  2/4    │                           │
-│                    │Agend: 3 │                           │
-│                    │Falta: 2 │                           │
-│                    └─────────┘                           │
-└──────────────────────────────────────────────────────────┘
+Arquivo único: `src/contexts/LeadContext.tsx`
+
+1. Aplicar `fetchAllRows` também para o cargo **agente** ao buscar `leads` e `eventos` — assim a paginação ultrapassa o limite de 1.000 e nenhum evento/lead é cortado.
+2. Manter recepcionista no caminho atual (volume baixo, filtrado por unidade + `concluido=false`), mas considerar a mesma blindagem como melhoria preventiva (se quiser, aplico também).
+3. Nenhuma mudança de UI, RLS, schema ou lógica de categorização.
+
+## Trecho-alvo (referência)
+
+```ts
+// hoje:
+const needsPagination = user?.cargo === "gestor" || user?.cargo === "supervisor";
+
+// depois:
+const needsPagination =
+  user?.cargo === "gestor" ||
+  user?.cargo === "supervisor" ||
+  user?.cargo === "agente";
 ```
 
-### Detalhes de cada Card de Unidade
+## Validação esperada após o fix
 
-Cada card terá:
-1. **Nome da unidade** em destaque
-2. **Gráfico de pizza (donut)** — segmentos: Concluído (verde), Na Loja (amarelo), Dispensado (laranja), Perdido (vermelho)
-3. **Número grande central** no donut: `X/4` (carros na loja vs meta diária de 4)
-4. **Barra de progresso** visual abaixo do donut
-5. **Agendados hoje**: quantos leads agendados para o dia
-6. **Faltam**: `max(0, 4 - naLoja)` carros para bater meta
-7. **Indicador visual de conquista**: emoji/ícone quando meta é atingida (🏆), com cor verde no card
-
-### Elementos motivacionais
-- Card fica com borda verde brilhante e ícone de troféu quando unidade bate a meta
-- Pulso animado sutil no número central quando está próximo da meta (falta 1)
-- Relógio em tempo real no header
-- Auto-refresh dos dados a cada 60 segundos
-
-### Sidebar colapsável
-- Botão no header para ocultar/mostrar o sidebar do gestor
-- Quando oculto, o painel ocupa 100% da largura — ideal para TV
-- Sidebar mostra perfil do gestor e navegação para outras abas
-
-### Implementação técnica
-
-| Arquivo | Ação |
-|---------|------|
-| `src/components/TVDashboardPanel.tsx` | **Criar** — Componente principal do painel TV |
-| `src/pages/ManagerDashboard.tsx` | **Editar** — Adicionar tab "Painel TV" no sidebar + estado de sidebar colapsável |
-
-### Lógica de dados (reutiliza LeadContext)
-
-```typescript
-// Para cada unidade, filtra leads do dia (data_agendamento === hoje)
-const hoje = getToday();
-const leadsHoje = leads.filter(l => 
-  l.data_agendamento === hoje || l.data_entrada === hoje
-);
-
-// Por unidade: naLoja, agendados, concluídos, faltam
-unidades.forEach(u => {
-  const uLeads = leadsHoje.filter(l => l.id_unidade === u.id);
-  const naLoja = uLeads.filter(l => foiNaLoja(l.etapa)).length;
-  const agendados = uLeads.filter(l => l.data_agendamento === hoje).length;
-  const faltam = Math.max(0, 4 - naLoja);
-});
-```
-
-### Responsividade
-- Grid de 5 colunas em tela grande (≥1400px)
-- Grid de 3 colunas em tela média
-- Grid de 2 colunas em tela menor
-- Cards com `min-height` generoso para legibilidade à distância
+- Aba **Eventos** do agente Maria Eduarda passa a mostrar os mesmos **61 follow-ups pendentes** que aparecem no painel do supervisor/gestor.
+- Lista de pendentes na aba do agente passa a incluir os leads que hoje estão "sumidos" (cortados pelo limite de 1.000).
+- Sem impacto nos demais cargos.
 
