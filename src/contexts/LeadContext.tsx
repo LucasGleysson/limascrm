@@ -88,7 +88,10 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const user = currentUserRef.current;
-    const needsPagination = user?.cargo === "gestor" || user?.cargo === "supervisor";
+    const needsPagination =
+      user?.cargo === "gestor" ||
+      user?.cargo === "supervisor" ||
+      user?.cargo === "agente";
 
     const [leadsData, eventosData, unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
       needsPagination
