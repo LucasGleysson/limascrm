@@ -89,7 +89,12 @@ export const AgentReceptionPanel = () => {
     try {
       const now = new Date().toISOString();
       const notas = appendNota(lead.notas, "Check-in", "Cliente confirmado na loja");
-      await updateLead(lead.id, { etapa: "confirmado", checkin: now, notas });
+      await updateLead(lead.id, {
+        etapa: "confirmado",
+        checkin: now,
+        notas,
+        visitas_loja: (lead.visitas_loja ?? 0) + 1,
+      } as any);
     } finally { setLoadingAction(null); }
   };
 

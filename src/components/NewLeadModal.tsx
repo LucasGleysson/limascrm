@@ -35,6 +35,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     if (!nome || !telefone) return;
     const now = new Date().toISOString();
     const finalEtapa = isReceptionist ? "na_loja" : (isPorta ? "na_loja" : "novo");
+    const isWalkIn = isReceptionist || isPorta;
     await addLead({
       nome,
       telefone: formatPhone(telefone),
@@ -44,9 +45,10 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       id_agente: currentUser.id,
       id_unidade: unidadeId || null,
       is_porta: isPorta || isReceptionist || false,
-      checkin: (isReceptionist || isPorta) ? now : null,
+      checkin: isWalkIn ? now : null,
       numero_os: numeroOs || null,
       id_recepcionista: isReceptionist ? currentUser.id : null,
+      visitas_loja: isWalkIn ? 1 : 0,
     } as any);
     setNome("");
     setTelefone("");
