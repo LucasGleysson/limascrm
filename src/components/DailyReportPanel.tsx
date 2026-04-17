@@ -25,7 +25,7 @@ export const DailyReportPanel = () => {
   // This ensures metrics are stable even when check-in is registered late (next day, etc.).
   const passaramNaLojaNoDia = useMemo(() => {
     return leads.filter((l) => {
-      if (!foiNaLoja(l.etapa)) return false;
+      if (!foiNaLoja(l)) return false;
       // Primary: use data_agendamento as the real event date
       if (l.data_agendamento) return l.data_agendamento === dateStr;
       // Walk-ins without appointment: use checkin date, then data_entrada

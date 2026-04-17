@@ -93,7 +93,7 @@ export const AgentDashboard = () => {
   const dailyStats = useMemo(() => {
     const todayLeads = allMyLeads.filter((l) => l.data_entrada === today);
     const todayAgendados = allMyLeads.filter((l) => l.data_agendamento === today);
-    const carrosHoje = todayAgendados.filter((l) => foiNaLoja(l.etapa)).length;
+    const carrosHoje = todayAgendados.filter((l) => foiNaLoja(l)).length;
     const dispensadosHoje = todayAgendados.filter((l) => l.etapa === "dispensado").length;
       const isEligible = (lead: Lead): boolean => {
         if (lead.fup_concluido) return false;
@@ -125,7 +125,7 @@ export const AgentDashboard = () => {
     const desqualificados = cohort.filter((l) => ["desqualificado_novo", "desqualificado_agendado"].includes(l.etapa)).length;
     const produtivos = total - desqualificados;
     const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado_agendado", "desqualificado"].includes(l.etapa)).length;
-    const naLojaOuSuperior = cohort.filter((l) => foiNaLoja(l.etapa)).length;
+    const naLojaOuSuperior = cohort.filter((l) => foiNaLoja(l)).length;
     const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
     return {
       total,
@@ -174,7 +174,7 @@ export const AgentDashboard = () => {
     const agendados = monthLeads.filter((l) =>
       !["novo", "desqualificado_novo"].includes(l.etapa)
     ).length;
-    const naLoja = monthLeads.filter((l) => foiNaLoja(l.etapa)).length;
+    const naLoja = monthLeads.filter((l) => foiNaLoja(l)).length;
     const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
     const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
@@ -224,7 +224,7 @@ export const AgentDashboard = () => {
         l.data_agendamento === dateStr
       ).length;
       const naLoja = monthLeads.filter((l) => {
-        if (!foiNaLoja(l.etapa)) return false;
+        if (!foiNaLoja(l)) return false;
         const agendInRange = l.data_agendamento && l.data_agendamento >= mesAtual.from && l.data_agendamento <= mesAtual.to;
         const entradaInRange = l.data_entrada >= mesAtual.from && l.data_entrada <= mesAtual.to;
         let refDate: string;
@@ -256,7 +256,7 @@ export const AgentDashboard = () => {
   const storeMetaProgress = useMemo(() => {
     if (!currentUser.unidade_padrao) return null;
     const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
-    const carrosNaLoja = storeLeads.filter((l) => foiNaLoja(l.etapa)).length;
+    const carrosNaLoja = storeLeads.filter((l) => foiNaLoja(l)).length;
     return { carros: carrosNaLoja, total: storeLeads.length };
   }, [leads, currentUser.unidade_padrao]);
 
