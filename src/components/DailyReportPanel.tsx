@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ChevronDown, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, PieChart as PieChartIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, ClipboardList, PieChart as PieChartIcon } from "lucide-react";
 import { foiNaLoja, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -53,6 +53,7 @@ export const DailyReportPanel = () => {
     const desqNovos = createdToday.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = createdToday.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = createdToday.filter((l) => l.etapa === "desqualificado_agendado").length;
+    const trabalhados = createdToday.filter((l) => l.etapa === "trabalhado").length;
     return {
       totalRegistros: createdToday.length,
       novos: createdToday.filter((l) => l.etapa === "novo").length,
@@ -64,6 +65,7 @@ export const DailyReportPanel = () => {
       desqNovos,
       desqOutraCidade,
       desqAgendados,
+      trabalhados,
     };
   }, [createdToday, passaramNaLojaNoDia, concluidosNoDia, dispensadosNoDia]);
 
@@ -162,10 +164,11 @@ export const DailyReportPanel = () => {
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
       </div>
       {/* Desqualificados */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={AlertTriangle} variant="destructive" />
         <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
         <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
+        <StatsCard title="Trabalhados" value={globalStats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
       </div>
 
       {/* Origin breakdown pie chart */}
