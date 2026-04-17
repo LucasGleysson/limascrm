@@ -95,9 +95,10 @@ export const ManagerDashboard = () => {
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
+    const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, perdidosAntes, taxaConversao };
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -307,10 +308,11 @@ export const ManagerDashboard = () => {
               <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
             </div>
             {/* Desqualificados */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatsCard title="Desq. Novo" value={stats.desqNovos} icon={XCircle} variant="destructive" />
               <StatsCard title="Outra Cidade" value={stats.desqOutraCidade} icon={MapPin} variant="warning" />
               <StatsCard title="Desq. Agendado" value={stats.desqAgendados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Trabalhados" value={stats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${stats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
