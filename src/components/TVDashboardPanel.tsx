@@ -52,12 +52,19 @@ export const TVDashboardPanel: React.FC = () => {
       const uLeads = leads.filter(
         (l) => l.id_unidade === u.id && (l.data_agendamento === hoje || l.data_entrada === hoje)
       );
-      const naLoja = uLeads.filter((l) => foiNaLoja(l.etapa)).length;
+      // Na Loja hoje: usa o contador visitas_loja (carros que efetivamente passaram).
+      // Reagendado NÃO conta — significa que o lead foi reagendado para outro dia.
+      const naLoja = uLeads.filter((l) => (l.visitas_loja ?? 0) > 0).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
-      const emLoja = uLeads.filter((l) => ["confirmado", "na_loja", "reagendado", "analise_supervisor"].includes(l.etapa)).length;
-      const agendados = uLeads.filter((l) => l.data_agendamento === hoje).length;
+      const emLoja = uLeads.filter((l) => ["confirmado", "na_loja", "analise_supervisor"].includes(l.etapa)).length;
+      // Agendados hoje: apenas leads ainda ativos. Exclui desqualificado_agendado e perdido.
+      const agendados = uLeads.filter(
+        (l) =>
+          l.data_agendamento === hoje &&
+          !["desqualificado_agendado", "perdido", "dispensado", "concluido"].includes(l.etapa)
+      ).length;
       const faltam = Math.max(0, META_DIARIA - naLoja);
       const metaBatida = naLoja >= META_DIARIA;
       const quaseLa = faltam === 1;
