@@ -50,8 +50,10 @@ export const AgentDashboard = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [etapaFilter, setEtapaFilter] = useState("todos");
   const [search, setSearch] = useState("");
-  const [dateStart, setDateStart] = useState<Date | undefined>();
-  const [dateEnd, setDateEnd] = useState<Date | undefined>();
+  const [entradaStart, setEntradaStart] = useState<Date | undefined>();
+  const [entradaEnd, setEntradaEnd] = useState<Date | undefined>();
+  const [agendStart, setAgendStart] = useState<Date | undefined>();
+  const [agendEnd, setAgendEnd] = useState<Date | undefined>();
 
   const today = getToday();
 
@@ -62,18 +64,34 @@ export const AgentDashboard = () => {
       .filter((l) => etapaFilter === "todos" || l.etapa === etapaFilter)
       .filter((l) => !search || l.nome.toLowerCase().includes(search.toLowerCase()) || l.telefone.includes(search))
       .filter((l) => {
-        if (!dateStart) return true;
-        const d = new Date(l.data_entrada + "T12:00:00");
-        return d >= dateStart;
+        if (!entradaStart) return true;
+        const s = format(entradaStart, "yyyy-MM-dd");
+        return l.data_entrada >= s;
       })
       .filter((l) => {
-        if (!dateEnd) return true;
-        const d = new Date(l.data_entrada + "T12:00:00");
-        const end = new Date(dateEnd);
-        end.setHours(23, 59, 59);
-        return d <= end;
+        if (!entradaEnd) return true;
+        const e = format(entradaEnd, "yyyy-MM-dd");
+        return l.data_entrada <= e;
+      })
+      .filter((l) => {
+        if (!agendStart) return true;
+        const s = format(agendStart, "yyyy-MM-dd");
+        return !!l.data_agendamento && l.data_agendamento >= s;
+      })
+      .filter((l) => {
+        if (!agendEnd) return true;
+        const e = format(agendEnd, "yyyy-MM-dd");
+        return !!l.data_agendamento && l.data_agendamento <= e;
       });
-  }, [allMyLeads, etapaFilter, search, dateStart, dateEnd]);
+  }, [allMyLeads, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd]);
+
+  const hasDateFilter = !!(entradaStart || entradaEnd || agendStart || agendEnd);
+  const clearDateFilters = () => {
+    setEntradaStart(undefined);
+    setEntradaEnd(undefined);
+    setAgendStart(undefined);
+    setAgendEnd(undefined);
+  };
 
   const pagination = usePagination(myLeads, { pageSize: 15 });
 
@@ -304,28 +322,46 @@ export const AgentDashboard = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="gap-2 min-w-36">
-                    <Calendar className="h-4 w-4" />
-                    {dateStart ? format(dateStart, "dd/MM/yyyy") : "Data início"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent mode="single" selected={dateStart} onSelect={setDateStart} locale={ptBR} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="gap-2 min-w-36">
-                    <Calendar className="h-4 w-4" />
-                    {dateEnd ? format(dateEnd, "dd/MM/yyyy") : "Data fim"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <CalendarComponent mode="single" selected={dateEnd} onSelect={setDateEnd} locale={ptBR} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium">Entrada:</span>
+              {[
+                { label: "De", date: entradaStart, set: setEntradaStart },
+                { label: "Até", date: entradaEnd, set: setEntradaEnd },
+              ].map((p, i) => (
+                <Popover key={`ent-${i}`}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={`gap-1.5 text-xs h-8 ${p.date ? "border-primary text-primary" : ""}`}>
+                      <Calendar className="h-3 w-3" />
+                      {p.date ? format(p.date, "dd/MM/yy") : p.label}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent mode="single" selected={p.date} onSelect={p.set} locale={ptBR} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              ))}
+              <span className="text-xs text-muted-foreground font-medium ml-2">Agendamento:</span>
+              {[
+                { label: "De", date: agendStart, set: setAgendStart },
+                { label: "Até", date: agendEnd, set: setAgendEnd },
+              ].map((p, i) => (
+                <Popover key={`ag-${i}`}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={`gap-1.5 text-xs h-8 ${p.date ? "border-primary text-primary" : ""}`}>
+                      <Calendar className="h-3 w-3" />
+                      {p.date ? format(p.date, "dd/MM/yy") : p.label}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent mode="single" selected={p.date} onSelect={p.set} locale={ptBR} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              ))}
+              {hasDateFilter && (
+                <Button variant="ghost" size="sm" className="text-xs h-8" onClick={clearDateFilters}>Limpar datas</Button>
+              )}
             </div>
 
             <div className="rounded-xl border border-border bg-card overflow-hidden">
