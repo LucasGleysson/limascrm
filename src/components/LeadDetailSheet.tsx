@@ -471,6 +471,11 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                     {etapa?.label || lead.etapa}
                   </Badge>
                   {lead.is_porta && <Badge variant="outline">Porta</Badge>}
+                  {(lead.visitas_loja ?? 0) > 0 && (
+                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                      {lead.visitas_loja} {lead.visitas_loja === 1 ? "visita" : "visitas"}
+                    </Badge>
+                  )}
                   {lead.fup_concluido && (
                     <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
                       FUP Concluído {lead.fup_concluido_numero ? `(F${lead.fup_concluido_numero})` : ""}
