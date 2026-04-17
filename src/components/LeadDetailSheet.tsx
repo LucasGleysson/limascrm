@@ -636,7 +636,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               <Label className="text-xs font-semibold">Tags de Motivo</Label>
               <div className="mt-1.5">
                 <MotivoTagSelector
-                  tags={lead.etapa === "novo" ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  tags={["novo", "trabalhado"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
                   selected={disqualifyTags}
                   onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
                 />
