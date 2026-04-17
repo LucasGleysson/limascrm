@@ -31,6 +31,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }] },
   desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }] },
   desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+  trabalhado: { label: "Trabalhado", targets: [{ id: "novo", label: "Novo Lead" }] },
   dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
   perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
 };
@@ -188,19 +189,19 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEditTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
-  const canSchedule = lead.etapa === "novo";
+  const canSchedule = ["novo", "trabalhado"].includes(lead.etapa);
   const isAgendado = ["agendado", "reagendado"].includes(lead.etapa);
   const isDispensado = lead.etapa === "dispensado";
   const isPerdido = lead.etapa === "perdido";
   const isDesqAgendado = lead.etapa === "desqualificado_agendado";
   const canEditSchedule = isAgendado || isDispensado || isPerdido || isDesqAgendado;
-  const canDisqualify = ["novo", "agendado", "reagendado"].includes(lead.etapa);
+  const canDisqualify = ["novo", "agendado", "reagendado", "trabalhado"].includes(lead.etapa);
   // Supervisor/Gestor can always change status; agents can only use transitions
   const canChangeStatus = isSupervisorOrGestor || !!STATUS_TRANSITIONS[lead.etapa];
   const canMarkLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
 
   const getDisqualifyStatus = () => {
-    if (lead.etapa === "novo") return "desqualificado_novo";
+    if (["novo", "trabalhado"].includes(lead.etapa)) return "desqualificado_novo";
     return "desqualificado_agendado";
   };
 
@@ -635,7 +636,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
               <Label className="text-xs font-semibold">Tags de Motivo</Label>
               <div className="mt-1.5">
                 <MotivoTagSelector
-                  tags={lead.etapa === "novo" ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  tags={["novo", "trabalhado"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
                   selected={disqualifyTags}
                   onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
                 />
