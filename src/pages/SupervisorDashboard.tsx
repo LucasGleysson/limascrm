@@ -186,10 +186,11 @@ export const SupervisorDashboard = () => {
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
+    const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
     const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
       totalLeads: filteredLeads.length, naLoja, concluidos, totalAgendamentos,
-      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, txConversao,
+      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, trabalhados, txConversao,
     };
   }, [filteredLeads]);
 
@@ -244,10 +245,11 @@ export const SupervisorDashboard = () => {
               <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
             </div>
             {/* Desqualificados */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
               <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
               <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
+              <StatsCard title="Trabalhados" value={globalStats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
               <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
             </div>
 
