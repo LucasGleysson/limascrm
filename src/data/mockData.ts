@@ -11,6 +11,7 @@ export const ETAPAS_FUNIL = [
   { id: "concluido", label: "Serviço Concluído", color: "success" },
   { id: "dispensado", label: "Dispensado", color: "destructive" },
   { id: "analise_supervisor", label: "Análise Supervisor", color: "warning" },
+  { id: "trabalhado", label: "Trabalhado", color: "muted" },
   { id: "desqualificado_novo", label: "Desqualificado (Novo)", color: "destructive" },
   { id: "desqualificado_agendado", label: "Desqualificado (Agendado)", color: "destructive" },
   { id: "perdido", label: "Perdido", color: "destructive" },
@@ -60,6 +61,7 @@ export interface Lead {
   fup_concluido_em?: string | null;
   fup_concluido_numero?: number | null;
   fup_motivo_conclusao?: string | null;
+  visitas_loja?: number;
   created_at?: string;
 }
 

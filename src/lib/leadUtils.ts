@@ -1,4 +1,5 @@
 // Shared utility functions for lead management
+import type { Lead } from "@/data/mockData";
 
 export const getStatusBadgeClass = (etapa: string): string => {
   const map: Record<string, string> = {
@@ -13,15 +14,29 @@ export const getStatusBadgeClass = (etapa: string): string => {
     desqualificado_novo: "bg-muted text-muted-foreground border-muted",
     desqualificado_agendado: "bg-destructive/15 text-destructive border-destructive/30",
     perdido: "bg-destructive/15 text-destructive border-destructive/30",
+    trabalhado: "bg-muted text-foreground border-border",
     // Legacy support
     desqualificado: "bg-muted text-muted-foreground border-muted",
   };
   return map[etapa] || "";
 };
 
-/** Check if a lead went to the store (confirmado+) */
-export const foiNaLoja = (etapa: string): boolean =>
-  ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado", "analise_supervisor"].includes(etapa);
+const STATUS_NA_LOJA_LEGACY = ["confirmado", "na_loja", "concluido", "dispensado", "perdido", "reagendado", "analise_supervisor"];
+
+/**
+ * Check if a lead went to the store.
+ * Accepts a Lead object (preferred — uses visitas_loja counter)
+ * or an etapa string (legacy — falls back to status-based inference).
+ */
+export const foiNaLoja = (leadOrEtapa: Lead | string | null | undefined): boolean => {
+  if (!leadOrEtapa) return false;
+  if (typeof leadOrEtapa === "string") {
+    return STATUS_NA_LOJA_LEGACY.includes(leadOrEtapa);
+  }
+  // Lead object: prefer counter, fallback to etapa for safety
+  if ((leadOrEtapa.visitas_loja ?? 0) > 0) return true;
+  return STATUS_NA_LOJA_LEGACY.includes(leadOrEtapa.etapa);
+};
 
 /** Na Loja = Concluído + Dispensado + Perdido */
 export const isCarroDoAgente = (etapa: string): boolean =>
@@ -42,6 +57,10 @@ export const isPerdidoDepoisLoja = (etapa: string): boolean =>
 /** Check if a lead is pending supervisor analysis */
 export const isAnaliseSupervisor = (etapa: string): boolean =>
   etapa === "analise_supervisor";
+
+/** Lead trabalhado: novo lead que percorreu o processo de FUP até o fim sem agendar */
+export const isTrabalhado = (etapa: string): boolean =>
+  etapa === "trabalhado";
 
 export const getToday = (): string => new Date().toISOString().split("T")[0];
 

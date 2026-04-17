@@ -58,8 +58,9 @@ export const FollowUpTrackingPanel = () => {
     if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "analise_supervisor";
     // Scheduled but no visit → desqualificado_agendado
     if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
-    // New lead → desqualificado_novo
-    if (["novo", "desqualificado"].includes(lead.etapa)) return "desqualificado_novo";
+    // New lead → trabalhado (lead novo que percorreu todo o processo de FUP sem agendar)
+    if (lead.etapa === "novo") return "trabalhado";
+    if (lead.etapa === "desqualificado") return "desqualificado_novo";
     // Already terminal
     return lead.etapa;
   }, []);

@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
 
       if (maxExisting >= 7) {
         let finalEtapa = lead.etapa;
-        if (lead.etapa === "novo") finalEtapa = "desqualificado_novo";
+        if (lead.etapa === "novo") finalEtapa = "trabalhado";
         else if (["agendado", "reagendado"].includes(lead.etapa)) finalEtapa = "desqualificado_agendado";
         else if (lead.etapa === "dispensado") finalEtapa = "perdido";
 
