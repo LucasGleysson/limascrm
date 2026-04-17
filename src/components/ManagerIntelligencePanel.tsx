@@ -42,7 +42,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
 
   // === 1. Vehicle Flow Stats ===
   const flowStats = useMemo(() => {
-    const foramNaLoja = filteredLeads.filter((l) => foiNaLoja(l.etapa));
+    const foramNaLoja = filteredLeads.filter((l) => foiNaLoja(l));
     const portaPassaram = foramNaLoja.filter((l) => l.is_porta);
     const telePassaram = foramNaLoja.filter((l) => !l.is_porta);
 
@@ -98,7 +98,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
   // === 4. Conversion metrics ===
   const conversion = useMemo(() => {
     const teleEnviados = tele.length;
-    const teleCheckin = tele.filter((l) => foiNaLoja(l.etapa)).length;
+    const teleCheckin = tele.filter((l) => foiNaLoja(l)).length;
     const teleNoShow = tele.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const teleConcluidos = tele.filter((l) => l.etapa === "concluido").length;
     const teleDispensados = tele.filter((l) => l.etapa === "dispensado").length;
@@ -122,7 +122,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
   const unitFlow = useMemo(() => {
     return unidades.map((u) => {
       const unitLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
-      const foramNaLoja = unitLeads.filter((l) => foiNaLoja(l.etapa));
+      const foramNaLoja = unitLeads.filter((l) => foiNaLoja(l));
       const portaUnit = foramNaLoja.filter((l) => l.is_porta).length;
       const teleUnit = foramNaLoja.filter((l) => !l.is_porta).length;
       const concluidos = unitLeads.filter((l) => l.etapa === "concluido");
@@ -165,7 +165,7 @@ export const ManagerIntelligencePanel = ({ filteredLeads, unidades, profiles }: 
     return agents.map((a) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === a.id);
       const total = aLeads.length;
-      const carrosNaLoja = aLeads.filter((l) => foiNaLoja(l.etapa)).length;
+      const carrosNaLoja = aLeads.filter((l) => foiNaLoja(l)).length;
       const concluidos = aLeads.filter((l) => l.etapa === "concluido").length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
       const perdidosDepois = aLeads.filter((l) => isPerdidoDepoisLoja(l.etapa)).length;
