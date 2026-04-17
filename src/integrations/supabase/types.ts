@@ -118,6 +118,7 @@ export type Database = {
           telefone: string
           updated_at: string
           valor_servico: number | null
+          visitas_loja: number
         }
         Insert: {
           checkin?: string | null
@@ -144,6 +145,7 @@ export type Database = {
           telefone: string
           updated_at?: string
           valor_servico?: number | null
+          visitas_loja?: number
         }
         Update: {
           checkin?: string | null
@@ -170,6 +172,7 @@ export type Database = {
           telefone?: string
           updated_at?: string
           valor_servico?: number | null
+          visitas_loja?: number
         }
         Relationships: [
           {
