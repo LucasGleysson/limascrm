@@ -421,7 +421,8 @@ export const EventoPanel = () => {
           {fupPagination.paginatedItems.map((evento) => {
             const lead = getLead(evento.id_lead);
             const canMarkLoss = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido";
-            const canEncerrar = lead && !lead.fup_concluido;
+            const canEncerrar = lead && !lead.fup_concluido
+              && !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
             const etapa = lead ? ETAPAS_FUNIL.find((e) => e.id === lead.etapa) : null;
             const leadFups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === evento.id_lead);
             const done = leadFups.filter((e) => e.concluido).length;
