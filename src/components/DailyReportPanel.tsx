@@ -21,28 +21,18 @@ export const DailyReportPanel = () => {
 
   const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
-  // Anchor "Na Loja" to data_agendamento (the real event date), NOT checkin timestamp.
-  // This ensures metrics are stable even when check-in is registered late (next day, etc.).
+  // Anchor "Na Loja" strictly to checkin of the day — same rule as TV Dashboard.
+  // checkin is immutable and reflects the real day the car was in the store.
+  // data_agendamento changes with reschedules and would inflate counts of reagendados.
   const passaramNaLojaNoDia = useMemo(() => {
-    return leads.filter((l) => {
-      if (!foiNaLoja(l)) return false;
-      // Primary: use data_agendamento as the real event date
-      if (l.data_agendamento) return l.data_agendamento === dateStr;
-      // Walk-ins without appointment: use checkin date, then data_entrada
-      if (l.checkin) return l.checkin.slice(0, 10) === dateStr;
-      return l.data_entrada === dateStr;
-    });
+    return leads.filter((l) => !!l.checkin && l.checkin.slice(0, 10) === dateStr);
   }, [leads, dateStr]);
 
-  // Anchor "Concluídos" to data_agendamento for the same stability reason.
+  // Concluídos: also anchored by checkin of the day (the day the car was actually attended).
   const concluidosNoDia = useMemo(() => {
-    return leads.filter((l) => {
-      if (l.etapa !== "concluido") return false;
-      if (l.data_agendamento) return l.data_agendamento === dateStr;
-      if (l.checkout) return l.checkout.slice(0, 10) === dateStr;
-      if (l.checkin) return l.checkin.slice(0, 10) === dateStr;
-      return l.data_entrada === dateStr;
-    });
+    return leads.filter(
+      (l) => l.etapa === "concluido" && !!l.checkin && l.checkin.slice(0, 10) === dateStr
+    );
   }, [leads, dateStr]);
 
   const dispensadosNoDia = useMemo(() => {
@@ -158,7 +148,7 @@ export const DailyReportPanel = () => {
       </div>
       {/* Na Loja */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Na Loja" value={globalStats.naLoja} icon={Car} variant="warning" subtitle="Conf+Concl+Disp+Perd+Reag" />
+        <StatsCard title="Na Loja" value={globalStats.naLoja} icon={Car} variant="warning" subtitle="Com check-in no dia" />
         <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
         <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
         <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
