@@ -1,47 +1,41 @@
 
 
-O usuário quer que o Painel TV funcione como um **registro do dia** (snapshot histórico), não como um contador volátil que reflete apenas o status atual do lead. 
+Aplicar as mudanças que ficaram pendentes do plano anterior:
 
-**Problema atual**: se um lead agendado para hoje passa na loja, é dispensado e depois reagendado para outro dia, ele desaparece de TODAS as métricas do dia (agendados E na loja), porque a query filtra por `data_agendamento === hoje` — e o reagendamento muda essa data.
+## 1. `EventoPanel.tsx` — esconder "Encerrar" pós-loja/agendamento
 
-**Solução**: usar `checkin` como fonte de verdade para "passou hoje" e separar a lógica de "agendado hoje" para incluir leads que **estavam** agendados hoje, mesmo que tenham sido reagendados depois.
+Mudar linha 424:
+```ts
+const canEncerrar = lead && !lead.fup_concluido 
+  && !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
+```
+Resultado: botão "Encerrar" só aparece para `novo` e `trabalhado`. Para os demais, agente usa apenas "Enviar para Análise".
 
-## Mudanças no `TVDashboardPanel.tsx`
+## 2. `FollowUpTrackingPanel.tsx` — mesma regra
 
-Reescrever o `unitStats` com duas fontes:
-
-```text
-1. naLoja (passou na loja HOJE) — REGISTRO HISTÓRICO:
-   leads onde checkin existe AND checkin::date === hoje
-   — independe de etapa atual ou data_agendamento atual
-   — se o lead foi reagendado depois, AINDA conta (porque passou hoje)
-
-2. agendados (esperados HOJE) — REGISTRO + STATUS ATUAL:
-   leads onde:
-     (a) data_agendamento === hoje E etapa in [agendado, reagendado, confirmado]
-         → ainda esperando chegar
-     OU
-     (b) checkin::date === hoje
-         → já chegou hoje (mesmo se data_agendamento foi alterada depois para reagendar)
-   
-   Exclui: desqualificado_agendado SEM checkin hoje (nunca chegou)
-
-3. emLoja (no momento, na loja agora):
-   data_agendamento === hoje AND etapa in [na_loja, analise_supervisor]
-   OU checkin hoje AND checkout NULL AND etapa in [na_loja, analise_supervisor]
-
-4. concluidos / dispensados / perdidos (HOJE):
-   checkin::date === hoje AND etapa === respectiva
-   — usa checkin como âncora do dia, não data_agendamento
+Localizar onde o botão "Encerrar" é renderizado nos cards (`renderPendingCard`) e aplicar o mesmo guard:
+```ts
+const canEncerrar = !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
 ```
 
-**Princípio**: `checkin` é imutável e marca "esteve aqui hoje". `data_agendamento` muda com reagendamento e não serve como âncora histórica.
+## 3. `DispensaReportPanel.tsx` — pergunta supervisor "volta para FUP?"
 
-### Pie chart por unidade
+Substituir `handleDecision` por um fluxo com dialog:
+- Supervisor clica "Perda" ou "Desq." → abre dialog: *"O agente deve voltar a fazer follow-up deste cliente?"* [Sim / Não]
+- **Sim** → `etapa = "dispensado"`, `fup_concluido = false` (volta para fila do agente).
+- **Não** → `etapa = "perdido"` ou `"desqualificado_agendado"` conforme botão clicado, `fup_concluido = true`, `fup_concluido_em = now()`.
+- Anota no campo `notas` a decisão do supervisor.
 
-Recalcular `pieData` com base nos leads que tiveram `checkin` hoje + os que ainda estão agendados pendentes — para que o donut reflita o "movimento real do dia".
+Adicionar estado:
+```ts
+const [decisionOpen, setDecisionOpen] = useState(false);
+const [decisionLead, setDecisionLead] = useState<Lead|null>(null);
+const [decisionType, setDecisionType] = useState<"perdido"|"desqualificado_agendado">("perdido");
+```
 
 ### Arquivos editados
 
-- `src/components/TVDashboardPanel.tsx`
+- `src/components/EventoPanel.tsx`
+- `src/components/FollowUpTrackingPanel.tsx`
+- `src/components/DispensaReportPanel.tsx`
 
