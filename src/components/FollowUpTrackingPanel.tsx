@@ -260,6 +260,7 @@ export const FollowUpTrackingPanel = () => {
     const pending = leadFups.filter((e) => !e.concluido).length;
     const newStatus = getEncerrarStatus(lead);
     const newStatusLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
+    const canEncerrar = !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
 
     return (
       <div
@@ -286,15 +287,17 @@ export const FollowUpTrackingPanel = () => {
             <span>{getUnitName(lead.id_unidade)}</span>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-          onClick={(e) => openEncerrar(lead, e)}
-          title={`Encerrar → ${newStatusLabel}`}
-        >
-          <XSquare className="h-3.5 w-3.5" /> Encerrar
-        </Button>
+        {canEncerrar && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={(e) => openEncerrar(lead, e)}
+            title={`Encerrar → ${newStatusLabel}`}
+          >
+            <XSquare className="h-3.5 w-3.5" /> Encerrar
+          </Button>
+        )}
       </div>
     );
   };
