@@ -1,41 +1,47 @@
 
 
-Aplicar as mudanças que ficaram pendentes do plano anterior:
+## Diagnóstico confirmado
 
-## 1. `EventoPanel.tsx` — esconder "Encerrar" pós-loja/agendamento
+O **Painel TV está certo (3)**. O **Relatório Diário está inflando (4)** porque conta o LUIZ MAURO, que tem `visitas_loja=1` (histórico de visita anterior) e `data_agendamento=hoje` — mas ainda **não fez checkin hoje** (etapa `reagendado`, esperando chegar).
 
-Mudar linha 424:
+### Causa raiz
+`DailyReportPanel.passaramNaLojaNoDia` usa esta regra:
 ```ts
-const canEncerrar = lead && !lead.fup_concluido 
-  && !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
+foiNaLoja(l) && l.data_agendamento === dateStr
 ```
-Resultado: botão "Encerrar" só aparece para `novo` e `trabalhado`. Para os demais, agente usa apenas "Enviar para Análise".
+`foiNaLoja` retorna true para qualquer lead com `visitas_loja > 0` (histórico). Isso conta leads reagendados que vieram em outro dia como se tivessem passado hoje.
 
-## 2. `FollowUpTrackingPanel.tsx` — mesma regra
+## Correção
 
-Localizar onde o botão "Encerrar" é renderizado nos cards (`renderPendingCard`) e aplicar o mesmo guard:
+Alinhar `DailyReportPanel` à mesma âncora do TV: **`checkin` do dia** é a única fonte de verdade para "passou na loja hoje". `data_agendamento` muda com reagendamento, não serve.
+
+### Mudanças em `src/components/DailyReportPanel.tsx`
+
+**1. `passaramNaLojaNoDia`** (linhas 26-35) — exigir checkin de hoje:
 ```ts
-const canEncerrar = !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
+const passaramNaLojaNoDia = useMemo(() => {
+  return leads.filter((l) => !!l.checkin && l.checkin.slice(0, 10) === dateStr);
+}, [leads, dateStr]);
 ```
 
-## 3. `DispensaReportPanel.tsx` — pergunta supervisor "volta para FUP?"
-
-Substituir `handleDecision` por um fluxo com dialog:
-- Supervisor clica "Perda" ou "Desq." → abre dialog: *"O agente deve voltar a fazer follow-up deste cliente?"* [Sim / Não]
-- **Sim** → `etapa = "dispensado"`, `fup_concluido = false` (volta para fila do agente).
-- **Não** → `etapa = "perdido"` ou `"desqualificado_agendado"` conforme botão clicado, `fup_concluido = true`, `fup_concluido_em = now()`.
-- Anota no campo `notas` a decisão do supervisor.
-
-Adicionar estado:
+**2. `concluidosNoDia`** (linhas 38-46) — ancorar pelo checkin de hoje:
 ```ts
-const [decisionOpen, setDecisionOpen] = useState(false);
-const [decisionLead, setDecisionLead] = useState<Lead|null>(null);
-const [decisionType, setDecisionType] = useState<"perdido"|"desqualificado_agendado">("perdido");
+const concluidosNoDia = useMemo(() => {
+  return leads.filter((l) =>
+    l.etapa === "concluido" && !!l.checkin && l.checkin.slice(0, 10) === dateStr
+  );
+}, [leads, dateStr]);
 ```
+
+**3. Subtítulo do card "Na Loja"** (linha 161): trocar `"Conf+Concl+Disp+Perd+Reag"` por `"Com check-in hoje"` para refletir a nova lógica.
+
+### Impacto colateral
+
+- `globalStats.agendados` (linha 60) continua usando `createdToday + etapas pós-agendamento` — isso mede "registros criados hoje que viraram agendamento", métrica diferente, mantém.
+- Tabelas "Por Cidade" e "Por Agente" usam `passaramNaLojaNoDia` derivado, então automaticamente passam a bater com o TV.
+- Leads reagendados (como LUIZ MAURO) deixam de inflar "Na Loja" do dia atual e aparecem corretamente no dia em que originalmente fizeram checkin.
 
 ### Arquivos editados
 
-- `src/components/EventoPanel.tsx`
-- `src/components/FollowUpTrackingPanel.tsx`
-- `src/components/DispensaReportPanel.tsx`
+- `src/components/DailyReportPanel.tsx`
 
