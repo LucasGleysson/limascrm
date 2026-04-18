@@ -11,8 +11,9 @@ import { TablePagination } from "@/components/TablePagination";
 import { usePagination } from "@/hooks/usePagination";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass } from "@/lib/leadUtils";
-import { CheckCircle2, Clock, Skull, XCircle, Search, AlertCircle } from "lucide-react";
+import { CheckCircle2, Clock, Skull, XCircle, Search, AlertCircle, RotateCcw } from "lucide-react";
 import { appendNota } from "@/lib/notasUtils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 export const DispensaReportPanel = () => {
   const { leads, profiles, unidades, updateLead } = useLeads();
@@ -23,6 +24,10 @@ export const DispensaReportPanel = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [decisionOpen, setDecisionOpen] = useState(false);
+  const [decisionLead, setDecisionLead] = useState<Lead | null>(null);
+  const [decisionType, setDecisionType] = useState<"perdido" | "desqualificado_agendado">("perdido");
+  const [decisionLoading, setDecisionLoading] = useState(false);
 
   // All leads that should appear in Análise: dispensado, perdido, desq_agendado, desq_novo, analise_supervisor
   const allAnaliseLeads = useMemo(
@@ -70,10 +75,49 @@ export const DispensaReportPanel = () => {
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
   const getUnitName = (id?: string | null) => (id ? unidades.find((u) => u.id === id)?.nome || "—" : "—");
 
-  const handleDecision = async (lead: Lead, decision: "perdido" | "desqualificado_agendado") => {
-    const label = decision === "perdido" ? "Perda" : "Desqualificado";
-    const notas = appendNota(lead.notas, `Supervisor: ${label}`, `Decisão do supervisor após análise`);
-    await updateLead(lead.id, { etapa: decision, notas });
+  const openDecision = (lead: Lead, decision: "perdido" | "desqualificado_agendado") => {
+    setDecisionLead(lead);
+    setDecisionType(decision);
+    setDecisionOpen(true);
+  };
+
+  const handleDecisionConfirm = async (voltarParaFup: boolean) => {
+    if (!decisionLead || decisionLoading) return;
+    setDecisionLoading(true);
+    try {
+      const label = decisionType === "perdido" ? "Perda" : "Desqualificado";
+      if (voltarParaFup) {
+        const notas = appendNota(
+          decisionLead.notas,
+          `Supervisor: ${label} → Volta para FUP`,
+          "Agente deve continuar follow-up",
+        );
+        await updateLead(decisionLead.id, {
+          etapa: "dispensado",
+          fup_concluido: false,
+          fup_concluido_em: null,
+          fup_motivo_conclusao: null,
+          notas,
+        });
+      } else {
+        const notas = appendNota(
+          decisionLead.notas,
+          `Supervisor: ${label} → FUP encerrado`,
+          "Decisão final do supervisor",
+        );
+        await updateLead(decisionLead.id, {
+          etapa: decisionType,
+          fup_concluido: true,
+          fup_concluido_em: new Date().toISOString(),
+          fup_motivo_conclusao: `Supervisor: ${label}`,
+          notas,
+        });
+      }
+      setDecisionOpen(false);
+      setDecisionLead(null);
+    } finally {
+      setDecisionLoading(false);
+    }
   };
 
   // Verification status: analise_supervisor = Pendente, otherwise = Analisado
@@ -208,14 +252,14 @@ export const DispensaReportPanel = () => {
                         <div className="flex items-center gap-1 justify-center" onClick={(e) => e.stopPropagation()}>
                           <Button
                             size="sm" variant="outline"
-                            onClick={() => handleDecision(lead, "perdido")}
+                            onClick={() => openDecision(lead, "perdido")}
                             className="gap-1 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
                           >
                             <Skull className="h-3.5 w-3.5" /> Perda
                           </Button>
                           <Button
                             size="sm" variant="outline"
-                            onClick={() => handleDecision(lead, "desqualificado_agendado")}
+                            onClick={() => openDecision(lead, "desqualificado_agendado")}
                             className="gap-1 text-xs"
                           >
                             <XCircle className="h-3.5 w-3.5" /> Desq.
@@ -243,6 +287,45 @@ export const DispensaReportPanel = () => {
       </div>
 
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+
+      <Dialog open={decisionOpen} onOpenChange={setDecisionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {decisionType === "perdido" ? <Skull className="h-5 w-5 text-destructive" /> : <XCircle className="h-5 w-5" />}
+              Marcar como {decisionType === "perdido" ? "Perda" : "Desqualificado"}
+            </DialogTitle>
+            <DialogDescription>
+              Cliente: <span className="font-semibold text-foreground">{decisionLead?.nome}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm">O agente deve voltar a fazer follow-up deste cliente?</p>
+            <p className="text-xs text-muted-foreground">
+              <strong>Sim</strong>: o lead volta como "Dispensado" e o agente continua o processo de FUP.<br />
+              <strong>Não</strong>: o FUP é encerrado e o lead fica como "{decisionType === "perdido" ? "Perdido" : "Desq. Agendado"}".
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleDecisionConfirm(true)}
+              disabled={decisionLoading}
+              className="gap-2"
+            >
+              <RotateCcw className="h-4 w-4" /> Sim, voltar para FUP
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleDecisionConfirm(false)}
+              disabled={decisionLoading}
+              className="gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Não, encerrar FUP
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
