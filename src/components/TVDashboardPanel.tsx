@@ -48,23 +48,39 @@ export const TVDashboardPanel: React.FC = () => {
   const unitStats = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     tick;
+    const checkinHoje = (l: typeof leads[number]) =>
+      !!l.checkin && l.checkin.startsWith(hoje);
+
     return orderedUnidades.map((u) => {
-      const uLeads = leads.filter(
-        (l) => l.id_unidade === u.id && (l.data_agendamento === hoje || l.data_entrada === hoje)
-      );
-      // Na Loja hoje: usa o contador visitas_loja (carros que efetivamente passaram).
-      // Reagendado NÃO conta — significa que o lead foi reagendado para outro dia.
-      const naLoja = uLeads.filter((l) => (l.visitas_loja ?? 0) > 0).length;
-      const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
-      const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
-      const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
-      const emLoja = uLeads.filter((l) => ["confirmado", "na_loja", "analise_supervisor"].includes(l.etapa)).length;
-      // Agendados hoje: apenas leads ainda ativos. Exclui desqualificado_agendado e perdido.
-      const agendados = uLeads.filter(
+      const uLeads = leads.filter((l) => l.id_unidade === u.id);
+
+      // Leads que passaram pela loja HOJE (registro histórico via checkin imutável).
+      const passouHoje = uLeads.filter(checkinHoje);
+
+      // Leads ainda esperados hoje (agendados/reagendados/confirmados para hoje, sem checkin ainda).
+      const esperadosHoje = uLeads.filter(
         (l) =>
+          !checkinHoje(l) &&
           l.data_agendamento === hoje &&
-          !["desqualificado_agendado", "perdido", "dispensado", "concluido"].includes(l.etapa)
+          ["agendado", "reagendado", "confirmado"].includes(l.etapa)
+      );
+
+      // Na Loja HOJE: quem fez checkin hoje (independe de reagendamento posterior).
+      const naLoja = passouHoje.length;
+
+      // Agendados HOJE: quem estava agendado e ainda não chegou + quem já chegou hoje.
+      const agendados = esperadosHoje.length + passouHoje.length;
+
+      // Em loja AGORA: checkin hoje, sem checkout, em etapa ativa de atendimento.
+      const emLoja = passouHoje.filter(
+        (l) => !l.checkout && ["na_loja", "analise_supervisor"].includes(l.etapa)
       ).length;
+
+      // Resultados do dia: ancorados pelo checkin de hoje.
+      const concluidos = passouHoje.filter((l) => l.etapa === "concluido").length;
+      const dispensados = passouHoje.filter((l) => l.etapa === "dispensado").length;
+      const perdidos = passouHoje.filter((l) => l.etapa === "perdido").length;
+
       const faltam = Math.max(0, META_DIARIA - naLoja);
       const metaBatida = naLoja >= META_DIARIA;
       const quaseLa = faltam === 1;
