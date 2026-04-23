@@ -29,7 +29,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, unidades, profiles, refreshAll } = useLeads();
+  const { leads, eventos, updateLead, concluirEvento, unidades, profiles, refreshAll } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
   const unidadeId = currentUser.unidade_padrao || "";
@@ -71,6 +71,7 @@ export const ReceptionistDashboard = () => {
   const today = getToday();
 
   const unitLeads = useMemo(() => leads.filter((l) => l.id_unidade === unidadeId), [leads, unidadeId]);
+  const unitLeadIds = useMemo(() => new Set(unitLeads.map((l) => l.id)), [unitLeads]);
 
   const agendados = useMemo(() => unitLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
@@ -109,7 +110,13 @@ export const ReceptionistDashboard = () => {
   }, [agendGroups, agendFilter, agendSearch]);
 
   // Statuses that have an OS (post-scheduling)
-  const OS_STATUSES = ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+  const OS_STATUSES = ["novo", "agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+
+  const lembretesRecepcao = useMemo(() => eventos
+    .filter((e) => e.tipo === "lembrete" && !e.concluido && unitLeadIds.has(e.id_lead))
+    .sort((a, b) => a.data_prevista.localeCompare(b.data_prevista)), [eventos, unitLeadIds]);
+  const lembretesHoje = lembretesRecepcao.filter((e) => e.data_prevista === today);
+  const lembretesAtrasados = lembretesRecepcao.filter((e) => e.data_prevista < today);
 
   const filteredClients = useMemo(() => {
     let filtered = unitLeads;
@@ -205,6 +212,16 @@ export const ReceptionistDashboard = () => {
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleConcluirLembrete = async (eventoId: string) => {
+    if (loadingAction) return;
+    setLoadingAction(`lembrete-${eventoId}`);
+    try {
+      await concluirEvento(eventoId, "Lembrete concluído pela recepção", currentUser.id);
     } finally {
       setLoadingAction(null);
     }
