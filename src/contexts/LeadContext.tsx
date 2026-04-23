@@ -204,7 +204,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       origem: lead.origem,
       etapa: lead.etapa,
       data_entrada: lead.data_entrada,
-      id_agente: lead.id_agente,
+      id_agente: lead.id_agente || null,
       id_unidade: lead.id_unidade || null,
       data_agendamento: lead.data_agendamento || null,
       numero_os: lead.numero_os || null,
@@ -215,7 +215,9 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       is_porta: lead.is_porta || false,
       notas: (lead as any).notas || null,
       id_recepcionista: (lead as any).id_recepcionista || null,
-    }).select("*").single();
+      visitas_loja: lead.visitas_loja ?? 0,
+      tags_motivo: lead.tags_motivo || null,
+    } as any).select("*").single();
     if (error) { console.error("addLead error:", error); return null; }
     if (data) {
       const newLead = mapLead(data);

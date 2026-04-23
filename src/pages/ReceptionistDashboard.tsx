@@ -80,14 +80,16 @@ export const ReceptionistDashboard = () => {
   const presentes = unitLeads.filter((l) => l.etapa === "na_loja");
   const concluidos = unitLeads.filter((l) => l.etapa === "concluido" && l.checkout?.startsWith(today));
   const dispensados = unitLeads.filter((l) => l.etapa === "dispensado");
+  const novosRecepcao = unitLeads.filter((l) => l.etapa === "novo" && l.id_recepcionista === currentUser.id);
 
   // Groups for category filtering
   const agendGroups = useMemo(() => [
     { key: "hoje", label: "Hoje", leads: agendadosHoje, cls: "bg-primary/10 text-primary border-primary/30" },
     { key: "atrasado", label: "Atrasados", leads: agendadosAtrasados, cls: "bg-destructive/10 text-destructive border-destructive/30" },
+    { key: "novo", label: "Novos", leads: novosRecepcao, cls: "bg-muted text-muted-foreground border-border" },
     { key: "confirmado", label: "Confirmados", leads: confirmados, cls: "bg-info/10 text-info border-info/30" },
     { key: "na_loja", label: "Em Serviço", leads: presentes, cls: "bg-warning/10 text-warning border-warning/30" },
-  ], [agendadosHoje, agendadosAtrasados, confirmados, presentes]);
+  ], [agendadosHoje, agendadosAtrasados, novosRecepcao, confirmados, presentes]);
 
   const filteredAgendLeads = useMemo(() => {
     let items: { lead: Lead; group: string }[] = [];
@@ -138,6 +140,8 @@ export const ReceptionistDashboard = () => {
       await updateLead(lead.id, {
         etapa: "confirmado",
         checkin: now,
+        data_agendamento: lead.data_agendamento || today,
+        is_porta: lead.is_porta ?? true,
         notas,
         id_recepcionista: currentUser.id,
         visitas_loja: (lead.visitas_loja ?? 0) + 1,
@@ -216,6 +220,7 @@ export const ReceptionistDashboard = () => {
     const labels: Record<string, { label: string; cls: string }> = {
       hoje: { label: "Agendado Hoje", cls: "bg-primary/10 text-primary border-primary/30" },
       atrasado: { label: "Atrasado", cls: "bg-destructive/10 text-destructive border-destructive/30" },
+      novo: { label: "Novo Cliente", cls: "bg-muted text-muted-foreground border-border" },
       confirmado: { label: "Confirmado", cls: "bg-info/10 text-info border-info/30" },
       na_loja: { label: "Em Serviço", cls: "bg-warning/10 text-warning border-warning/30" },
     };
@@ -223,10 +228,10 @@ export const ReceptionistDashboard = () => {
   };
 
   const getActions = (lead: Lead, group: string) => {
-    if (group === "hoje" || group === "atrasado") {
+    if (group === "hoje" || group === "atrasado" || group === "novo") {
       return (
         <Button onClick={(e) => { e.stopPropagation(); handleCheckin(lead); }} className="gap-1" size="sm" disabled={loadingAction === `checkin-${lead.id}`}>
-          <LogIn className="h-3.5 w-3.5" /> {loadingAction === `checkin-${lead.id}` ? "..." : "Check-in"}
+          <LogIn className="h-3.5 w-3.5" /> {loadingAction === `checkin-${lead.id}` ? "..." : group === "novo" ? "Dar entrada" : "Check-in"}
         </Button>
       );
     }

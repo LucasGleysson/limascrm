@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,25 +27,38 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
   const [origem, setOrigem] = useState((isPorta || isReceptionist) ? "Porta" : "Instagram");
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
+  const [confirmEntryOpen, setConfirmEntryOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setNome("");
+    setTelefone("");
+    setOrigem((isPorta || isReceptionist) ? "Porta" : "Instagram");
+    setNumeroOs("");
+    setEtapa(isPorta ? "na_loja" : "novo");
+    setConfirmEntryOpen(false);
+  }, [open, isPorta, isReceptionist]);
 
   const receptionistEtapas = ETAPAS_FUNIL.filter((e) =>
     ["na_loja", "agendado"].includes(e.id)
   );
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (darEntradaAgora = isPorta || false) => {
     if (!nome || !telefone) return;
     const now = new Date().toISOString();
-    const finalEtapa = isReceptionist ? "na_loja" : (isPorta ? "na_loja" : "novo");
-    const isWalkIn = isReceptionist || isPorta;
+    const today = now.split("T")[0];
+    const isWalkIn = isReceptionist ? darEntradaAgora : isPorta || false;
+    const finalEtapa = isReceptionist ? (darEntradaAgora ? "confirmado" : "novo") : (isPorta ? "na_loja" : "novo");
     await addLead({
       nome,
       telefone: formatPhone(telefone),
       origem: origem || "Porta",
       etapa: finalEtapa,
-      data_entrada: now.split("T")[0],
-      id_agente: currentUser.id,
+      data_entrada: today,
+      data_agendamento: isReceptionist && darEntradaAgora ? today : null,
+      id_agente: isReceptionist ? null : currentUser.id,
       id_unidade: unidadeId || null,
-      is_porta: isPorta || isReceptionist || false,
+      is_porta: isWalkIn,
       checkin: isWalkIn ? now : null,
       numero_os: numeroOs || null,
       id_recepcionista: isReceptionist ? currentUser.id : null,
@@ -58,11 +72,21 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     onOpenChange(false);
   };
 
+  const handlePrimarySubmit = () => {
+    if (!canSubmit) return;
+    if (isReceptionist) {
+      setConfirmEntryOpen(true);
+      return;
+    }
+    handleSubmit(isPorta || false);
+  };
+
   const canSubmit = nome && telefone && (!isPorta && !isReceptionist ? !!origem : true);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && canSubmit) { e.preventDefault(); handleSubmit(); } }}>
+      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && canSubmit) { e.preventDefault(); handlePrimarySubmit(); } }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
@@ -98,9 +122,24 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>Cadastrar</Button>
+          <Button onClick={handlePrimarySubmit} disabled={!canSubmit}>Cadastrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={confirmEntryOpen} onOpenChange={setConfirmEntryOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Esse cliente vai dar entrada na loja agora?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se der entrada agora, ele ficará como confirmado para a recepção colocar em serviço ou dispensar. Caso contrário, será apenas cadastrado como cliente novo.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => handleSubmit(false)}>Não, apenas cadastrar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => handleSubmit(true)}>Sim, dar entrada</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };

@@ -45,7 +45,7 @@ export interface Lead {
   origem: string;
   etapa: string;
   data_entrada: string;
-  id_agente: string;
+  id_agente: string | null;
   id_unidade?: string | null;
   data_agendamento?: string | null;
   numero_os?: string | null;
