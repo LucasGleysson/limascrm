@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriangle, Wrench, XCircle, RefreshCw } from "lucide-react";
+import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, Bell, Wrench, XCircle, RefreshCw, CheckCircle2 } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, getToday, formatDateBR } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 const SIDEBAR_TABS = [
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "clientes", label: "Clientes", icon: UsersRound },
+  { id: "lembretes", label: "Lembretes", icon: Bell },
 ];
 
 export const ReceptionistDashboard = () => {
