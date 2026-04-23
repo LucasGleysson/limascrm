@@ -56,31 +56,6 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const currentUserRef = useRef(currentUser);
   currentUserRef.current = currentUser;
 
-  const buildLeadsQuery = useCallback(() => {
-    const user = currentUserRef.current;
-    let query = supabase.from("leads").select("*").order("created_at", { ascending: false });
-    if (user?.cargo === "agente") {
-      query = query.eq("id_agente", user.id);
-    }
-    if (user?.cargo === "recepcionista" && user.unidade_padrao) {
-      query = query.eq("id_unidade", user.unidade_padrao);
-    }
-    // For gestor/supervisor — no date filter, pagination handles the limit
-    return query;
-  }, []);
-
-  const buildEventosQuery = useCallback(() => {
-    const user = currentUserRef.current;
-    let query = supabase.from("eventos").select("*").order("data_prevista", { ascending: true });
-    if (user?.cargo === "agente") {
-      query = query.eq("id_usuario", user.id);
-    }
-    if (user?.cargo === "recepcionista") {
-      query = query.eq("concluido", false);
-    }
-    return query;
-  }, []);
-
   const fetchAll = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && lastFetchRef.current && now - lastFetchRef.current < CACHE_TTL) {
@@ -88,31 +63,74 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const user = currentUserRef.current;
-    const needsPagination =
-      user?.cargo === "gestor" ||
-      user?.cargo === "supervisor" ||
-      user?.cargo === "agente";
 
-    const [leadsData, eventosData, unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
-      needsPagination
-        ? fetchAllRows<any>(buildLeadsQuery())
-        : buildLeadsQuery().then((r: any) => r.data || []),
-      needsPagination
-        ? fetchAllRows<any>(buildEventosQuery())
-        : buildEventosQuery().then((r: any) => r.data || []),
+    // Load support tables first; agente_unidades is needed to compute visible leads for agents
+    const [unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
       supabase.from("unidades").select("*").order("nome"),
       supabase.from("profiles").select("id, nome, cargo, unidade_padrao"),
       supabase.from("agente_unidades").select("*"),
     ]);
 
+    const allAgentUnidades = (agentUnidadesRes.data || []) as AgentUnidade[];
+
+    // Build leads query per role
+    const buildLeadsQuery = () => {
+      let q = supabase.from("leads").select("*").order("created_at", { ascending: false });
+      if (user?.cargo === "agente") {
+        const myUnits = allAgentUnidades
+          .filter((au) => au.id_agente === user.id)
+          .map((au) => au.id_unidade);
+        if (myUnits.length > 0) {
+          // Lead is mine OR belongs to one of my units
+          const unitsCsv = myUnits.map((u) => `"${u}"`).join(",");
+          q = q.or(`id_agente.eq.${user.id},id_unidade.in.(${unitsCsv})`);
+        } else {
+          q = q.eq("id_agente", user.id);
+        }
+      } else if (user?.cargo === "recepcionista" && user.unidade_padrao) {
+        q = q.eq("id_unidade", user.unidade_padrao);
+      }
+      return q;
+    };
+
+    // Always paginate to bypass the 1000-row PostgREST limit, regardless of role
+    const leadsData = await fetchAllRows<any>(buildLeadsQuery());
+
+    // Load events scoped to the leads the user can see
+    let eventosData: any[] = [];
+    if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
+      eventosData = await fetchAllRows<any>(
+        supabase.from("eventos").select("*").order("data_prevista", { ascending: true })
+      );
+    } else {
+      const visibleIds = leadsData.map((l) => l.id);
+      if (visibleIds.length > 0) {
+        // Chunk to avoid URL length issues with .in()
+        const CHUNK = 200;
+        const all: any[] = [];
+        for (let i = 0; i < visibleIds.length; i += CHUNK) {
+          const slice = visibleIds.slice(i, i + CHUNK);
+          const rows = await fetchAllRows<any>(
+            supabase
+              .from("eventos")
+              .select("*")
+              .in("id_lead", slice)
+              .order("data_prevista", { ascending: true })
+          );
+          all.push(...rows);
+        }
+        eventosData = all;
+      }
+    }
+
     setLeads(leadsData.map(mapLead));
     setEventos(eventosData.map(mapEvento));
     if (unidadesRes.data) setUnidades(unidadesRes.data);
     if (profilesRes.data) setProfiles(profilesRes.data);
-    if (agentUnidadesRes.data) setAgentUnidades(agentUnidadesRes.data as AgentUnidade[]);
+    setAgentUnidades(allAgentUnidades);
     lastFetchRef.current = Date.now();
     setLoading(false);
-  }, [buildLeadsQuery, buildEventosQuery]);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
