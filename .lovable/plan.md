@@ -1,227 +1,340 @@
 
-# Regra definitiva do Painel TV: contador de carros que foram hoje
+# Plano: corrigir follow-ups e agendamentos pendentes para agentes e apoios
 
-## Confirmação da lógica
+## Objetivo
 
-O contador principal do Painel TV deve ser apenas:
+Garantir que agentes e recepcionistas/apoios vejam todos os agendamentos e reagendamentos pendentes das unidades pelas quais são responsáveis, sem perda por limite de consulta, vínculo incompleto de agente ou eventos de follow-up criados com outro responsável.
 
-```text
-Carros que fizeram check-in hoje na unidade
-```
+O problema principal parece estar em dois pontos:
 
-Ou seja, o carro conta para hoje se:
+1. O agente hoje enxerga principalmente leads vinculados diretamente a `id_agente`.
+2. As consultas de recepcionista ainda podem cair no limite padrão de 1000 registros em algumas situações.
 
-```ts
-lead.checkin começa com a data de hoje
-```
-
-Não importa se depois ele foi:
-- concluído
-- dispensado
-- perdido
-- reagendado para outro dia
-- enviado para análise
-- atualizado em outro campo
-
-Se o `checkin` foi hoje, ele continua contando como carro que foi hoje.
-
-Se o `checkin` foi ontem e o lead foi finalizado hoje, ele não conta hoje. Conta apenas no dia do check-in.
+Isso faz com que um carro atrasado apareça para a apoio da unidade, mas não apareça no painel de follow-up do agente responsável pela unidade.
 
 ---
 
-## Situação atual do código
+## Regra funcional final
 
-No `TVDashboardPanel.tsx`, a regra principal já está correta:
+### Para agentes
 
-```ts
-const checkinHoje = (l) =>
-  !!l.checkin && l.checkin.startsWith(hoje);
-
-const passouHoje = uLeads.filter(checkinHoje);
-
-const naLoja = passouHoje.length;
-```
-
-Isso significa que o número central de cada unidade já representa:
+O agente deve visualizar no painel de follow-up e agendamentos:
 
 ```text
-quantos carros fizeram check-in hoje naquela unidade
+Leads onde:
+- id_agente = agente logado
+OU
+- id_unidade pertence às unidades que esse agente atende em agente_unidades
 ```
 
-E ele continua contando mesmo se o lead depois mudar para `dispensado`, `perdido`, `concluido` ou `reagendado`.
+Isso cobre casos como:
+
+```text
+Agente cuida de Grandville e Laranjeiras
+Lead está em Grandville
+Lead está agendado/reagendado atrasado
+Mesmo que id_agente esteja vazio ou diferente, ele deve aparecer para follow-up da unidade
+```
+
+Sem substituir o agente comercial do cadastro: o sistema apenas dá visibilidade operacional pelo vínculo da unidade.
 
 ---
 
-## Ajuste necessário: deixar o donut acompanhar exatamente o contador
+### Para recepcionistas/apoios
 
-O ponto que precisa correção não é a regra principal do contador, mas a composição visual do círculo.
+A apoio deve continuar vendo apenas clientes da sua unidade:
 
-Hoje o donut separa apenas:
-- Concluído
-- Em Loja
-- Dispensado
-- Perdido
-- Restante
+```text
+lead.id_unidade = unidade_padrao da recepcionista
+```
 
-Mas um lead que fez check-in hoje e depois ficou em outro status, como `confirmado`, `reagendado` ou `analise_supervisor`, pode contar no número central e não aparecer claramente em nenhuma fatia do círculo.
-
-Isso pode fazer parecer que o círculo não acompanha o número, especialmente em uma unidade específica como Catalão.
+Mas sem limite de 1000 registros, tanto para:
+- agendamentos
+- reagendamentos atrasados
+- clientes
+- lembretes
+- eventos relacionados à unidade
 
 ---
 
 ## Implementação proposta
 
-### 1. Manter `naLoja` como contador puro de check-in do dia
+### 1. Corrigir carregamento de leads no `LeadContext`
 
-Não alterar esta regra:
+Arquivo:
+
+```text
+src/contexts/LeadContext.tsx
+```
+
+Ajustar a busca inicial para carregar `agente_unidades` antes de montar a regra de visibilidade do agente.
+
+Para agente:
+
+```text
+buscar leads onde:
+id_agente = currentUser.id
+OU
+id_unidade IN unidades vinculadas ao agente
+```
+
+Para recepcionista:
+
+```text
+buscar leads da unidade_padrao
+```
+
+Para gestor/supervisor:
+
+```text
+buscar todos os leads
+```
+
+Também ajustar a paginação interna para incluir recepcionistas, não apenas gestor/supervisor/agente.
+
+Hoje a paginação ampla já existe, mas a recepcionista pode cair no `.then(r => r.data)` sem `.range()`, o que pode limitar dados.
+
+---
+
+### 2. Corrigir carregamento de eventos/follow-ups
+
+Arquivo:
+
+```text
+src/contexts/LeadContext.tsx
+```
+
+Não depender apenas de:
+
+```text
+eventos.id_usuario = agente logado
+```
+
+Porque alguns follow-ups podem ter sido criados com:
+- `id_usuario` antigo
+- `id_usuario` vazio
+- `id_usuario` de outro usuário
+- lead criado pela recepção sem agente direto
+
+A regra correta deve ser:
+
+```text
+carregar eventos relacionados aos leads visíveis para aquele perfil
+```
+
+Fluxo proposto:
+
+```text
+1. Buscar leads visíveis do usuário
+2. Montar lista de ids desses leads
+3. Buscar eventos onde id_lead está nessa lista
+4. Fazer isso com paginação/chunks para não cair em limite
+```
+
+Para gestor/supervisor, pode continuar buscando todos os eventos paginados.
+
+Resultado:
+
+```text
+Se o lead atrasado aparece para a unidade, o follow-up também aparece para o agente responsável pela unidade e para a apoio da unidade.
+```
+
+---
+
+### 3. Corrigir painel de follow-up do agente
+
+Arquivo:
+
+```text
+src/components/EventoPanel.tsx
+```
+
+Hoje o painel usa:
 
 ```ts
-const passouHoje = uLeads.filter(checkinHoje);
-const naLoja = passouHoje.length;
+leads.filter((l) => l.id_agente === currentUser.id)
 ```
 
-Esse será o contador oficial:
+Trocar para uma função de visibilidade do agente:
 
 ```text
-Carros que foram hoje
+lead pertence ao agente
+OU
+lead pertence a uma unidade que o agente atende
 ```
+
+Isso deve ser aplicado em:
+- `myLeads`
+- `myLeadIds`
+- follow-ups pendentes
+- categorias de follow-up:
+  - novos
+  - amanhã
+  - agendados hoje
+  - agendados atrasados
+  - dispensados
+- busca por nome/telefone
+- lista de leads disponíveis para criar lembrete/evento
 
 ---
 
-### 2. Criar uma fatia “Atendidos” no donut
+### 4. Corrigir painel de agendamentos do agente
 
-Adicionar uma categoria visual para todos os carros que fizeram check-in hoje, mas não estão em:
-- concluído
-- em loja
-- dispensado
-- perdido
+Arquivo:
 
-Exemplo:
+```text
+src/components/AgentSchedulePanel.tsx
+```
+
+Hoje também usa:
 
 ```ts
-const outrosAtendidos = Math.max(
-  0,
-  naLoja - concluidos - emLoja - dispensados - perdidos
-);
+leads.filter((l) => l.id_agente === currentUser.id)
 ```
 
-E incluir no gráfico:
+Ajustar para a mesma regra:
+
+```text
+lead do agente
+OU
+lead de unidade atendida pelo agente
+```
+
+Assim, agendamentos e reagendamentos atrasados das unidades Grandville/Laranjeiras aparecem para o agente que cuida dessas lojas.
+
+---
+
+### 5. Garantir que apoio/recepção não perca dados
+
+Arquivo:
+
+```text
+src/pages/ReceptionistDashboard.tsx
+```
+
+A lógica visual da recepção já filtra por unidade:
 
 ```ts
-{ name: "Atendidos", value: outrosAtendidos, color: DONUT_COLORS.atendidos }
+lead.id_unidade === currentUser.unidade_padrao
 ```
 
-Essa fatia cobre casos como:
-- `confirmado`
-- `reagendado`
-- `analise_supervisor`
-- qualquer outro status que já teve check-in hoje
+Ajuste principal será garantir que o `LeadContext` entregue todos os dados da unidade, sem limite de 1000 registros.
 
-Resultado: o círculo passa a representar exatamente o mesmo total do número central.
+Também revisar:
+- aba Agendamentos
+- grupo Atrasados
+- grupo Hoje
+- grupo Novos
+- aba Clientes
+- aba Lembretes
+
+Para garantir que todos usem `unitLeads` completo e não listas parciais.
 
 ---
 
-### 3. Desativar animação do donut no Painel TV
+### 6. Ajustar permissões do backend para não bloquear conclusão/atualização
 
-Para evitar a sensação de atraso visual entre número e círculo:
+Será necessário revisar as regras de segurança de `leads` e `eventos`.
 
-```tsx
-<Pie isAnimationActive={false} />
+#### Leads
+
+Permitir que agente atualize lead se:
+
+```text
+id_agente = auth.uid()
+OU
+id_unidade está em agente_unidades do auth.uid()
+OU
+usuário é gestor/supervisor
+OU
+recepcionista está na unidade do lead
 ```
 
-Assim, quando os dados atualizarem, número e círculo mudam juntos.
+Isso permite que o agente conclua follow-up de um lead da unidade que ele atende, mesmo que o lead tenha sido criado pela recepção.
+
+#### Eventos
+
+Permitir que usuário atualize/conclua evento se:
+
+```text
+id_usuario = auth.uid()
+OU
+evento pertence a lead do agente
+OU
+evento pertence a lead de unidade atendida pelo agente
+OU
+evento pertence à unidade da recepcionista
+OU
+usuário é gestor/supervisor
+```
+
+Isso evita erro ao concluir follow-ups que foram criados com `id_usuario` vazio ou diferente.
 
 ---
 
-### 4. Ajustar textos para não gerar dúvida
+## O que não será alterado
 
-Trocar o rótulo do card global de:
+Não vamos mudar a propriedade comercial do lead automaticamente.
 
-```text
-Na Loja
-```
-
-Para algo mais fiel à regra:
+Ou seja:
 
 ```text
-Carros Hoje
+id_agente não será sobrescrito só porque o agente viu ou concluiu o follow-up.
 ```
 
-Ou manter “Na Loja”, mas com comentário interno claro no código:
+O lead pode continuar tendo:
+- agente comercial
+- recepcionista/apoio
+- unidade
+- eventos/follow-ups operacionais
+
+Isso preserva a regra que você definiu:
 
 ```text
-Na Loja = carros com check-in hoje, mesmo que depois tenham sido dispensados, concluídos, perdidos ou reagendados.
+Recepcionista não substitui agente.
+Cliente pode ter interação com agente e recepção, ou apenas com recepção.
 ```
-
-Minha recomendação é usar no TV:
-
-```text
-Carros Hoje
-```
-
-Porque é exatamente o que você pediu: um contador apenas de carros que foram hoje.
 
 ---
 
-## Regras finais esperadas
+## Sobre paginação visual
 
-### Caso 1: chegou hoje e foi dispensado
+A interface pode continuar mostrando 20 itens por página para manter o layout organizado.
 
-```text
-checkin = hoje
-etapa = dispensado
-```
+Mas isso será apenas paginação visual.
 
-Conta hoje no Painel TV.
+O total real deve considerar todos os registros carregados, sem cortar em 1000 registros.
 
 ---
 
-### Caso 2: chegou hoje e foi reagendado para outro dia
+## Arquivos previstos
 
 ```text
-checkin = hoje
-data_agendamento = amanhã
-etapa = reagendado
+src/contexts/LeadContext.tsx
+src/components/EventoPanel.tsx
+src/components/AgentSchedulePanel.tsx
+src/pages/ReceptionistDashboard.tsx
+supabase/migrations/*
 ```
-
-Conta hoje no Painel TV.
 
 ---
 
-### Caso 3: chegou ontem e foi concluído hoje
+## Resultado esperado
+
+Depois da implementação:
 
 ```text
-checkin = ontem
-checkout = hoje
-etapa = concluido
+Agente que atende Grandville e Laranjeiras verá todos os agendamentos/reagendamentos atrasados dessas unidades.
 ```
-
-Não conta hoje. Conta apenas ontem.
-
----
-
-### Caso 4: agendado hoje, mas ainda não chegou
 
 ```text
-data_agendamento = hoje
-checkin = vazio
-etapa = agendado
+Apoio/recepcionista verá todos os agendamentos/reagendamentos/lembretes da sua unidade.
 ```
-
-Não conta como carro hoje. Entra apenas em “Agendados Hoje”.
-
----
-
-## Arquivo a editar
-
-- `src/components/TVDashboardPanel.tsx`
-
-## Resultado
-
-O Painel TV terá um contador confiável por unidade:
 
 ```text
-Carros Hoje = todos os leads com check-in hoje naquela unidade
+Follow-ups não deixarão de aparecer por causa de id_usuario, id_agente vazio ou limite de consulta.
 ```
 
-E o círculo visual passará a acompanhar exatamente esse número, incluindo carros concluídos, dispensados, perdidos, reagendados ou em qualquer outro status após terem dado entrada hoje.
+```text
+Nenhum cliente será atribuído automaticamente a outro agente apenas por aparecer no painel de follow-up.
+```
