@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, AlertTriangle, Wrench, XCircle, RefreshCw } from "lucide-react";
+import { LogIn, LogOut, UserPlus, CalendarCheck, Search, UsersRound, Bell, Wrench, XCircle, RefreshCw, CheckCircle2 } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, getToday, formatDateBR } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
@@ -26,10 +26,11 @@ import { supabase } from "@/integrations/supabase/client";
 const SIDEBAR_TABS = [
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "clientes", label: "Clientes", icon: UsersRound },
+  { id: "lembretes", label: "Lembretes", icon: Bell },
 ];
 
 export const ReceptionistDashboard = () => {
-  const { leads, updateLead, unidades, profiles, refreshAll } = useLeads();
+  const { leads, eventos, updateLead, concluirEvento, unidades, profiles, refreshAll } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("agendamentos");
   const unidadeId = currentUser.unidade_padrao || "";
@@ -71,6 +72,7 @@ export const ReceptionistDashboard = () => {
   const today = getToday();
 
   const unitLeads = useMemo(() => leads.filter((l) => l.id_unidade === unidadeId), [leads, unidadeId]);
+  const unitLeadIds = useMemo(() => new Set(unitLeads.map((l) => l.id)), [unitLeads]);
 
   const agendados = useMemo(() => unitLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento <= today), [unitLeads, today]);
   const agendadosHoje = agendados.filter((l) => l.data_agendamento === today);
@@ -109,7 +111,13 @@ export const ReceptionistDashboard = () => {
   }, [agendGroups, agendFilter, agendSearch]);
 
   // Statuses that have an OS (post-scheduling)
-  const OS_STATUSES = ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+  const OS_STATUSES = ["novo", "agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido"];
+
+  const lembretesRecepcao = useMemo(() => eventos
+    .filter((e) => e.tipo === "lembrete" && !e.concluido && unitLeadIds.has(e.id_lead))
+    .sort((a, b) => a.data_prevista.localeCompare(b.data_prevista)), [eventos, unitLeadIds]);
+  const lembretesHoje = lembretesRecepcao.filter((e) => e.data_prevista === today);
+  const lembretesAtrasados = lembretesRecepcao.filter((e) => e.data_prevista < today);
 
   const filteredClients = useMemo(() => {
     let filtered = unitLeads;
@@ -205,6 +213,16 @@ export const ReceptionistDashboard = () => {
       setCheckoutOpen(false);
       setTags([]);
       setCheckoutMotivo("");
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleConcluirLembrete = async (eventoId: string) => {
+    if (loadingAction) return;
+    setLoadingAction(`lembrete-${eventoId}`);
+    try {
+      await concluirEvento(eventoId, "Lembrete concluído pela recepção", currentUser.id);
     } finally {
       setLoadingAction(null);
     }
@@ -452,6 +470,54 @@ export const ReceptionistDashboard = () => {
                 totalItems={clientPagination.totalItems} pageSize={clientPagination.pageSize}
                 onPageChange={clientPagination.goToPage} hasNextPage={clientPagination.hasNextPage} hasPrevPage={clientPagination.hasPrevPage}
               />
+            </div>
+          </>
+        )}
+
+        {activeTab === "lembretes" && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">Lembretes — {unidadeNome}</h1>
+              <p className="text-muted-foreground text-sm">Retornos pendentes dos clientes da sua unidade</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatsCard title="Pendentes" value={lembretesRecepcao.length} icon={Bell} variant="info" />
+              <StatsCard title="Hoje" value={lembretesHoje.length} icon={CalendarCheck} variant="warning" />
+              <StatsCard title="Atrasados" value={lembretesAtrasados.length} icon={XCircle} variant="destructive" />
+            </div>
+
+            <div className="space-y-2">
+              {lembretesRecepcao.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum lembrete pendente.</p>
+              ) : (
+                lembretesRecepcao.map((evento) => {
+                  const lead = unitLeads.find((l) => l.id === evento.id_lead);
+                  if (!lead) return null;
+                  const isAtrasado = evento.data_prevista < today;
+                  const isHoje = evento.data_prevista === today;
+                  return (
+                    <div key={evento.id} className={`flex items-center gap-3 p-3 rounded-xl bg-card border transition-all hover:bg-muted/50 ${isAtrasado ? "border-destructive/30" : "border-border"}`}>
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{lead.nome}</span>
+                          <Badge variant="outline" className={isAtrasado ? "bg-destructive/10 text-destructive border-destructive/30" : isHoje ? "bg-warning/10 text-warning border-warning/30" : "bg-info/10 text-info border-info/30"}>
+                            {isAtrasado ? "Atrasado" : isHoje ? "Hoje" : formatDateBR(evento.data_prevista)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          <span>{formatPhone(lead.telefone)}</span>
+                          {lead.numero_os && <span>OS: {lead.numero_os}</span>}
+                          <span>{evento.descricao || "Lembrete sem descrição"}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="gap-1 border-success/30 text-success hover:bg-success/10" onClick={() => handleConcluirLembrete(evento.id)} disabled={loadingAction === `lembrete-${evento.id}`}>
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {loadingAction === `lembrete-${evento.id}` ? "..." : "Concluir"}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </>
         )}
