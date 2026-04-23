@@ -20,7 +20,7 @@ import { appendNota } from "@/lib/notasUtils";
 import { formatPhone } from "@/lib/phoneUtils";
 
 export const EventoPanel = () => {
-  const { eventos, leads, addEvento, concluirEvento, updateLead } = useLeads();
+  const { eventos, leads, addEvento, concluirEvento, updateLead, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [concludeOpen, setConcludeOpen] = useState(false);
   const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
@@ -49,9 +49,18 @@ export const EventoPanel = () => {
   const [fupSearch, setFupSearch] = useState("");
   const [fupCategoryFilter, setFupCategoryFilter] = useState<string | null>(null);
 
+  const myUnitIds = useMemo(
+    () => new Set(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    ),
+    [agentUnidades, currentUser.id]
+  );
+
   const myLeads = useMemo(
-    () => leads.filter((l) => l.id_agente === currentUser.id),
-    [leads, currentUser.id]
+    () => leads.filter(
+      (l) => l.id_agente === currentUser.id || (l.id_unidade && myUnitIds.has(l.id_unidade))
+    ),
+    [leads, currentUser.id, myUnitIds]
   );
 
   const today = new Date().toISOString().split("T")[0];
