@@ -473,6 +473,54 @@ export const ReceptionistDashboard = () => {
             </div>
           </>
         )}
+
+        {activeTab === "lembretes" && (
+          <>
+            <div>
+              <h1 className="text-2xl font-bold">Lembretes — {unidadeNome}</h1>
+              <p className="text-muted-foreground text-sm">Retornos pendentes dos clientes da sua unidade</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatsCard title="Pendentes" value={lembretesRecepcao.length} icon={Bell} variant="info" />
+              <StatsCard title="Hoje" value={lembretesHoje.length} icon={CalendarCheck} variant="warning" />
+              <StatsCard title="Atrasados" value={lembretesAtrasados.length} icon={XCircle} variant="destructive" />
+            </div>
+
+            <div className="space-y-2">
+              {lembretesRecepcao.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Nenhum lembrete pendente.</p>
+              ) : (
+                lembretesRecepcao.map((evento) => {
+                  const lead = unitLeads.find((l) => l.id === evento.id_lead);
+                  if (!lead) return null;
+                  const isAtrasado = evento.data_prevista < today;
+                  const isHoje = evento.data_prevista === today;
+                  return (
+                    <div key={evento.id} className={`flex items-center gap-3 p-3 rounded-xl bg-card border transition-all hover:bg-muted/50 ${isAtrasado ? "border-destructive/30" : "border-border"}`}>
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{lead.nome}</span>
+                          <Badge variant="outline" className={isAtrasado ? "bg-destructive/10 text-destructive border-destructive/30" : isHoje ? "bg-warning/10 text-warning border-warning/30" : "bg-info/10 text-info border-info/30"}>
+                            {isAtrasado ? "Atrasado" : isHoje ? "Hoje" : formatDateBR(evento.data_prevista)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          <span>{formatPhone(lead.telefone)}</span>
+                          {lead.numero_os && <span>OS: {lead.numero_os}</span>}
+                          <span>{evento.descricao || "Lembrete sem descrição"}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="gap-1 border-success/30 text-success hover:bg-success/10" onClick={() => handleConcluirLembrete(evento.id)} disabled={loadingAction === `lembrete-${evento.id}`}>
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {loadingAction === `lembrete-${evento.id}` ? "..." : "Concluir"}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isReceptionist unidadeId={unidadeId} />
