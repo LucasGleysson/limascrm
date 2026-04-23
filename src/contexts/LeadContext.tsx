@@ -190,7 +190,14 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (table === "leads") {
       if (eventType === "INSERT") {
         const lead = mapLead(newRow);
-        if (user?.cargo === "agente" && lead.id_agente !== user.id) return;
+        if (user?.cargo === "agente") {
+          const myUnits = new Set(
+            agentUnidades.filter((au) => au.id_agente === user.id).map((au) => au.id_unidade)
+          );
+          const visible = lead.id_agente === user.id || (lead.id_unidade && myUnits.has(lead.id_unidade));
+          if (!visible) return;
+        }
+        if (user?.cargo === "recepcionista" && lead.id_unidade !== user.unidade_padrao) return;
         setLeads((prev) => prev.some((l) => l.id === lead.id) ? prev : [lead, ...prev]);
       } else if (eventType === "UPDATE") {
         const lead = mapLead(newRow);
@@ -201,7 +208,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     } else if (table === "eventos") {
       if (eventType === "INSERT") {
         const evento = mapEvento(newRow);
-        if (user?.cargo === "agente" && evento.id_usuario !== user.id) return;
+        // Visibility based on the related lead, not on id_usuario
+        // We accept the event optimistically; if lead isn't loaded the UI will simply ignore it
         setEventos((prev) => {
           if (prev.some((e) => e.id === evento.id)) return prev;
           return [...prev, evento].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista));
@@ -213,7 +221,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
         setEventos((prev) => prev.filter((e) => e.id !== oldRow.id));
       }
     }
-  }, []);
+  }, [agentUnidades]);
 
   const addLead = async (lead: Omit<Lead, "id">): Promise<string | null> => {
     const { data, error } = await supabase.from("leads").insert({
