@@ -12,15 +12,24 @@ import { ptBR } from "date-fns/locale";
 import type { Lead } from "@/data/mockData";
 
 export const AgentSchedulePanel = () => {
-  const { leads, unidades } = useLeads();
+  const { leads, unidades, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  const myUnitIds = useMemo(
+    () => new Set(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    ),
+    [agentUnidades, currentUser.id]
+  );
+
   const myLeads = useMemo(
-    () => leads.filter((l) => l.id_agente === currentUser.id),
-    [leads, currentUser.id]
+    () => leads.filter(
+      (l) => l.id_agente === currentUser.id || (l.id_unidade && myUnitIds.has(l.id_unidade))
+    ),
+    [leads, currentUser.id, myUnitIds]
   );
 
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
