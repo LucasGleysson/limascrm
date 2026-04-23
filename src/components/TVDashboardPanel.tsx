@@ -12,6 +12,7 @@ const META_DIARIA = 4;
 const DONUT_COLORS = {
   concluido: "hsl(var(--success))",
   na_loja: "hsl(var(--warning))",
+  atendidos: "hsl(var(--primary))",
   dispensado: "hsl(38, 92%, 50%)",
   perdido: "hsl(var(--destructive))",
   outros: "hsl(var(--muted))",
@@ -54,7 +55,7 @@ export const TVDashboardPanel: React.FC = () => {
     return orderedUnidades.map((u) => {
       const uLeads = leads.filter((l) => l.id_unidade === u.id);
 
-      // Leads que passaram pela loja HOJE (registro histórico via checkin imutável).
+      // Carros que foram hoje: contagem ancorada somente no check-in do dia.
       const passouHoje = uLeads.filter(checkinHoje);
 
       // Leads ainda esperados hoje (agendados/reagendados/confirmados para hoje, sem checkin ainda).
@@ -65,7 +66,7 @@ export const TVDashboardPanel: React.FC = () => {
           ["agendado", "reagendado", "confirmado"].includes(l.etapa)
       );
 
-      // Na Loja HOJE: quem fez checkin hoje (independe de reagendamento posterior).
+      // Carros Hoje: quem fez check-in hoje, mesmo que depois tenha sido concluído, dispensado, perdido ou reagendado.
       const naLoja = passouHoje.length;
 
       // Agendados HOJE: quem estava agendado e ainda não chegou + quem já chegou hoje.
@@ -80,6 +81,7 @@ export const TVDashboardPanel: React.FC = () => {
       const concluidos = passouHoje.filter((l) => l.etapa === "concluido").length;
       const dispensados = passouHoje.filter((l) => l.etapa === "dispensado").length;
       const perdidos = passouHoje.filter((l) => l.etapa === "perdido").length;
+      const outrosAtendidos = Math.max(0, naLoja - concluidos - emLoja - dispensados - perdidos);
 
       const faltam = Math.max(0, META_DIARIA - naLoja);
       const metaBatida = naLoja >= META_DIARIA;
@@ -91,6 +93,7 @@ export const TVDashboardPanel: React.FC = () => {
       const pieData = [
         { name: "Concluído", value: concluidos, color: DONUT_COLORS.concluido },
         { name: "Em Loja", value: emLoja, color: DONUT_COLORS.na_loja },
+        { name: "Atendidos", value: outrosAtendidos, color: DONUT_COLORS.atendidos },
         { name: "Dispensado", value: dispensados, color: DONUT_COLORS.dispensado },
         { name: "Perdido", value: perdidos, color: DONUT_COLORS.perdido },
         { name: "Restante", value: restante, color: DONUT_COLORS.outros },
@@ -141,7 +144,7 @@ export const TVDashboardPanel: React.FC = () => {
 
       {/* Global summary */}
       <div className="grid grid-cols-3 gap-3 xl:gap-5">
-        <SummaryCard icon={Car} label="Na Loja" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
+        <SummaryCard icon={Car} label="Carros Hoje" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
         <SummaryCard icon={Calendar} label="Agendados Hoje" value={globalStats.totalAgendados} variant="info" />
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
@@ -231,6 +234,7 @@ function UnitCard({ data }: {
               outerRadius="80%"
               dataKey="value"
               stroke="none"
+              isAnimationActive={false}
             >
               {pieData.map((entry, i) => (
                 <Cell key={i} fill={entry.color} />
