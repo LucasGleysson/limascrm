@@ -52,11 +52,19 @@ export const TVDashboardPanel: React.FC = () => {
     const checkinHoje = (l: typeof leads[number]) =>
       !!l.checkin && l.checkin.startsWith(hoje);
 
+    // Conta no painel apenas se o agendamento é de hoje E o check-in foi feito hoje.
+    // Carros de porta (sem agendamento) também contam quando o check-in é hoje.
+    const contaNoPainel = (l: typeof leads[number]) => {
+      if (!checkinHoje(l)) return false;
+      if (l.is_porta && !l.data_agendamento) return true;
+      return l.data_agendamento === hoje;
+    };
+
     return orderedUnidades.map((u) => {
       const uLeads = leads.filter((l) => l.id_unidade === u.id);
 
       // Carros que foram hoje: contagem ancorada somente no check-in do dia.
-      const passouHoje = uLeads.filter(checkinHoje);
+      const passouHoje = uLeads.filter(contaNoPainel);
 
       // Leads ainda esperados hoje (agendados/reagendados/confirmados para hoje, sem checkin ainda).
       const esperadosHoje = uLeads.filter(
