@@ -783,6 +783,7 @@ export const ManagerDashboard = () => {
                           <tr className="border-b border-border">
                             <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">PARTIC.</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
@@ -800,10 +801,12 @@ export const ManagerDashboard = () => {
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
                             const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
                             const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
+                            const partic = sel.total > 0 ? Math.round((agLeads.length / sel.total) * 100) : 0;
                             return (
                               <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
                                 <td className="py-2 font-medium">{ag.nome}</td>
                                 <td className="py-2 text-center">{agLeads.length}</td>
+                                <td className="py-2 text-center font-medium text-primary">{partic}%</td>
                                 <td className="py-2 text-center text-primary">{agAgend}</td>
                                 <td className="py-2 text-center text-warning">{agNaLoja}</td>
                                 <td className="py-2 text-center text-success">{agConcl}</td>
