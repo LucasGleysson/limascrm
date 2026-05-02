@@ -10,13 +10,23 @@ interface AppSidebarProps {
 
 export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) => {
   const { currentUser, logout } = useRole();
-  const { unidades } = useLeads();
+  const { unidades, agentUnidades } = useLeads();
 
   if (!currentUser) return null;
 
-  const unidadeNome = currentUser.unidade_padrao
-    ? unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || ""
-    : "";
+  let unidadeNome = "";
+  if (currentUser.cargo === "agente") {
+    const ids = new Set(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    );
+    if (currentUser.unidade_padrao) ids.add(currentUser.unidade_padrao);
+    unidadeNome = Array.from(ids)
+      .map((id) => unidades.find((u) => u.id === id)?.nome)
+      .filter(Boolean)
+      .join(" / ");
+  } else if (currentUser.unidade_padrao) {
+    unidadeNome = unidades.find((u) => u.id === currentUser.unidade_padrao)?.nome || "";
+  }
 
   return (
     <aside className="w-64 min-h-screen bg-sidebar flex flex-col border-r border-sidebar-border shrink-0">
