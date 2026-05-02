@@ -235,7 +235,7 @@ export const ManagerDashboard = () => {
         fupPending: agFollowUps.filter((e) => !e.concluido).length,
       };
     });
-  }, [filteredLeads, agentes, unidades, eventos]);
+  }, [filteredLeads, agentes, unidades, eventos, agentUnitMap]);
 
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));
