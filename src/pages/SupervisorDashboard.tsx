@@ -80,6 +80,19 @@ export const SupervisorDashboard = () => {
     return d.toISOString().split("T")[0];
   }, []);
 
+  // Map of agent -> unidades using agente_unidades (single source of truth, N:N)
+  const agentUnitMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    return map;
+  }, [agentUnidades]);
+
+  // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
+  const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
+
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
@@ -132,20 +145,7 @@ export const SupervisorDashboard = () => {
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
-
-  // Map of agent -> unidades using agente_unidades (single source of truth, N:N)
-  const agentUnitMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    agentUnidades.forEach((au) => {
-      if (!map[au.id_agente]) map[au.id_agente] = [];
-      map[au.id_agente].push(au.id_unidade);
-    });
-    return map;
-  }, [agentUnidades]);
-
-  // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
-  const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
