@@ -199,15 +199,16 @@ export const ManagerDashboard = () => {
         if (["agendado", "reagendado"].includes(lead.etapa)) return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
         return false;
       }).length + agLembretes.filter((e) => !e.concluido && e.data_prevista <= todayStr).length;
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       return {
-        ...agente, unidadeNome: unidade?.nome || "—",
+        ...agente, unidadeNome,
         total: aLeads.length, passaramNaLoja, concluidos, totalAgendamentos,
         dispensados, perdidos, desqNovos, desqAgendados, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
 
   const selectedAgent = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
@@ -215,12 +216,13 @@ export const ManagerDashboard = () => {
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       const carrosNaLoja = aLeads.filter((l) => foiNaLoja(l)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
-        nome: agente.nome, unidade: unidade?.nome || "—",
+        nome: agente.nome, unidade: unidadeNome,
         novo: aLeads.filter((l) => l.etapa === "novo").length,
         agendado: totalAgendamentos,
         carrosNaLoja,
