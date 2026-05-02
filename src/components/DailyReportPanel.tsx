@@ -92,7 +92,6 @@ export const DailyReportPanel = () => {
     return agentes.map((a) => {
       const aCreated = createdToday.filter((l) => l.id_agente === a.id);
       const aAgendados = agendadosNoDia.filter((l) => l.id_agente === a.id);
-      const unidade = unidades.find((u) => u.id === a.unidade_padrao);
       const aPassaram = passaramNaLojaNoDia.filter((l) => l.id_agente === a.id);
       const aConcluidos = concluidosNoDia.filter((l) => l.id_agente === a.id);
       const passaramNaLoja = aPassaram.length;
