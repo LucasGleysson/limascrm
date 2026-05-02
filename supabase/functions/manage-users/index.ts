@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const { action, ...payload } = await req.json();
 
     if (action === "create") {
-      const { email, password, nome, cargo, unidade_padrao } = payload;
+      const { email, password, nome, cargo, unidade_padrao, unidades_ids } = payload;
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -54,11 +54,21 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("profiles").update({ unidade_padrao }).eq("id", newUser.user.id);
       }
 
+      // Sync agente_unidades for agents
+      if (cargo === "agente" && Array.isArray(unidades_ids)) {
+        const rows = unidades_ids
+          .filter((u: string) => !!u)
+          .map((id_unidade: string) => ({ id_agente: newUser.user.id, id_unidade }));
+        if (rows.length > 0) {
+          await supabaseAdmin.from("agente_unidades").insert(rows);
+        }
+      }
+
       return new Response(JSON.stringify({ user: newUser.user }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "update") {
-      const { user_id, nome, cargo, unidade_padrao, email, password } = payload;
+      const { user_id, nome, cargo, unidade_padrao, email, password, unidades_ids } = payload;
 
       // Update profile
       const profileUpdate: Record<string, unknown> = {};
@@ -77,6 +87,22 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("user_roles").insert({ user_id, role: cargo });
       }
 
+      // Sync agente_unidades when caller provided the list
+      if (Array.isArray(unidades_ids)) {
+        // Wipe existing links for this agent
+        await supabaseAdmin.from("agente_unidades").delete().eq("id_agente", user_id);
+        // If still an agent, insert the new list
+        const isAgent = (cargo ?? (await supabaseAdmin.from("profiles").select("cargo").eq("id", user_id).single()).data?.cargo) === "agente";
+        if (isAgent) {
+          const rows = unidades_ids
+            .filter((u: string) => !!u)
+            .map((id_unidade: string) => ({ id_agente: user_id, id_unidade }));
+          if (rows.length > 0) {
+            await supabaseAdmin.from("agente_unidades").insert(rows);
+          }
+        }
+      }
+
       // Update auth email/password if changed
       const authUpdate: Record<string, unknown> = {};
       if (email) authUpdate.email = email;
@@ -89,12 +115,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "list") {
-      const { data: profiles } = await supabaseAdmin
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: true });
+      const [{ data: profiles }, { data: agentUnidades }] = await Promise.all([
+        supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: true }),
+        supabaseAdmin.from("agente_unidades").select("id_agente, id_unidade"),
+      ]);
 
-      return new Response(JSON.stringify({ profiles: profiles || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ profiles: profiles || [], agente_unidades: agentUnidades || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "delete") {
