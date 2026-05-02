@@ -657,12 +657,25 @@ export const ManagerDashboard = () => {
                 >
                   <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div className="flex-1">
-                    <span className="font-semibold">{u.nome}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{u.nome}</span>
+                      {u.recepcionista && (
+                        <Badge variant="outline" className="text-xs gap-1 bg-warning/10 text-warning border-warning/20">
+                          <LogIn className="h-3 w-3" /> Recep: {u.recepcionista.nome}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Users className="h-3 w-3" /> {u.unitAgents.length} agente{u.unitAgents.length === 1 ? "" : "s"}
+                      </Badge>
+                    </div>
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                       <span>{u.total} registros</span>
                       <span className="text-primary">{u.totalAgendamentos} agend.</span>
                       <span className="text-warning">{u.carrosNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
+                      <span className="text-purple-500">{u.dispensados} disp.</span>
+                      <span className="text-destructive">{u.perdidos} perd.</span>
+                      {u.emAnalise > 0 && <span className="text-info">{u.emAnalise} análise</span>}
                       <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
