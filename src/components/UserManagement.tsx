@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Users, Shield, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Shield, X, MapPin } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -42,6 +43,7 @@ const CARGO_COLORS: Record<AppRole, string> = {
 export const UserManagement = () => {
   const { unidades } = useLeads();
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [agentUnidadesMap, setAgentUnidadesMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -54,6 +56,7 @@ export const UserManagement = () => {
   const [password, setPassword] = useState("");
   const [cargo, setCargo] = useState<AppRole>("agente");
   const [unidadePadrao, setUnidadePadrao] = useState("");
+  const [unidadesIds, setUnidadesIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const fetchProfiles = useCallback(async () => {
@@ -62,6 +65,14 @@ export const UserManagement = () => {
     if (!session) return;
     const res = await supabase.functions.invoke("manage-users", { body: { action: "list" } });
     if (res.data?.profiles) setProfiles(res.data.profiles);
+    if (res.data?.agente_unidades) {
+      const map: Record<string, string[]> = {};
+      (res.data.agente_unidades as { id_agente: string; id_unidade: string }[]).forEach((au) => {
+        if (!map[au.id_agente]) map[au.id_agente] = [];
+        map[au.id_agente].push(au.id_unidade);
+      });
+      setAgentUnidadesMap(map);
+    }
     setLoading(false);
   }, []);
 
@@ -69,7 +80,7 @@ export const UserManagement = () => {
 
   const openCreate = () => {
     setEditingUser(null);
-    setNome(""); setEmail(""); setPassword(""); setCargo("agente"); setUnidadePadrao("");
+    setNome(""); setEmail(""); setPassword(""); setCargo("agente"); setUnidadePadrao(""); setUnidadesIds([]);
     setModalOpen(true);
   };
 
@@ -77,7 +88,12 @@ export const UserManagement = () => {
     setEditingUser(profile);
     setNome(profile.nome); setEmail(profile.email); setPassword("");
     setCargo(profile.cargo); setUnidadePadrao(profile.unidade_padrao || "");
+    setUnidadesIds(agentUnidadesMap[profile.id] || []);
     setModalOpen(true);
+  };
+
+  const toggleUnidade = (id: string) => {
+    setUnidadesIds((prev) => prev.includes(id) ? prev.filter((u) => u !== id) : [...prev, id]);
   };
 
   const handleSave = async () => {
@@ -89,6 +105,14 @@ export const UserManagement = () => {
       toast({ title: "Defina uma senha para o novo usuário", variant: "destructive" });
       return;
     }
+    if (cargo === "agente" && unidadesIds.length === 0) {
+      toast({ title: "Selecione ao menos uma loja para o agente", variant: "destructive" });
+      return;
+    }
+    if (cargo === "recepcionista" && !unidadePadrao) {
+      toast({ title: "Selecione a loja da recepcionista", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     if (editingUser) {
@@ -96,7 +120,9 @@ export const UserManagement = () => {
         body: {
           action: "update", user_id: editingUser.id, nome,
           email: email !== editingUser.email ? email : undefined,
-          cargo, unidade_padrao: unidadePadrao || null,
+          cargo,
+          unidade_padrao: cargo === "recepcionista" ? (unidadePadrao || null) : null,
+          unidades_ids: cargo === "agente" ? unidadesIds : [],
           password: password || undefined,
         },
       });
@@ -108,7 +134,11 @@ export const UserManagement = () => {
       }
     } else {
       const res = await supabase.functions.invoke("manage-users", {
-        body: { action: "create", nome, email, password, cargo, unidade_padrao: unidadePadrao || null },
+        body: {
+          action: "create", nome, email, password, cargo,
+          unidade_padrao: cargo === "recepcionista" ? (unidadePadrao || null) : null,
+          unidades_ids: cargo === "agente" ? unidadesIds : [],
+        },
       });
       if (res.error || res.data?.error) {
         toast({ title: "Erro ao criar usuário", description: res.data?.error || String(res.error), variant: "destructive" });
@@ -131,15 +161,12 @@ export const UserManagement = () => {
     setDeleteDialogOpen(false); setDeletingUser(null);
   };
 
-  // Show unidade field for recepcionista (required) and always for agents (optional)
-  const showUnidade = cargo === "recepcionista" || cargo === "agente";
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
-          <p className="text-muted-foreground text-sm">Crie, edite e gerencie os perfis do sistema</p>
+          <p className="text-muted-foreground text-sm">Defina cargo, e quais lojas cada agente atende ou em qual loja a recepcionista trabalha</p>
         </div>
         <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Novo Usuário</Button>
       </div>
@@ -154,7 +181,10 @@ export const UserManagement = () => {
       ) : (
         <div className="space-y-2">
           {profiles.map((profile) => {
-            const unidade = unidades.find((u) => u.id === profile.unidade_padrao);
+            const recepUnidade = profile.cargo === "recepcionista" ? unidades.find((u) => u.id === profile.unidade_padrao) : null;
+            const agenteUnidades = profile.cargo === "agente"
+              ? (agentUnidadesMap[profile.id] || []).map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean) as string[]
+              : [];
             return (
               <div key={profile.id} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:shadow-sm transition-shadow">
                 <div className="rounded-full bg-muted h-10 w-10 flex items-center justify-center text-sm font-bold">
@@ -167,7 +197,16 @@ export const UserManagement = () => {
                 <Badge variant="outline" className={`text-xs ${CARGO_COLORS[profile.cargo]}`}>
                   <Shield className="h-3 w-3 mr-1" />{CARGO_LABELS[profile.cargo]}
                 </Badge>
-                {unidade && <Badge variant="outline" className="text-xs">{unidade.nome}</Badge>}
+                {recepUnidade && (
+                  <Badge variant="outline" className="text-xs gap-1"><MapPin className="h-3 w-3" />{recepUnidade.nome}</Badge>
+                )}
+                {agenteUnidades.length > 0 && (
+                  <div className="flex flex-wrap gap-1 max-w-[260px] justify-end">
+                    {agenteUnidades.map((n) => (
+                      <Badge key={n} variant="outline" className="text-xs gap-1"><MapPin className="h-3 w-3" />{n}</Badge>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(profile)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => { setDeletingUser(profile); setDeleteDialogOpen(true); }}>
@@ -215,25 +254,32 @@ export const UserManagement = () => {
               </Select>
             </div>
 
-            {showUnidade && (
+            {cargo === "recepcionista" && (
               <div className="space-y-2">
-                <Label>
-                  Loja padrão {cargo === "recepcionista" && <span className="text-destructive">*</span>}
-                  {cargo === "agente" && <span className="text-xs text-muted-foreground ml-1">(opcional)</span>}
-                </Label>
-                <div className="flex gap-2">
-                  <Select value={unidadePadrao} onValueChange={setUnidadePadrao}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
-                    <SelectContent>
-                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {unidadePadrao && cargo === "agente" && (
-                    <Button variant="outline" size="icon" onClick={() => setUnidadePadrao("")} title="Limpar">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
+                <Label>Loja da recepcionista <span className="text-destructive">*</span></Label>
+                <Select value={unidadePadrao} onValueChange={setUnidadePadrao}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                  <SelectContent>
+                    {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {cargo === "agente" && (
+              <div className="space-y-2">
+                <Label>Lojas atendidas <span className="text-destructive">*</span></Label>
+                <p className="text-xs text-muted-foreground">Selecione todas as lojas em que este agente trabalha</p>
+                <div className="space-y-1.5 max-h-48 overflow-auto rounded-lg border border-border p-3">
+                  {unidades.map((u) => (
+                    <label key={u.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1">
+                      <Checkbox checked={unidadesIds.includes(u.id)} onCheckedChange={() => toggleUnidade(u.id)} />
+                      <span className="text-sm">{u.nome}</span>
+                    </label>
+                  ))}
                 </div>
+                {unidadesIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{unidadesIds.length} loja(s) selecionada(s)</p>
+                )}
               </div>
             )}
           </div>
