@@ -155,15 +155,18 @@ export const ManagerDashboard = () => {
       const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
+      const emAnalise = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
+      const recepcionista = profiles.find((p) => p.cargo === "recepcionista" && p.unidade_padrao === u.id);
       const txConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
       return {
         ...u, total: uLeads.length, carrosNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados,
+        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, emAnalise,
+        recepcionista,
         txConversao, unitAgents: uAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
+  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades, profiles]);
 
   const periodRange = useMemo(() => {
     if (period === "mes") return getMonthRange(mesRef);
