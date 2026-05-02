@@ -196,6 +196,16 @@ export const AgentDashboard = () => {
     const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
     const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+    const emAnalise = monthLeads.filter((l) => l.etapa === "analise_supervisor").length;
+    const registrosFeitos = monthLeads.filter((l) => l.id_agente === currentUser.id).length;
+    const agendamentosFeitos = monthLeads.filter((l) =>
+      l.id_agente === currentUser.id &&
+      ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)
+    ).length;
+    // Progressão da meta = Concluídos + Perdidos (resultado já realizado)
+    const progressoMeta = concluidos + perdidos;
+    // Pendentes = Dispensados + Em Análise (ainda podem virar concluído/perdido)
+    const pendentes = dispensados + emAnalise;
 
     // No-Show: agendados cujo data_agendamento já passou e ainda estão como agendado/reagendado
     const noShow = monthLeads.filter((l) =>
@@ -228,8 +238,9 @@ export const AgentDashboard = () => {
     return {
       total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
       noShow, mediaCarrosLojaDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+      emAnalise, registrosFeitos, agendamentosFeitos, progressoMeta, pendentes,
     };
-  }, [monthLeads, today, mesAtual]);
+  }, [monthLeads, today, mesAtual, currentUser.id]);
 
   // Daily appointments chart data
   const dailyChartData = useMemo(() => {
