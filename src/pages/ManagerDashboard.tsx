@@ -702,7 +702,18 @@ export const ManagerDashboard = () => {
               const funnelColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
               return (
                 <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-5">
-                  <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
+                    <div className="flex items-center gap-2 text-sm">
+                      {sel.recepcionista ? (
+                        <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
+                          <LogIn className="h-3.5 w-3.5" /> Recepção: <strong className="ml-1">{sel.recepcionista.nome}</strong>
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Sem recepcionista atribuída</Badge>
+                      )}
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
@@ -711,11 +722,12 @@ export const ManagerDashboard = () => {
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-orange-500">{sel.desqOutraCidade}</p><p className="text-xs text-muted-foreground">Outra Cidade</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-purple-500">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-info">{sel.emAnalise}</p><p className="text-xs text-muted-foreground">Em Análise</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                   </div>
 
