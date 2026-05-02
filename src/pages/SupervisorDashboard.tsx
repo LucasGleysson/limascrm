@@ -130,31 +130,25 @@ export const SupervisorDashboard = () => {
     });
   }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
 
-  // Build a map of agent -> unidades using agente_unidades table (many-to-many)
+  // Map of agent -> unidades using agente_unidades (single source of truth, N:N)
   const agentUnitMap = useMemo(() => {
     const map: Record<string, string[]> = {};
     agentUnidades.forEach((au) => {
       if (!map[au.id_agente]) map[au.id_agente] = [];
       map[au.id_agente].push(au.id_unidade);
     });
-    // Fallback to unidade_padrao
-    profiles.forEach((p) => {
-      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
-        map[p.id] = [p.unidade_padrao];
-      }
-    });
     return map;
-  }, [agentUnidades, profiles]);
+  }, [agentUnidades]);
 
-  const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
-    l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null) || null;
+  // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
+  const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
       // Agents linked to this unit via agente_unidades
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
-      const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
+      const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const passaramNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
