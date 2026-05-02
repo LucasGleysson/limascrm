@@ -119,10 +119,14 @@ export const SupervisorDashboard = () => {
         return e.data_prevista <= todayStr;
       }).length;
 
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds
+        .map((id) => unidades.find((u) => u.id === id)?.nome)
+        .filter(Boolean)
+        .join(" / ") || "—";
 
       return {
-        ...agente, unidadeNome: unidade?.nome || "—",
+        ...agente, unidadeNome,
         total: aLeads.length, passaramNaLoja, concluidos, agendados, totalAgendamentos,
         dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, emAtendimento, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
@@ -336,8 +340,9 @@ export const SupervisorDashboard = () => {
                 const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
                 const naLoja = cohort.filter((l) => foiNaLoja(l)).length;
                 const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
-                const unidade = unidades.find((u) => u.id === ag.unidade_padrao);
-                return { ...ag, unidadeNome: unidade?.nome || "—", total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
+                const agUnitIds = agentUnitMap[ag.id] || (ag.unidade_padrao ? [ag.unidade_padrao] : []);
+                const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+                return { ...ag, unidadeNome, total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
               }).filter((a) => a.total > 0);
 
               if (safraAgentes.length === 0) return null;
