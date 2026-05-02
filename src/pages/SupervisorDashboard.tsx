@@ -80,6 +80,19 @@ export const SupervisorDashboard = () => {
     return d.toISOString().split("T")[0];
   }, []);
 
+  // Map of agent -> unidades using agente_unidades (single source of truth, N:N)
+  const agentUnitMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    return map;
+  }, [agentUnidades]);
+
+  // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
+  const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
+
   const agenteStats = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
@@ -119,42 +132,27 @@ export const SupervisorDashboard = () => {
         return e.data_prevista <= todayStr;
       }).length;
 
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds
+        .map((id) => unidades.find((u) => u.id === id)?.nome)
+        .filter(Boolean)
+        .join(" / ") || "—";
 
       return {
-        ...agente, unidadeNome: unidade?.nome || "—",
+        ...agente, unidadeNome,
         total: aLeads.length, passaramNaLoja, concluidos, agendados, totalAgendamentos,
         dispensados, perdidos, desqNovos, desqAgendados, naoAgendados, emAtendimento, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
-
-  // Build a map of agent -> unidades using agente_unidades table (many-to-many)
-  const agentUnitMap = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    agentUnidades.forEach((au) => {
-      if (!map[au.id_agente]) map[au.id_agente] = [];
-      map[au.id_agente].push(au.id_unidade);
-    });
-    // Fallback to unidade_padrao
-    profiles.forEach((p) => {
-      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
-        map[p.id] = [p.unidade_padrao];
-      }
-    });
-    return map;
-  }, [agentUnidades, profiles]);
-
-  const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
-    l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null) || null;
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
 
   const unidadeStats = useMemo(() => {
     return unidades.map((u) => {
       // Agents linked to this unit via agente_unidades
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
-      const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
+      const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const passaramNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
@@ -342,8 +340,9 @@ export const SupervisorDashboard = () => {
                 const agendados = cohort.filter((l) => !["novo", "desqualificado_novo", "desqualificado"].includes(l.etapa)).length;
                 const naLoja = cohort.filter((l) => foiNaLoja(l)).length;
                 const concluidos = cohort.filter((l) => l.etapa === "concluido").length;
-                const unidade = unidades.find((u) => u.id === ag.unidade_padrao);
-                return { ...ag, unidadeNome: unidade?.nome || "—", total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
+                const agUnitIds = agentUnitMap[ag.id] || (ag.unidade_padrao ? [ag.unidade_padrao] : []);
+                const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+                return { ...ag, unidadeNome, total, agendados, naLoja, concluidos, txAgend: total > 0 ? Math.round((agendados / total) * 100) : 0, txVisita: total > 0 ? Math.round((naLoja / total) * 100) : 0 };
               }).filter((a) => a.total > 0);
 
               if (safraAgentes.length === 0) return null;

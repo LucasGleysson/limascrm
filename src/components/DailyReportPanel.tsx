@@ -11,13 +11,22 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--suc
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export const DailyReportPanel = () => {
-  const { leads, unidades, profiles } = useLeads();
+  const { leads, unidades, profiles, agentUnidades } = useLeads();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const dateStr = selectedDate.toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
 
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
+
+  const agentUnitMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_agente]) map[au.id_agente] = [];
+      map[au.id_agente].push(au.id_unidade);
+    });
+    return map;
+  }, [agentUnidades]);
 
   const createdToday = useMemo(() => leads.filter((l) => l.data_entrada === dateStr), [leads, dateStr]);
   const agendadosNoDia = useMemo(() => leads.filter((l) => l.data_agendamento === dateStr), [leads, dateStr]);
@@ -83,10 +92,11 @@ export const DailyReportPanel = () => {
     return agentes.map((a) => {
       const aCreated = createdToday.filter((l) => l.id_agente === a.id);
       const aAgendados = agendadosNoDia.filter((l) => l.id_agente === a.id);
-      const unidade = unidades.find((u) => u.id === a.unidade_padrao);
       const aPassaram = passaramNaLojaNoDia.filter((l) => l.id_agente === a.id);
       const aConcluidos = concluidosNoDia.filter((l) => l.id_agente === a.id);
       const passaramNaLoja = aPassaram.length;
+      const agUnitIds = agentUnitMap[a.id] || (a.unidade_padrao ? [a.unidade_padrao] : []);
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       const totalAgendamentos = aCreated.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = aCreated.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = aCreated.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
@@ -101,7 +111,7 @@ export const DailyReportPanel = () => {
 
       return {
         ...a,
-        unidadeNome: unidade?.nome || "—",
+        unidadeNome,
         totalRegistros: aCreated.length,
         totalAgendamentos,
         passaramNaLoja,
@@ -115,7 +125,7 @@ export const DailyReportPanel = () => {
         origemData,
       };
     }).filter((a) => a.totalRegistros > 0 || a.totalAgendamentos > 0);
-  }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia]);
+  }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia, agentUnitMap]);
 
   const prevDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); };
   const nextDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); };

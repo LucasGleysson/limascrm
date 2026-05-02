@@ -40,7 +40,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const AgentDashboard = () => {
-  const { leads, updateLead, eventos, unidades, profiles } = useLeads();
+  const { leads, updateLead, eventos, unidades, profiles, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [activeTab, setActiveTab] = useState("leads");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -270,13 +270,22 @@ export const AgentDashboard = () => {
     ].filter((d) => d.value > 0);
   }, [desempenho]);
 
-  // Store meta progress
+  // Units this agent attends (N:N), with legacy unidade_padrao fallback
+  const myUnitIds = useMemo(() => {
+    const ids = new Set<string>(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    );
+    if (currentUser.unidade_padrao) ids.add(currentUser.unidade_padrao);
+    return ids;
+  }, [agentUnidades, currentUser.id, currentUser.unidade_padrao]);
+
+  // Store meta progress (sums across ALL units the agent attends)
   const storeMetaProgress = useMemo(() => {
-    if (!currentUser.unidade_padrao) return null;
-    const storeLeads = leads.filter((l) => l.id_unidade === currentUser.unidade_padrao);
+    if (myUnitIds.size === 0) return null;
+    const storeLeads = leads.filter((l) => l.id_unidade && myUnitIds.has(l.id_unidade));
     const carrosNaLoja = storeLeads.filter((l) => foiNaLoja(l)).length;
     return { carros: carrosNaLoja, total: storeLeads.length };
-  }, [leads, currentUser.unidade_padrao]);
+  }, [leads, myUnitIds]);
 
 
 

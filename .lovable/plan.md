@@ -1,340 +1,234 @@
+# Plano: normalizar relacionamentos de Unidade, Agente, Recepcionista e Lead
 
-# Plano: corrigir follow-ups e agendamentos pendentes para agentes e apoios
+## Diagnóstico do estado atual
+
+Estrutura encontrada hoje:
+
+```text
+unidades (id, nome)
+profiles (id, nome, cargo, unidade_padrao TEXT)   -- guarda 1 unidade como string
+agente_unidades (id_agente, id_unidade)           -- N:N já existe, mas é subutilizada
+leads (id, id_agente, id_unidade, id_recepcionista, ...)
+```
+
+Problemas reais verificados no banco:
+
+```text
+- 1.140 leads SEM id_unidade (de 2.186 leads no total, ~52%)
+- Maria Eduarda atende 2 unidades, tem unidade_padrao=NULL e 486 leads sem unidade
+- Yasmin tem unidade_padrao mas 0 vínculos em agente_unidades
+- profiles.unidade_padrao é TEXT, não FK -> não há integridade
+- Código usa em alguns pontos unidade_padrao, em outros agente_unidades, em outros faz "fallback" misturando os dois (ManagerDashboard, SupervisorDashboard)
+- RLS de leads/eventos para recepcionista usa profiles.unidade_padrao::uuid (cast frágil)
+```
+
+Consequências práticas:
+
+```text
+- Contagens "leads por unidade" ficam erradas (lead sem id_unidade some do total da loja)
+- Agente que atende 2 lojas nunca aparece corretamente em relatórios por loja
+- Recepção pode não ver leads que o agente criou sem informar a loja
+- Cada relatório resolve "qual a loja do lead" de um jeito diferente
+```
 
 ## Objetivo
 
-Garantir que agentes e recepcionistas/apoios vejam todos os agendamentos e reagendamentos pendentes das unidades pelas quais são responsáveis, sem perda por limite de consulta, vínculo incompleto de agente ou eventos de follow-up criados com outro responsável.
-
-O problema principal parece estar em dois pontos:
-
-1. O agente hoje enxerga principalmente leads vinculados diretamente a `id_agente`.
-2. As consultas de recepcionista ainda podem cair no limite padrão de 1000 registros em algumas situações.
-
-Isso faz com que um carro atrasado apareça para a apoio da unidade, mas não apareça no painel de follow-up do agente responsável pela unidade.
-
----
-
-## Regra funcional final
-
-### Para agentes
-
-O agente deve visualizar no painel de follow-up e agendamentos:
+Tornar o modelo de dados realmente relacional para o domínio:
 
 ```text
-Leads onde:
-- id_agente = agente logado
-OU
-- id_unidade pertence às unidades que esse agente atende em agente_unidades
+Unidade  N---N  Agente          (via agente_unidades)
+Unidade  1---N  Recepcionista   (recepcionista pertence a 1 unidade)
+Unidade  1---N  Lead            (todo lead pertence a UMA unidade)
+Agente   1---N  Lead            (lead pode ter um agente comercial responsável, opcional)
+Recepcionista 1---N  Lead       (lead pode ter recepcionista que registrou, opcional)
 ```
 
-Isso cobre casos como:
+Regra-chave: **`leads.id_unidade` passa a ser a única fonte de verdade da loja do cliente.**
+Agente não "carrega" a unidade. A unidade está sempre no lead.
+
+## Mudanças no banco (migration)
+
+### 1. Backfill seguro do `leads.id_unidade`
+
+Para cada lead onde `id_unidade IS NULL`:
 
 ```text
-Agente cuida de Grandville e Laranjeiras
-Lead está em Grandville
-Lead está agendado/reagendado atrasado
-Mesmo que id_agente esteja vazio ou diferente, ele deve aparecer para follow-up da unidade
+1. Se o agente do lead tem exatamente 1 vínculo em agente_unidades  -> usar essa unidade
+2. Senão, se o agente tem profiles.unidade_padrao preenchida        -> usar essa
+3. Senão, se o lead tem id_recepcionista com unidade_padrao         -> usar essa
+4. Senão, deixar NULL e marcar para revisão manual no painel do gestor
 ```
 
-Sem substituir o agente comercial do cadastro: o sistema apenas dá visibilidade operacional pelo vínculo da unidade.
+Resultado esperado: praticamente todos os 1.140 leads ganham unidade automaticamente. Os que sobrarem aparecem numa lista "leads sem unidade" para o gestor corrigir.
 
----
+### 2. Sincronizar `agente_unidades` com `profiles.unidade_padrao`
 
-### Para recepcionistas/apoios
+Para todo agente que tem `unidade_padrao` mas não tem linha equivalente em `agente_unidades`, inserir o vínculo. Isso resolve o caso da Yasmin.
 
-A apoio deve continuar vendo apenas clientes da sua unidade:
+### 3. Manter `agente_unidades` como única fonte de verdade do vínculo agente↔unidade
 
 ```text
-lead.id_unidade = unidade_padrao da recepcionista
+- Adicionar FK: agente_unidades.id_agente -> profiles.id (ON DELETE CASCADE)
+- Adicionar FK: agente_unidades.id_unidade -> unidades.id (ON DELETE RESTRICT)
+- Constraint UNIQUE(id_agente, id_unidade) (provavelmente já existe via PK composta lógica; garantir)
+- Index em (id_agente) e (id_unidade)
 ```
 
-Mas sem limite de 1000 registros, tanto para:
-- agendamentos
-- reagendamentos atrasados
-- clientes
-- lembretes
-- eventos relacionados à unidade
+### 4. Tratar `profiles.unidade_padrao`
 
----
+Para recepcionistas faz sentido (recepção pertence a 1 loja).
+Para agentes vira um conceito legado e enganoso.
 
-## Implementação proposta
+Decisão proposta:
 
-### 1. Corrigir carregamento de leads no `LeadContext`
+```text
+- Manter a coluna por enquanto (não dropar para não quebrar ninguém imediatamente)
+- Para AGENTES: parar de ler unidade_padrao no app; ler sempre de agente_unidades
+- Para RECEPCIONISTAS: continuar usando unidade_padrao (lá faz sentido como "lotação")
+- Adicionar comentário SQL na coluna explicando: "Apenas para recepcionistas. Agentes usam agente_unidades."
+- Em uma fase futura: mover recepcionistas também para uma tabela recepcionista_unidades para uniformidade (não nesta migration)
+```
 
-Arquivo:
+### 5. Reforçar integridade de `leads.id_unidade`
+
+```text
+- Adicionar FK leads.id_unidade -> unidades.id (ON DELETE RESTRICT) se ainda não existir
+- Adicionar FK leads.id_agente -> profiles.id (ON DELETE SET NULL)
+- Adicionar FK leads.id_recepcionista -> profiles.id (ON DELETE SET NULL)
+- Index leads(id_unidade), leads(id_agente), leads(id_unidade, etapa), leads(id_unidade, data_agendamento)
+```
+
+Não tornar `id_unidade` NOT NULL agora (precisaria backfill 100%). Deixar como nullable após backfill, mas planejar transição para NOT NULL no futuro.
+
+### 6. Trigger de proteção (opcional, recomendado)
+
+Trigger BEFORE INSERT/UPDATE em `leads`:
+
+```text
+- Se id_unidade IS NULL e id_agente tem exatamente 1 unidade vinculada -> preencher automaticamente
+- Se id_unidade IS NULL e id_recepcionista tem unidade_padrao -> preencher automaticamente
+```
+
+Assim novas inserções nunca mais ficam órfãs.
+
+### 7. Funções utilitárias SQL (SECURITY DEFINER)
+
+Para usar em RLS sem recursão e em queries do app:
+
+```sql
+-- Lista de unidades de um agente
+agente_unidades_de(_user_id uuid) RETURNS SETOF uuid
+
+-- O usuário (qualquer cargo) pode ver leads desta unidade?
+pode_ver_unidade(_user_id uuid, _unidade uuid) RETURNS boolean
+  -- gestor/supervisor: true
+  -- recepcionista: profiles.unidade_padrao = _unidade
+  -- agente: existe em agente_unidades
+```
+
+### 8. Atualizar RLS para usar essas funções
+
+```text
+- leads SELECT/UPDATE: usar pode_ver_unidade(auth.uid(), leads.id_unidade)
+- eventos SELECT/UPDATE: via lead.id_unidade -> pode_ver_unidade
+- Remover o cast frágil profiles.unidade_padrao::uuid das policies atuais
+```
+
+## Mudanças no código (sem quebrar nada)
+
+### Princípios
+
+```text
+1. Para AGENTE: nunca mais usar currentUser.unidade_padrao. Sempre derivar de agentUnidades.
+2. Para RECEPCIONISTA: continuar usando currentUser.unidade_padrao.
+3. Para CONTAGEM POR UNIDADE: sempre filtrar por leads.id_unidade. Nunca por agente.unidade_padrao.
+4. Remover toda lógica "getLeadUnidade(lead) = lead.id_unidade ?? agentUnitMap[lead.id_agente]?.[0]" 
+   após o backfill — passa a ser sempre lead.id_unidade.
+```
+
+### Arquivos a ajustar
 
 ```text
 src/contexts/LeadContext.tsx
-```
+  - Já está correto para agente. Validar.
+  - Tipar agentUnidades com helper getUnidadesDoAgente(agenteId).
 
-Ajustar a busca inicial para carregar `agente_unidades` antes de montar a regra de visibilidade do agente.
+src/pages/AgentDashboard.tsx
+  - Trocar leads.filter(l => l.id_unidade === currentUser.unidade_padrao)
+    por leads.filter(l => myUnitIds.has(l.id_unidade))
+  - "minha loja" deixa de existir como singular -> "minhas lojas"
 
-Para agente:
+src/pages/ManagerDashboard.tsx
+src/pages/SupervisorDashboard.tsx
+  - Remover getLeadUnidade com fallback. Usar sempre lead.id_unidade.
+  - Listar agentes de uma unidade SEMPRE via agente_unidades.
 
-```text
-buscar leads onde:
-id_agente = currentUser.id
-OU
-id_unidade IN unidades vinculadas ao agente
-```
+src/components/MetasUnidadesPanel.tsx
+  - unitAgents = profiles que aparecem em agente_unidades para essa unidade
+    (não mais a.unidade_padrao === u.id)
 
-Para recepcionista:
+src/components/DailyReportPanel.tsx
+  - Igual: lista de agentes de uma unidade vem de agente_unidades.
 
-```text
-buscar leads da unidade_padrao
-```
+src/components/AppSidebar.tsx
+  - Para agente, mostrar lista de unidades atendidas (não unidade_padrao).
+  - Para recepcionista, segue mostrando unidade_padrao.
 
-Para gestor/supervisor:
+src/components/NewLeadModal.tsx / ScheduleModal.tsx
+  - Quando o agente cria um lead, exigir escolha de unidade entre as unidades dele
+    (default = primeira; se só tem 1, pré-preenche).
+  - Quando recepcionista cria, unidade já vem fixa da unidade_padrao dela.
 
-```text
-buscar todos os leads
-```
-
-Também ajustar a paginação interna para incluir recepcionistas, não apenas gestor/supervisor/agente.
-
-Hoje a paginação ampla já existe, mas a recepcionista pode cair no `.then(r => r.data)` sem `.range()`, o que pode limitar dados.
-
----
-
-### 2. Corrigir carregamento de eventos/follow-ups
-
-Arquivo:
-
-```text
-src/contexts/LeadContext.tsx
-```
-
-Não depender apenas de:
-
-```text
-eventos.id_usuario = agente logado
-```
-
-Porque alguns follow-ups podem ter sido criados com:
-- `id_usuario` antigo
-- `id_usuario` vazio
-- `id_usuario` de outro usuário
-- lead criado pela recepção sem agente direto
-
-A regra correta deve ser:
-
-```text
-carregar eventos relacionados aos leads visíveis para aquele perfil
-```
-
-Fluxo proposto:
-
-```text
-1. Buscar leads visíveis do usuário
-2. Montar lista de ids desses leads
-3. Buscar eventos onde id_lead está nessa lista
-4. Fazer isso com paginação/chunks para não cair em limite
-```
-
-Para gestor/supervisor, pode continuar buscando todos os eventos paginados.
-
-Resultado:
-
-```text
-Se o lead atrasado aparece para a unidade, o follow-up também aparece para o agente responsável pela unidade e para a apoio da unidade.
-```
-
----
-
-### 3. Corrigir painel de follow-up do agente
-
-Arquivo:
-
-```text
-src/components/EventoPanel.tsx
-```
-
-Hoje o painel usa:
-
-```ts
-leads.filter((l) => l.id_agente === currentUser.id)
-```
-
-Trocar para uma função de visibilidade do agente:
-
-```text
-lead pertence ao agente
-OU
-lead pertence a uma unidade que o agente atende
-```
-
-Isso deve ser aplicado em:
-- `myLeads`
-- `myLeadIds`
-- follow-ups pendentes
-- categorias de follow-up:
-  - novos
-  - amanhã
-  - agendados hoje
-  - agendados atrasados
-  - dispensados
-- busca por nome/telefone
-- lista de leads disponíveis para criar lembrete/evento
-
----
-
-### 4. Corrigir painel de agendamentos do agente
-
-Arquivo:
-
-```text
-src/components/AgentSchedulePanel.tsx
-```
-
-Hoje também usa:
-
-```ts
-leads.filter((l) => l.id_agente === currentUser.id)
-```
-
-Ajustar para a mesma regra:
-
-```text
-lead do agente
-OU
-lead de unidade atendida pelo agente
-```
-
-Assim, agendamentos e reagendamentos atrasados das unidades Grandville/Laranjeiras aparecem para o agente que cuida dessas lojas.
-
----
-
-### 5. Garantir que apoio/recepção não perca dados
-
-Arquivo:
-
-```text
 src/pages/ReceptionistDashboard.tsx
+  - Mantém filtro por unidade_padrao da recepcionista.
+
+UI nova: "Leads sem unidade" no painel do gestor
+  - Lista os leads que sobraram NULL após o backfill, com botão para atribuir unidade.
 ```
 
-A lógica visual da recepção já filtra por unidade:
+### Helper centralizado
 
-```ts
-lead.id_unidade === currentUser.unidade_padrao
-```
-
-Ajuste principal será garantir que o `LeadContext` entregue todos os dados da unidade, sem limite de 1000 registros.
-
-Também revisar:
-- aba Agendamentos
-- grupo Atrasados
-- grupo Hoje
-- grupo Novos
-- aba Clientes
-- aba Lembretes
-
-Para garantir que todos usem `unitLeads` completo e não listas parciais.
-
----
-
-### 6. Ajustar permissões do backend para não bloquear conclusão/atualização
-
-Será necessário revisar as regras de segurança de `leads` e `eventos`.
-
-#### Leads
-
-Permitir que agente atualize lead se:
+Criar `src/lib/unidadeUtils.ts`:
 
 ```text
-id_agente = auth.uid()
-OU
-id_unidade está em agente_unidades do auth.uid()
-OU
-usuário é gestor/supervisor
-OU
-recepcionista está na unidade do lead
+getUnidadesDoUsuario(user, agentUnidades) -> string[]
+  - gestor/supervisor: todas as unidades
+  - agente: ids de agente_unidades onde id_agente = user.id
+  - recepcionista: [user.unidade_padrao]
+
+podeVerLead(user, lead, agentUnidades) -> boolean
+getAgentesDaUnidade(unidadeId, profiles, agentUnidades) -> Profile[]
+contarLeadsPorUnidade(leads, unidadeId, filtro?) -> number
+contarLeadsPorAgente(leads, agenteId, filtro?) -> number
 ```
 
-Isso permite que o agente conclua follow-up de um lead da unidade que ele atende, mesmo que o lead tenha sido criado pela recepção.
+Todos os componentes passam a chamar esses helpers. Acaba a divergência entre painéis.
 
-#### Eventos
-
-Permitir que usuário atualize/conclua evento se:
+## Compatibilidade e segurança da transição
 
 ```text
-id_usuario = auth.uid()
-OU
-evento pertence a lead do agente
-OU
-evento pertence a lead de unidade atendida pelo agente
-OU
-evento pertence à unidade da recepcionista
-OU
-usuário é gestor/supervisor
+- Migration roda backfill ANTES de adicionar restrições
+- Nada é deletado: unidade_padrao continua na tabela
+- agente_unidades já existe e já é lida pelo app -> mudanças são incrementais
+- RLS é trocada por funções equivalentes ou mais permissivas (nunca mais restritivas no momento da troca)
+- Build verificado após cada bloco de alteração
 ```
-
-Isso evita erro ao concluir follow-ups que foram criados com `id_usuario` vazio ou diferente.
-
----
-
-## O que não será alterado
-
-Não vamos mudar a propriedade comercial do lead automaticamente.
-
-Ou seja:
-
-```text
-id_agente não será sobrescrito só porque o agente viu ou concluiu o follow-up.
-```
-
-O lead pode continuar tendo:
-- agente comercial
-- recepcionista/apoio
-- unidade
-- eventos/follow-ups operacionais
-
-Isso preserva a regra que você definiu:
-
-```text
-Recepcionista não substitui agente.
-Cliente pode ter interação com agente e recepção, ou apenas com recepção.
-```
-
----
-
-## Sobre paginação visual
-
-A interface pode continuar mostrando 20 itens por página para manter o layout organizado.
-
-Mas isso será apenas paginação visual.
-
-O total real deve considerar todos os registros carregados, sem cortar em 1000 registros.
-
----
-
-## Arquivos previstos
-
-```text
-src/contexts/LeadContext.tsx
-src/components/EventoPanel.tsx
-src/components/AgentSchedulePanel.tsx
-src/pages/ReceptionistDashboard.tsx
-supabase/migrations/*
-```
-
----
 
 ## Resultado esperado
 
-Depois da implementação:
-
 ```text
-Agente que atende Grandville e Laranjeiras verá todos os agendamentos/reagendamentos atrasados dessas unidades.
+- Toda contagem "X clientes na unidade Y" passa a bater entre todos os painéis
+- Maria Eduarda (e qualquer agente multi-loja) consegue ver e ter seus leads contados nas 2 lojas corretamente
+- Recepção da loja vê 100% dos leads da loja, mesmo os criados por agente que esqueceu de marcar a unidade (porque o trigger preenche)
+- Gestor tem uma fila de "leads sem unidade" para corrigir, em vez de leads invisíveis
+- Ao remover a coluna unidade_padrao no futuro (fase 2), nada do app quebra, porque agentes já não dependem dela
 ```
 
-```text
-Apoio/recepcionista verá todos os agendamentos/reagendamentos/lembretes da sua unidade.
-```
+## Fora de escopo desta fase
 
 ```text
-Follow-ups não deixarão de aparecer por causa de id_usuario, id_agente vazio ou limite de consulta.
-```
-
-```text
-Nenhum cliente será atribuído automaticamente a outro agente apenas por aparecer no painel de follow-up.
+- Dropar profiles.unidade_padrao
+- Migrar recepcionistas para tabela recepcionista_unidades
+- Tornar leads.id_unidade NOT NULL
+Esses passos ficam para uma fase 2, depois que a fila de "leads sem unidade" estiver zerada.
 ```

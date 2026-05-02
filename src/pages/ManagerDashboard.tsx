@@ -127,24 +127,18 @@ export const ManagerDashboard = () => {
     ].filter((d) => d.value > 0);
   }, [filteredLeads]);
 
-  // Build a map of agent -> unidades using agente_unidades (many-to-many)
+  // Map of agent -> unidades using agente_unidades (single source of truth, N:N)
   const agentUnitMap = useMemo(() => {
     const map: Record<string, string[]> = {};
     agentUnidades.forEach((au) => {
       if (!map[au.id_agente]) map[au.id_agente] = [];
       map[au.id_agente].push(au.id_unidade);
     });
-    // Fallback to unidade_padrao
-    profiles.forEach((p) => {
-      if (p.unidade_padrao && (!map[p.id] || map[p.id].length === 0)) {
-        map[p.id] = [p.unidade_padrao];
-      }
-    });
     return map;
-  }, [agentUnidades, profiles]);
+  }, [agentUnidades]);
 
-  const getLeadUnidade = (l: { id_unidade?: string | null; id_agente: string }) =>
-    l.id_unidade || (agentUnitMap[l.id_agente] ? agentUnitMap[l.id_agente][0] : null) || null;
+  // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
+  const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
 
   const agentes = profiles.filter((u) => u.cargo === "agente");
 
@@ -152,7 +146,7 @@ export const ManagerDashboard = () => {
     return unidades.map((u) => {
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
-      const uLeads = filteredLeads.filter((l) => getLeadUnidade(l) === u.id);
+      const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const carrosNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
@@ -205,15 +199,16 @@ export const ManagerDashboard = () => {
         if (["agendado", "reagendado"].includes(lead.etapa)) return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
         return false;
       }).length + agLembretes.filter((e) => !e.concluido && e.data_prevista <= todayStr).length;
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       return {
-        ...agente, unidadeNome: unidade?.nome || "—",
+        ...agente, unidadeNome,
         total: aLeads.length, passaramNaLoja, concluidos, totalAgendamentos,
         dispensados, perdidos, desqNovos, desqAgendados, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr]);
+  }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
 
   const selectedAgent = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
@@ -221,12 +216,13 @@ export const ManagerDashboard = () => {
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
-      const unidade = unidades.find((u) => u.id === agente.unidade_padrao);
+      const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       const carrosNaLoja = aLeads.filter((l) => foiNaLoja(l)).length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
-        nome: agente.nome, unidade: unidade?.nome || "—",
+        nome: agente.nome, unidade: unidadeNome,
         novo: aLeads.filter((l) => l.etapa === "novo").length,
         agendado: totalAgendamentos,
         carrosNaLoja,
@@ -239,7 +235,7 @@ export const ManagerDashboard = () => {
         fupPending: agFollowUps.filter((e) => !e.concluido).length,
       };
     });
-  }, [filteredLeads, agentes, unidades, eventos]);
+  }, [filteredLeads, agentes, unidades, eventos, agentUnitMap]);
 
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));

@@ -332,6 +332,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      agente_unidades_de: { Args: { _user_id: string }; Returns: string[] }
       get_user_cargo: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -341,6 +342,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      pode_ver_unidade: {
+        Args: { _unidade: string; _user_id: string }
         Returns: boolean
       }
     }

@@ -70,7 +70,7 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasUnidadesPanel = ({ profiles }: Props) => {
-  const { unidades } = useLeads();
+  const { unidades, agentUnidades } = useLeads();
   const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
@@ -140,7 +140,13 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       const diasRestantes = totalBizDays - elapsedBizDays;
       const necessarioPorDia = diasRestantes > 0 ? faltam / diasRestantes : faltam;
 
-      const unitAgents = agentes.filter((a) => a.unidade_padrao === u.id);
+      // Agents linked to this unit via the N:N table (with legacy unidade_padrao fallback)
+      const linkedAgentIds = new Set(
+        agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente)
+      );
+      const unitAgents = agentes.filter(
+        (a) => linkedAgentIds.has(a.id) || a.unidade_padrao === u.id
+      );
       const agentBreakdown = unitAgents.map((ag) => {
         const agLeads = monthLeads.filter((l) => l.id_agente === ag.id);
         return {
@@ -167,7 +173,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         totalLeads: monthLeads.length, agentBreakdown,
       };
     });
-  }, [unidades, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes]);
+  }, [unidades, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes, agentUnidades]);
 
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);
