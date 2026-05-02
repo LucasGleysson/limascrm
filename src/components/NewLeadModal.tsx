@@ -20,7 +20,7 @@ interface Props {
 }
 
 export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist }: Props) => {
-  const { addLead } = useLeads();
+  const { addLead, agentUnidades, unidades } = useLeads();
   const { currentUser } = useRole();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -28,6 +28,17 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
   const [confirmEntryOpen, setConfirmEntryOpen] = useState(false);
+
+  // For agents: list of units they attend
+  const myAgentUnits = (() => {
+    if (!currentUser || currentUser.cargo !== "agente") return [] as string[];
+    const ids = new Set<string>(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    );
+    if (currentUser.unidade_padrao) ids.add(currentUser.unidade_padrao);
+    return Array.from(ids);
+  })();
+  const [selectedUnidade, setSelectedUnidade] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -37,6 +48,9 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     setNumeroOs("");
     setEtapa(isPorta ? "na_loja" : "novo");
     setConfirmEntryOpen(false);
+    // Default unit pre-fill: prop > single unit > unidade_padrao
+    const defaultUnit = unidadeId || (myAgentUnits.length === 1 ? myAgentUnits[0] : currentUser?.unidade_padrao || "");
+    setSelectedUnidade(defaultUnit);
   }, [open, isPorta, isReceptionist]);
 
   const receptionistEtapas = ETAPAS_FUNIL.filter((e) =>
@@ -49,6 +63,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     const today = now.split("T")[0];
     const isWalkIn = isReceptionist ? darEntradaAgora : isPorta || false;
     const finalEtapa = isReceptionist ? (darEntradaAgora ? "confirmado" : "novo") : (isPorta ? "na_loja" : "novo");
+    const finalUnidade = unidadeId || selectedUnidade || null;
     await addLead({
       nome,
       telefone: formatPhone(telefone),
@@ -57,7 +72,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       data_entrada: today,
       data_agendamento: isReceptionist && darEntradaAgora ? today : null,
       id_agente: isReceptionist ? null : currentUser.id,
-      id_unidade: unidadeId || null,
+      id_unidade: finalUnidade,
       is_porta: isWalkIn,
       checkin: isWalkIn ? now : null,
       numero_os: numeroOs || null,
@@ -81,7 +96,11 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     handleSubmit(isPorta || false);
   };
 
-  const canSubmit = nome && telefone && (!isPorta && !isReceptionist ? !!origem : true);
+  const needsUnitChoice = !isReceptionist && !unidadeId && myAgentUnits.length > 1;
+  const canSubmit =
+    !!nome && !!telefone &&
+    (!isPorta && !isReceptionist ? !!origem : true) &&
+    (!needsUnitChoice || !!selectedUnidade);
 
   return (
     <>
@@ -119,6 +138,21 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
               </SelectContent>
             </Select>
           </div>
+          {needsUnitChoice && (
+            <div>
+              <Label>Unidade</Label>
+              <Select value={selectedUnidade} onValueChange={setSelectedUnidade}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione a loja..." /></SelectTrigger>
+                <SelectContent>
+                  {myAgentUnits.map((id) => {
+                    const u = unidades.find((x) => x.id === id);
+                    if (!u) return null;
+                    return <SelectItem key={id} value={id}>{u.nome}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
