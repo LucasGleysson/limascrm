@@ -155,15 +155,18 @@ export const ManagerDashboard = () => {
       const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
       const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
       const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
+      const emAnalise = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
+      const recepcionista = profiles.find((p) => p.cargo === "recepcionista" && p.unidade_padrao === u.id);
       const txConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
       return {
         ...u, total: uLeads.length, carrosNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
-        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados,
+        concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, emAnalise,
+        recepcionista,
         txConversao, unitAgents: uAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades]);
+  }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades, profiles]);
 
   const periodRange = useMemo(() => {
     if (period === "mes") return getMonthRange(mesRef);
@@ -654,12 +657,25 @@ export const ManagerDashboard = () => {
                 >
                   <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div className="flex-1">
-                    <span className="font-semibold">{u.nome}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{u.nome}</span>
+                      {u.recepcionista && (
+                        <Badge variant="outline" className="text-xs gap-1 bg-warning/10 text-warning border-warning/20">
+                          <LogIn className="h-3 w-3" /> Recep: {u.recepcionista.nome}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Users className="h-3 w-3" /> {u.unitAgents.length} agente{u.unitAgents.length === 1 ? "" : "s"}
+                      </Badge>
+                    </div>
                     <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                       <span>{u.total} registros</span>
                       <span className="text-primary">{u.totalAgendamentos} agend.</span>
                       <span className="text-warning">{u.carrosNaLoja} na loja</span>
                       <span className="text-success">{u.concluidos} concl.</span>
+                      <span className="text-purple-500">{u.dispensados} disp.</span>
+                      <span className="text-destructive">{u.perdidos} perd.</span>
+                      {u.emAnalise > 0 && <span className="text-info">{u.emAnalise} análise</span>}
                       <span className="font-medium">{u.txConversao}% conv.</span>
                     </div>
                   </div>
@@ -686,7 +702,18 @@ export const ManagerDashboard = () => {
               const funnelColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
               return (
                 <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-5">
-                  <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
+                    <div className="flex items-center gap-2 text-sm">
+                      {sel.recepcionista ? (
+                        <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
+                          <LogIn className="h-3.5 w-3.5" /> Recepção: <strong className="ml-1">{sel.recepcionista.nome}</strong>
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">Sem recepcionista atribuída</Badge>
+                      )}
+                    </div>
+                  </div>
                   
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
@@ -695,11 +722,12 @@ export const ManagerDashboard = () => {
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-orange-500">{sel.desqOutraCidade}</p><p className="text-xs text-muted-foreground">Outra Cidade</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-purple-500">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-info">{sel.emAnalise}</p><p className="text-xs text-muted-foreground">Em Análise</p></div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
                   </div>
 
@@ -755,6 +783,7 @@ export const ManagerDashboard = () => {
                           <tr className="border-b border-border">
                             <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
+                            <th className="text-center py-2 font-medium text-muted-foreground">PARTIC.</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
                             <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
@@ -772,10 +801,12 @@ export const ManagerDashboard = () => {
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
                             const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
                             const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
+                            const partic = sel.total > 0 ? Math.round((agLeads.length / sel.total) * 100) : 0;
                             return (
                               <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
                                 <td className="py-2 font-medium">{ag.nome}</td>
                                 <td className="py-2 text-center">{agLeads.length}</td>
+                                <td className="py-2 text-center font-medium text-primary">{partic}%</td>
                                 <td className="py-2 text-center text-primary">{agAgend}</td>
                                 <td className="py-2 text-center text-warning">{agNaLoja}</td>
                                 <td className="py-2 text-center text-success">{agConcl}</td>

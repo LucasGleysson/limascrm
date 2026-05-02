@@ -196,6 +196,16 @@ export const AgentDashboard = () => {
     const concluidos = monthLeads.filter((l) => l.etapa === "concluido").length;
     const dispensados = monthLeads.filter((l) => l.etapa === "dispensado").length;
     const perdidos = monthLeads.filter((l) => l.etapa === "perdido").length;
+    const emAnalise = monthLeads.filter((l) => l.etapa === "analise_supervisor").length;
+    const registrosFeitos = monthLeads.filter((l) => l.id_agente === currentUser.id).length;
+    const agendamentosFeitos = monthLeads.filter((l) =>
+      l.id_agente === currentUser.id &&
+      ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)
+    ).length;
+    // Progressão da meta = Concluídos + Perdidos (resultado já realizado)
+    const progressoMeta = concluidos + perdidos;
+    // Pendentes = Dispensados + Em Análise (ainda podem virar concluído/perdido)
+    const pendentes = dispensados + emAnalise;
 
     // No-Show: agendados cujo data_agendamento já passou e ainda estão como agendado/reagendado
     const noShow = monthLeads.filter((l) =>
@@ -228,8 +238,9 @@ export const AgentDashboard = () => {
     return {
       total, desqNovos, produtivos, agendados, naLoja, concluidos, dispensados, perdidos,
       noShow, mediaCarrosLojaDia, txComparecimento, txConversao, resgatados, ganhosFup, bizDays,
+      emAnalise, registrosFeitos, agendamentosFeitos, progressoMeta, pendentes,
     };
-  }, [monthLeads, today, mesAtual]);
+  }, [monthLeads, today, mesAtual, currentUser.id]);
 
   // Daily appointments chart data
   const dailyChartData = useMemo(() => {
@@ -580,10 +591,10 @@ export const AgentDashboard = () => {
 
             {/* KPI Cards Row 1 */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Leads Recebidos" value={desempenho.total} icon={Users} variant="info" />
+              <StatsCard title="Registros Feitos" value={desempenho.registrosFeitos} icon={Users} variant="info" subtitle="Cadastrados por mim" />
               <StatsCard title="Desqualificados" value={desempenho.desqNovos} icon={XCircle} variant="destructive" />
               <StatsCard title="Produtivos" value={desempenho.produtivos} icon={CheckCircle2} variant="primary" subtitle={`${desempenho.total} - ${desempenho.desqNovos} desq.`} />
-              <StatsCard title="Agendamentos" value={desempenho.agendados} icon={CalendarCheck} variant="primary" />
+              <StatsCard title="Agendamentos Feitos" value={desempenho.agendamentosFeitos} icon={CalendarCheck} variant="primary" subtitle="Agendados por mim" />
             </div>
 
             {/* KPI Cards Row 2 */}
@@ -599,6 +610,44 @@ export const AgentDashboard = () => {
               <StatsCard title="Na Loja" value={desempenho.naLoja} icon={Car} variant="warning" />
               <StatsCard title="Concluídos" value={desempenho.concluidos} icon={CheckCircle2} variant="success" />
               <StatsCard title="No-Show" value={desempenho.noShow} icon={NoShowIcon} variant="destructive" subtitle="Não compareceram" />
+            </div>
+
+            {/* Resultado vs Pendente */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-success/30 bg-card p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">🎯 Progressão da Meta</h3>
+                  <span className="text-3xl font-bold text-success">{desempenho.progressoMeta}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Concluídos + Perdidos (resultado já realizado)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-success/10 p-3 text-center">
+                    <p className="text-xl font-bold text-success">{desempenho.concluidos}</p>
+                    <p className="text-xs text-muted-foreground">Concluídos</p>
+                  </div>
+                  <div className="rounded-lg bg-destructive/10 p-3 text-center">
+                    <p className="text-xl font-bold text-destructive">{desempenho.perdidos}</p>
+                    <p className="text-xs text-muted-foreground">Perdidos</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-warning/30 bg-card p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">⏳ Pendentes</h3>
+                  <span className="text-3xl font-bold text-warning">{desempenho.pendentes}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Dispensados + Em Análise (ainda podem virar resultado)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-purple-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-purple-500">{desempenho.dispensados}</p>
+                    <p className="text-xs text-muted-foreground">Dispensados</p>
+                  </div>
+                  <div className="rounded-lg bg-info/10 p-3 text-center">
+                    <p className="text-xl font-bold text-info">{desempenho.emAnalise}</p>
+                    <p className="text-xs text-muted-foreground">Em Análise</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* KPI Cards Row 3 - Rates */}
