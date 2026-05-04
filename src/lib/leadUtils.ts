@@ -64,6 +64,19 @@ export const isTrabalhado = (etapa: string): boolean =>
 
 export const getToday = (): string => new Date().toISOString().split("T")[0];
 
+/**
+ * Mês de referência da meta para um lead:
+ * - Se houve check-in, usa a data do check-in.
+ * - Senão, usa data_agendamento.
+ * - Senão, retorna null (não conta em nenhum mês de meta).
+ * Retorna no formato 'YYYY-MM-DD'.
+ */
+export function getLeadMetaDate(lead: { checkin?: string | null; data_agendamento?: string | null }): string | null {
+  if (lead.checkin) return lead.checkin.slice(0, 10);
+  if (lead.data_agendamento) return lead.data_agendamento.slice(0, 10);
+  return null;
+}
+
 export const formatDateBR = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
   try {
