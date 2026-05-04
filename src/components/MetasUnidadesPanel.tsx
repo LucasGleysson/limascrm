@@ -14,7 +14,7 @@ import {
   ResponsiveContainer, Cell,
 } from "recharts";
 import { toast } from "sonner";
-import { isCarroDoAgente, isCarroParaMeta } from "@/lib/leadUtils";
+import { isCarroDoAgente, isCarroParaMeta, getLeadMetaDate } from "@/lib/leadUtils";
 
 interface Meta {
   id?: string;
@@ -101,12 +101,12 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   // Fetch leads for the selected month — dual-date: data_entrada OR data_agendamento in month
   const fetchMonthLeads = useCallback(async () => {
     const range = getMonthRange(mesRef);
-    const [byEntrada, byAgend] = await Promise.all([
-      supabase.from("leads").select("*").gte("data_entrada", range.from).lte("data_entrada", range.to),
+    const [byCheckin, byAgend] = await Promise.all([
+      supabase.from("leads").select("*").gte("checkin", `${range.from}T00:00:00`).lte("checkin", `${range.to}T23:59:59`),
       supabase.from("leads").select("*").gte("data_agendamento", range.from).lte("data_agendamento", range.to),
     ]);
     const map = new Map<string, any>();
-    (byEntrada.data || []).forEach((l: any) => map.set(l.id, l));
+    (byCheckin.data || []).forEach((l: any) => map.set(l.id, l));
     (byAgend.data || []).forEach((l: any) => map.set(l.id, l));
     setMetaLeads(Array.from(map.values()));
   }, [mesRef]);
@@ -125,9 +125,8 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
       const monthLeads = metaLeads.filter((l) => {
         if (l.id_unidade !== u.id) return false;
-        const entradaIn = l.data_entrada >= monthRange.from && l.data_entrada <= monthRange.to;
-        const agendIn = l.data_agendamento && l.data_agendamento >= monthRange.from && l.data_agendamento <= monthRange.to;
-        return entradaIn || agendIn;
+        const metaDate = getLeadMetaDate(l);
+        return !!metaDate && metaDate >= monthRange.from && metaDate <= monthRange.to;
       });
       const carrosNaLoja = monthLeads.filter((l) => isCarroDoAgente(l.etapa)).length;
       const carrosParaMeta = monthLeads.filter((l) => isCarroParaMeta(l.etapa)).length;
