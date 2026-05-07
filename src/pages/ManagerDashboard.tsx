@@ -310,6 +310,24 @@ export const ManagerDashboard = () => {
               <StatsCard title="Dispensados" value={stats.dispensados} icon={XCircle} variant="warning" />
               <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
             </div>
+            {/* Detalhamento Na Loja por etapa atual */}
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold">Detalhamento "Na Loja"</h2>
+                <p className="text-xs text-muted-foreground">
+                  Total {stats.carrosNaLoja} = soma das etapas abaixo
+                </p>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                <StatsCard title="Confirmados" value={stats.naLojaConfirmado} icon={CalendarCheck} variant="info" subtitle="Apareceu, aguardando" />
+                <StatsCard title="Em loja agora" value={stats.naLojaEmLoja} icon={Car} variant="warning" subtitle="Em atendimento" />
+                <StatsCard title="Em análise" value={stats.naLojaAnalise} icon={AlertTriangle} variant="warning" subtitle="Análise do supervisor" />
+                <StatsCard title="Reagendados" value={stats.reagendados} icon={Calendar} variant="info" subtitle="Dispensado e reagendado" />
+                <StatsCard title="Concluídos" value={stats.concluidos} icon={CheckCircle2} variant="success" />
+                <StatsCard title="Dispensados" value={stats.dispensados} icon={XCircle} variant="warning" />
+                <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
+              </div>
+            </div>
             {/* Desqualificados */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <StatsCard title="Desq. Novo" value={stats.desqNovos} icon={XCircle} variant="destructive" />
