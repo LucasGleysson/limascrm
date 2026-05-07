@@ -98,7 +98,11 @@ export const ManagerDashboard = () => {
     const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
     const perdidosAntes = filteredLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
     const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao };
+    // Detalhamento "Na Loja" por etapa atual
+    const naLojaConfirmado = filteredLeads.filter((l) => l.etapa === "confirmado").length;
+    const naLojaEmLoja = filteredLeads.filter((l) => l.etapa === "na_loja").length;
+    const naLojaAnalise = filteredLeads.filter((l) => l.etapa === "analise_supervisor").length;
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
