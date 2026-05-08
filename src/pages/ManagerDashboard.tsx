@@ -102,7 +102,9 @@ export const ManagerDashboard = () => {
     const naLojaConfirmado = filteredLeads.filter((l) => l.etapa === "confirmado").length;
     const naLojaEmLoja = filteredLeads.filter((l) => l.etapa === "na_loja").length;
     const naLojaAnalise = filteredLeads.filter((l) => l.etapa === "analise_supervisor").length;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise };
+    const NA_LOJA_ETAPAS = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
+    const naLojaOutros = filteredLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS.includes(l.etapa)).length;
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise, naLojaOutros };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -152,6 +154,12 @@ export const ManagerDashboard = () => {
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const carrosNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
+      const naLojaConfirmado = uLeads.filter((l) => l.etapa === "confirmado").length;
+      const naLojaEmLoja = uLeads.filter((l) => l.etapa === "na_loja").length;
+      const naLojaAnalise = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
+      const reagendados = uLeads.filter((l) => l.etapa === "reagendado").length;
+      const NA_LOJA_ETAPAS_U = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
+      const naLojaOutros = uLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS_U.includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
@@ -168,6 +176,7 @@ export const ManagerDashboard = () => {
         concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, emAnalise,
         recepcionista,
         txConversao, unitAgents: uAgents, leads: uLeads,
+        naLojaConfirmado, naLojaEmLoja, naLojaAnalise, reagendados, naLojaOutros,
       };
     });
   }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades, profiles]);
@@ -318,7 +327,7 @@ export const ManagerDashboard = () => {
                   Total {stats.carrosNaLoja} = soma das etapas abaixo
                 </p>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
                 <StatsCard title="Confirmados" value={stats.naLojaConfirmado} icon={CalendarCheck} variant="info" subtitle="Apareceu, aguardando" />
                 <StatsCard title="Em loja agora" value={stats.naLojaEmLoja} icon={Car} variant="warning" subtitle="Em atendimento" />
                 <StatsCard title="Em análise" value={stats.naLojaAnalise} icon={AlertTriangle} variant="warning" subtitle="Análise do supervisor" />
@@ -326,6 +335,7 @@ export const ManagerDashboard = () => {
                 <StatsCard title="Concluídos" value={stats.concluidos} icon={CheckCircle2} variant="success" />
                 <StatsCard title="Dispensados" value={stats.dispensados} icon={XCircle} variant="warning" />
                 <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
+                <StatsCard title="Fantasmas" value={stats.naLojaOutros} icon={AlertTriangle} variant="destructive" subtitle="Check-in mas saiu do funil" />
               </div>
             </div>
             {/* Desqualificados */}
@@ -501,28 +511,39 @@ export const ManagerDashboard = () => {
 
             {/* Detailed report: By Loja */}
             <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4">Relatório por Loja</h2>
+              <h2 className="text-lg font-semibold mb-1">Relatório por Loja</h2>
+              <p className="text-xs text-muted-foreground mb-4">Detalhamento "Na Loja" por etapa (mesma lógica do card global). Fantasmas = check-in registrado mas saiu para outra etapa fora do funil.</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 font-medium text-muted-foreground">LOJA</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">CONF.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">EM LOJA</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">ANÁLISE</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">REAG.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">DISP. (incl. reag.)</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">PERDIDOS</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground">FANTASMAS</th>
                     </tr>
                   </thead>
                   <tbody>
                     {porUnidade.map((u) => {
-                      const dispensadosReag = u.leads.filter((l: Lead) => ["dispensado", "reagendado"].includes(l.etapa)).length;
+                      const soma = u.naLojaConfirmado + u.naLojaEmLoja + u.naLojaAnalise + u.reagendados + u.concluidos + u.dispensados + u.perdidos + u.naLojaOutros;
                       return (
                         <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                           <td className="py-3 font-medium flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{u.nome}</td>
-                          <td className="py-3 text-center text-warning">{u.carrosNaLoja}</td>
+                          <td className="py-3 text-center text-warning font-bold" title={`Soma das etapas: ${soma}`}>{u.carrosNaLoja}</td>
+                          <td className="py-3 text-center text-info">{u.naLojaConfirmado}</td>
+                          <td className="py-3 text-center text-warning">{u.naLojaEmLoja}</td>
+                          <td className="py-3 text-center text-warning">{u.naLojaAnalise}</td>
+                          <td className="py-3 text-center text-info">{u.reagendados}</td>
                           <td className="py-3 text-center text-success">{u.concluidos}</td>
-                          <td className="py-3 text-center text-purple-500">{dispensadosReag}</td>
+                          <td className="py-3 text-center text-purple-500">{u.dispensados}</td>
                           <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                          <td className="py-3 text-center text-destructive font-medium">{u.naLojaOutros}</td>
                         </tr>
                       );
                     })}
