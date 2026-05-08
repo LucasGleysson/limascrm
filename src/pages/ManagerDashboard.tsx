@@ -102,7 +102,9 @@ export const ManagerDashboard = () => {
     const naLojaConfirmado = filteredLeads.filter((l) => l.etapa === "confirmado").length;
     const naLojaEmLoja = filteredLeads.filter((l) => l.etapa === "na_loja").length;
     const naLojaAnalise = filteredLeads.filter((l) => l.etapa === "analise_supervisor").length;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise };
+    const NA_LOJA_ETAPAS = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
+    const naLojaOutros = filteredLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS.includes(l.etapa)).length;
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, perdidosAntes, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise, naLojaOutros };
   }, [filteredLeads]);
 
   const porOrigem = useMemo(() => {
@@ -152,6 +154,12 @@ export const ManagerDashboard = () => {
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
       const carrosNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
+      const naLojaConfirmado = uLeads.filter((l) => l.etapa === "confirmado").length;
+      const naLojaEmLoja = uLeads.filter((l) => l.etapa === "na_loja").length;
+      const naLojaAnalise = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
+      const reagendados = uLeads.filter((l) => l.etapa === "reagendado").length;
+      const NA_LOJA_ETAPAS_U = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
+      const naLojaOutros = uLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS_U.includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
@@ -168,6 +176,7 @@ export const ManagerDashboard = () => {
         concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, emAnalise,
         recepcionista,
         txConversao, unitAgents: uAgents, leads: uLeads,
+        naLojaConfirmado, naLojaEmLoja, naLojaAnalise, reagendados, naLojaOutros,
       };
     });
   }, [filteredLeads, unidades, agentUnitMap, agentes, agentUnidades, profiles]);
@@ -318,7 +327,7 @@ export const ManagerDashboard = () => {
                   Total {stats.carrosNaLoja} = soma das etapas abaixo
                 </p>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
                 <StatsCard title="Confirmados" value={stats.naLojaConfirmado} icon={CalendarCheck} variant="info" subtitle="Apareceu, aguardando" />
                 <StatsCard title="Em loja agora" value={stats.naLojaEmLoja} icon={Car} variant="warning" subtitle="Em atendimento" />
                 <StatsCard title="Em análise" value={stats.naLojaAnalise} icon={AlertTriangle} variant="warning" subtitle="Análise do supervisor" />
@@ -326,6 +335,7 @@ export const ManagerDashboard = () => {
                 <StatsCard title="Concluídos" value={stats.concluidos} icon={CheckCircle2} variant="success" />
                 <StatsCard title="Dispensados" value={stats.dispensados} icon={XCircle} variant="warning" />
                 <StatsCard title="Perdidos" value={stats.perdidos} icon={Skull} variant="destructive" />
+                <StatsCard title="Fantasmas" value={stats.naLojaOutros} icon={AlertTriangle} variant="destructive" subtitle="Check-in mas saiu do funil" />
               </div>
             </div>
             {/* Desqualificados */}
