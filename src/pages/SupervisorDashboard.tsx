@@ -22,6 +22,7 @@ import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
+import { DashboardOverviewPanel } from "@/components/DashboardOverviewPanel";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -228,73 +229,14 @@ export const SupervisorDashboard = () => {
               </div>
             </div>
 
-            {/* Registros e Funil */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Total de Registros" value={globalStats.totalLeads} icon={Users} variant="info" />
-              <StatsCard title="Agendamentos" value={globalStats.totalAgendamentos} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Leads Produtivos" value={globalStats.totalLeads - globalStats.desqNovos} icon={Users} variant="success" subtitle="Total - Desq. Novos" />
-              <StatsCard title="Aproveitamento" value={`${(globalStats.totalLeads - globalStats.desqNovos) > 0 ? Math.round((globalStats.naLoja / (globalStats.totalLeads - globalStats.desqNovos)) * 100) : 0}%`} icon={TrendingUp} variant="primary" subtitle="Na Loja / Produtivos" />
-            </div>
-            {/* Na Loja */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Na Loja" value={globalStats.naLoja} icon={Car} variant="warning" subtitle="Conf+Concl+Disp+Perd+Reag" />
-              <StatsCard title="Concluídos" value={globalStats.concluidos} icon={CheckCircle2} variant="success" />
-              <StatsCard title="Dispensados" value={globalStats.dispensados} icon={XCircle} variant="warning" />
-              <StatsCard title="Perdidos" value={globalStats.perdidos} icon={Skull} variant="destructive" />
-            </div>
-            {/* Desqualificados */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              <StatsCard title="Desq. Novo" value={globalStats.desqNovos} icon={XCircle} variant="destructive" />
-              <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
-              <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
-              <StatsCard title="Trabalhados" value={globalStats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
-              <StatsCard title="Conversão (Loja→Concl.)" value={`${globalStats.txConversao}%`} icon={TrendingUp} variant="primary" />
-            </div>
-
-            {/* Agent summary table */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-4">Resumo por Agente</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
-                      <th className="text-left py-2 font-medium text-muted-foreground">CIDADE</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">LEADS</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">TX CV.</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">FUP ✓</th>
-                      <th className="text-center py-2 font-medium text-muted-foreground">FUP ⏳</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agenteStats.map((a) => (
-                      <tr key={a.id} className="border-b border-border/50 hover:bg-muted/30">
-                        <td className="py-3 font-medium">{a.nome}</td>
-                        <td className="py-3 text-muted-foreground">{a.unidadeNome}</td>
-                        <td className="py-3 text-center">{a.total}</td>
-                        <td className="py-3 text-center text-primary">{a.totalAgendamentos}</td>
-                        <td className="py-3 text-center text-warning">{a.passaramNaLoja}</td>
-                         <td className="py-3 text-center text-success">{a.concluidos}</td>
-                        <td className="py-3 text-center text-destructive">{a.perdidos}</td>
-                        <td className="py-3 text-center font-medium">{a.txConversao}%</td>
-                        <td className="py-3 text-center text-success">{a.fupConcluidos}</td>
-                        <td className="py-3 text-center">
-                          {a.fupPendentes > 0 ? (
-                            <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">{a.fupPendentes}</Badge>
-                          ) : (
-                            <span className="text-success">0</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <DashboardOverviewPanel
+              filteredLeads={filteredLeads}
+              unidades={unidades}
+              profiles={profiles}
+              eventos={eventos}
+              agentUnidades={agentUnidades}
+              periodRange={periodRange}
+            />
 
             {/* Unit summary */}
             <div className="rounded-xl border border-border bg-card p-5">
