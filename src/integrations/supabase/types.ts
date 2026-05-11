@@ -99,6 +99,7 @@ export type Database = {
           created_at: string
           data_agendamento: string | null
           data_entrada: string
+          dispensado_em: string | null
           etapa: string
           fup_concluido: boolean
           fup_concluido_em: string | null
@@ -126,6 +127,7 @@ export type Database = {
           created_at?: string
           data_agendamento?: string | null
           data_entrada?: string
+          dispensado_em?: string | null
           etapa?: string
           fup_concluido?: boolean
           fup_concluido_em?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           created_at?: string
           data_agendamento?: string | null
           data_entrada?: string
+          dispensado_em?: string | null
           etapa?: string
           fup_concluido?: boolean
           fup_concluido_em?: string | null
