@@ -63,6 +63,8 @@ export interface Lead {
   fup_motivo_conclusao?: string | null;
   visitas_loja?: number;
   created_at?: string;
+  updated_at?: string;
+  dispensado_em?: string | null;
 }
 
 export interface Evento {
