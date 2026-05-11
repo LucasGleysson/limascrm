@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   CheckCircle2, Clock, User, ChevronRight, ChevronDown, FileText, Phone, Car, Flag, Search,
-  XSquare, Skull,
+  XSquare, Skull, AlertTriangle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -42,7 +42,28 @@ export const FollowUpTrackingPanel = () => {
   const today = new Date().toISOString().split("T")[0];
   const isConcludedOnDay = (iso?: string | null) => !!iso && iso.slice(0, 10) === today;
 
+  // FUP cadence config (must match generate-followups edge function)
+  const FUP_MAX = { novo: 4, agendado: 3, dispensado: 4 } as const;
+  const MAX_FUP_NUM = 4; // tabela renderiza F1..F4
+  const FUP_NUMBERS = [1, 2, 3, 4];
+
+  // Atenção: leads parados em status críticos
+  const ATENCAO_STATUSES = ["confirmado", "na_loja", "reagendado", "analise_supervisor"] as const;
+  const daysSince = (iso?: string | null): number => {
+    if (!iso) return 0;
+    const then = new Date(iso).getTime();
+    return Math.floor((Date.now() - then) / 86400000);
+  };
+
   const allFollowUps = useMemo(() => eventos.filter((e) => e.tipo === "followup"), [eventos]);
+
+  // Leads parados em status que exigem atenção (>= 1 dia sem mudança)
+  const stuckLeads = useMemo(() => {
+    return leads
+      .filter((l) => (ATENCAO_STATUSES as readonly string[]).includes(l.etapa) && daysSince(l.updated_at) >= 1)
+      .map((l) => ({ lead: l, dias: daysSince(l.updated_at) }))
+      .sort((a, b) => b.dias - a.dias);
+  }, [leads]);
 
   const categorizeLead = (lead: Lead): string => {
     if (lead.etapa === "novo" || lead.etapa === "desqualificado_novo") return "novo";
@@ -124,7 +145,7 @@ export const FollowUpTrackingPanel = () => {
         });
 
         const byNumber: Record<number, { pending: number; completed: number }> = {};
-        for (let i = 1; i <= 7; i++) {
+        for (let i = 1; i <= MAX_FUP_NUM; i++) {
           const nFups = agFups.filter((e) => e.numero === i);
           const nPendingToday = pendingFupsToday.filter((e) => e.numero === i);
           byNumber[i] = {
@@ -171,7 +192,7 @@ export const FollowUpTrackingPanel = () => {
 
   const globalByNumber = useMemo(() => {
     const result: Record<number, { pending: number; completed: number }> = {};
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= MAX_FUP_NUM; i++) {
       const nFups = allFollowUps.filter((e) => e.numero === i);
       result[i] = {
         pending: nFups.filter((e) => !e.concluido).length,
@@ -350,7 +371,7 @@ export const FollowUpTrackingPanel = () => {
       </div>
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-8 gap-4">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <p className="text-2xl font-bold">{globalTotals.totalProcesses}</p>
           <p className="text-xs text-muted-foreground">Processos</p>
@@ -379,13 +400,70 @@ export const FollowUpTrackingPanel = () => {
           <p className="text-2xl font-bold text-primary">{globalTotals.carrosDispensadoConcluido}</p>
           <p className="text-xs text-muted-foreground">Carros Ganhos</p>
         </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className={`text-2xl font-bold ${stuckLeads.length > 0 ? "text-warning" : "text-muted-foreground"}`}>{stuckLeads.length}</p>
+          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <AlertTriangle className="h-3 w-3" /> Atenção
+          </p>
+        </div>
       </div>
+
+      {/* Atenção — Leads parados em status crítico */}
+      {stuckLeads.length > 0 && (
+        <Accordion type="single" collapsible className="rounded-xl border border-warning/40 bg-warning/5">
+          <AccordionItem value="stuck" className="border-none">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline">
+              <span className="flex items-center gap-2 text-lg font-semibold text-warning">
+                <AlertTriangle className="h-5 w-5" />
+                Atenção — Leads parados ({stuckLeads.length})
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="px-5 pb-5 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Leads em <strong>Confirmado</strong>, <strong>Na Loja</strong>, <strong>Reagendado</strong> ou <strong>Em Análise</strong> há mais de 1 dia sem alteração.
+              </p>
+              {stuckLeads.map(({ lead, dias }) => {
+                const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
+                const severe = dias > 3;
+                return (
+                  <div
+                    key={lead.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border cursor-pointer hover:bg-muted/50"
+                    onClick={() => { setDetailLead(lead); setDetailOpen(true); }}
+                  >
+                    <AlertTriangle className={`h-4 w-4 shrink-0 ${severe ? "text-destructive" : "text-warning"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{lead.nome}</span>
+                        <Badge variant="outline" className={`text-xs ${getStatusBadgeClass(lead.etapa)}`}>
+                          {etapa?.label || lead.etapa}
+                        </Badge>
+                        <Badge variant={severe ? "destructive" : "outline"} className={`text-xs ${severe ? "" : "bg-warning/10 text-warning border-warning/30"}`}>
+                          {dias} {dias === 1 ? "dia" : "dias"} parado
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                        <span>{formatPhone(lead.telefone)}</span>
+                        <span>{getAgentName(lead.id_agente)}</span>
+                        <span>{getUnitName(lead.id_unidade)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
 
       {/* Global by FUP number */}
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="text-lg font-semibold mb-4">Leads por Etapa de Follow-up</h2>
-        <div className="grid grid-cols-7 gap-2">
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+        <p className="text-xs text-muted-foreground mb-3">
+          Nova régua: Novo até FUP4 · Agendado até FUP3 · Dispensado até FUP4
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {FUP_NUMBERS.map((n) => {
             const data = globalByNumber[n];
             if (!data || (data.pending === 0 && data.completed === 0)) return (
               <div key={n} className="rounded-lg bg-muted/30 p-3 text-center opacity-50">
@@ -416,7 +494,7 @@ export const FollowUpTrackingPanel = () => {
               <tr className="border-b border-border">
                 <th className="text-left py-2 font-medium text-muted-foreground w-8"></th>
                 <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
-                {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                {FUP_NUMBERS.map((n) => (
                   <th key={n} className="text-center py-2 font-medium text-muted-foreground text-xs">F{n}</th>
                 ))}
                 <th className="text-center py-2 font-medium text-muted-foreground text-xs">PROC. ✓</th>
@@ -434,7 +512,7 @@ export const FollowUpTrackingPanel = () => {
                       {expandedAgent === a.id ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     </td>
                     <td className="py-3 font-medium">{a.nome}</td>
-                    {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+                    {FUP_NUMBERS.map((n) => {
                       const d = a.byNumber[n];
                       return (
                         <td key={n} className="py-3 text-center text-xs">
@@ -466,7 +544,7 @@ export const FollowUpTrackingPanel = () => {
                   </tr>
                   {expandedAgent === a.id && (
                     <tr>
-                      <td colSpan={14} className="p-0">
+                      <td colSpan={11} className="p-0">
                         <div className="bg-muted/20 p-4 space-y-2 max-h-[300px] overflow-y-auto">
                           {a.processesPending.map((lead) => renderPendingCard(lead))}
                           {a.processesConcluidosFull.length > 0 && (
