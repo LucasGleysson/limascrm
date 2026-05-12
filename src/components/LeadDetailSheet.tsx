@@ -734,6 +734,41 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit visitas_loja modal — supervisor/gestor only */}
+      <Dialog open={editVisitasOpen} onOpenChange={setEditVisitasOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar quantidade de visitas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="visitas-input">Quantidade de visitas à loja</Label>
+            <Input
+              id="visitas-input"
+              type="number"
+              min={0}
+              value={editVisitasValue}
+              onChange={(e) => setEditVisitasValue(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use para corrigir check-ins feitos por engano. Defina como 0 para remover a contagem de visita.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditVisitasOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                const n = Math.max(0, Math.floor(Number(editVisitasValue) || 0));
+                await updateLead(lead.id, { visitas_loja: n } as any);
+                setEditVisitasOpen(false);
+              }}
+              className="gap-2"
+            >
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit motivo tags modal */}
       <Dialog open={editMotivoTagsOpen} onOpenChange={setEditMotivoTagsOpen}>
         <DialogContent className="sm:max-w-md">
