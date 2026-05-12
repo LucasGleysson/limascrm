@@ -76,6 +76,9 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const isSupervisorOrGestor = currentUser?.cargo === "supervisor" || currentUser?.cargo === "gestor";
 
+  const [editVisitasOpen, setEditVisitasOpen] = useState(false);
+  const [editVisitasValue, setEditVisitasValue] = useState<string>("0");
+
   useEffect(() => {
     setEditing(false);
     setEditingSchedule(false);
@@ -477,6 +480,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                       {lead.visitas_loja} {lead.visitas_loja === 1 ? "visita" : "visitas"}
                     </Badge>
                   )}
+                  {isSupervisorOrGestor && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2 text-xs gap-1"
+                      onClick={() => {
+                        setEditVisitasValue(String(lead.visitas_loja ?? 0));
+                        setEditVisitasOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Editar visitas
+                    </Button>
+                  )}
                   {lead.fup_concluido && (
                     <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
                       FUP Concluído {lead.fup_concluido_numero ? `(F${lead.fup_concluido_numero})` : ""}
@@ -713,6 +730,41 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 <AlertCircle className="h-4 w-4" /> Enviar para Análise
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit visitas_loja modal — supervisor/gestor only */}
+      <Dialog open={editVisitasOpen} onOpenChange={setEditVisitasOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar quantidade de visitas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="visitas-input">Quantidade de visitas à loja</Label>
+            <Input
+              id="visitas-input"
+              type="number"
+              min={0}
+              value={editVisitasValue}
+              onChange={(e) => setEditVisitasValue(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use para corrigir check-ins feitos por engano. Defina como 0 para remover a contagem de visita.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditVisitasOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                const n = Math.max(0, Math.floor(Number(editVisitasValue) || 0));
+                await updateLead(lead.id, { visitas_loja: n } as any);
+                setEditVisitasOpen(false);
+              }}
+              className="gap-2"
+            >
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
