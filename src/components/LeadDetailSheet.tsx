@@ -76,6 +76,9 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
 
   const isSupervisorOrGestor = currentUser?.cargo === "supervisor" || currentUser?.cargo === "gestor";
 
+  const [editVisitasOpen, setEditVisitasOpen] = useState(false);
+  const [editVisitasValue, setEditVisitasValue] = useState<string>("0");
+
   useEffect(() => {
     setEditing(false);
     setEditingSchedule(false);
