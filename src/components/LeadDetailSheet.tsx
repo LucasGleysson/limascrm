@@ -480,6 +480,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                       {lead.visitas_loja} {lead.visitas_loja === 1 ? "visita" : "visitas"}
                     </Badge>
                   )}
+                  {isSupervisorOrGestor && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2 text-xs gap-1"
+                      onClick={() => {
+                        setEditVisitasValue(String(lead.visitas_loja ?? 0));
+                        setEditVisitasOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Editar visitas
+                    </Button>
+                  )}
                   {lead.fup_concluido && (
                     <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
                       FUP Concluído {lead.fup_concluido_numero ? `(F${lead.fup_concluido_numero})` : ""}
