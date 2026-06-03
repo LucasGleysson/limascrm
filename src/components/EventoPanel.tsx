@@ -81,7 +81,8 @@ export const EventoPanel = () => {
     if (lead.fup_concluido) return false;
     if (lead.etapa === "dispensado") return true;
     if (lead.etapa === "novo") return true;
-    if (["agendado", "reagendado"].includes(lead.etapa)) {
+    if (lead.etapa === "reagendado") return true;
+    if (lead.etapa === "agendado") {
       // Include: appointment tomorrow (day-before reminder), today, or past
       return !!lead.data_agendamento && lead.data_agendamento <= tomorrowStr;
     }
@@ -118,7 +119,8 @@ export const EventoPanel = () => {
     const lead = myLeads.find((l) => l.id === evento.id_lead);
     if (!lead) return "other";
     if (lead.etapa === "dispensado") return "dispensado";
-    if (["agendado", "reagendado"].includes(lead.etapa)) {
+    if (lead.etapa === "reagendado") return "reagendado";
+    if (lead.etapa === "agendado") {
       if (lead.data_agendamento && lead.data_agendamento < today) return "agendado_atrasado";
       if (lead.data_agendamento === today) return "agendado_hoje";
       if (lead.data_agendamento === tomorrowStr) return "agendado_amanha";
@@ -134,6 +136,7 @@ export const EventoPanel = () => {
       agendado_amanha: [],
       agendado_hoje: [],
       agendado_atrasado: [],
+      reagendado: [],
       dispensado: [],
       other: [],
     };
@@ -413,6 +416,7 @@ export const EventoPanel = () => {
             { key: "agendado_amanha", label: "Amanhã", count: followupsByCategory.agendado_amanha.length, cls: "bg-info/10 text-info border-info/30" },
             { key: "agendado_hoje", label: "Agend. Hoje", count: followupsByCategory.agendado_hoje.length, cls: "bg-success/10 text-success border-success/30" },
             { key: "agendado_atrasado", label: "Atrasados", count: followupsByCategory.agendado_atrasado.length, cls: "bg-destructive/10 text-destructive border-destructive/30" },
+            { key: "reagendado", label: "Reagendados", count: followupsByCategory.reagendado.length, cls: "bg-warning/10 text-warning border-warning/30" },
             { key: "dispensado", label: "Dispensados", count: followupsByCategory.dispensado.length, cls: "bg-warning/10 text-warning border-warning/30" },
           ].map((cat) => (
             <Badge
