@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const FINAL: Record<string, string> = {
       novo: "trabalhado",
       agendado: "desqualificado_agendado",
-      dispensado: "perdido",
+      dispensado: "analise_supervisor",
     };
 
     const categoryOf = (etapa: string): "novo" | "agendado" | "dispensado" | null => {
@@ -41,13 +41,25 @@ Deno.serve(async (req) => {
       return null;
     };
 
-    const { data: leads, error: leadsErr } = await supabase
-      .from("leads")
-      .select("id, etapa, data_entrada, data_agendamento, dispensado_em, checkin, id_agente, fup_concluido")
-      .eq("fup_concluido", false)
-      .or("etapa.eq.novo,etapa.eq.agendado,etapa.eq.reagendado,etapa.eq.dispensado");
-
-    if (leadsErr) throw leadsErr;
+    // Paginate to bypass PostgREST 1000-row default limit
+    const PAGE = 1000;
+    const leads: any[] = [];
+    {
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("leads")
+          .select("id, etapa, data_entrada, data_agendamento, dispensado_em, checkin, id_agente, fup_concluido")
+          .eq("fup_concluido", false)
+          .or("etapa.eq.novo,etapa.eq.agendado,etapa.eq.reagendado,etapa.eq.dispensado")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        leads.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+    }
     if (!leads || leads.length === 0) {
       return new Response(JSON.stringify({ message: "No eligible leads", generated: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -71,14 +83,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch all eventos for eligible leads in one query
+    // Fetch all eventos for eligible leads, chunked to avoid URL length + 1000-row limit
     const leadIds = eligible.map((l) => l.id);
-    const { data: eventos, error: eventosErr } = await supabase
-      .from("eventos")
-      .select("id, id_lead, numero, concluido, data_conclusao")
-      .in("id_lead", leadIds);
-
-    if (eventosErr) throw eventosErr;
+    const eventos: any[] = [];
+    const CHUNK = 200;
+    for (let i = 0; i < leadIds.length; i += CHUNK) {
+      const slice = leadIds.slice(i, i + CHUNK);
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("eventos")
+          .select("id, id_lead, numero, concluido, data_conclusao")
+          .in("id_lead", slice)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        eventos.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+    }
 
     let generated = 0;
     let statusChanged = 0;
@@ -128,6 +152,10 @@ Deno.serve(async (req) => {
           anchorDate = (lead.dispensado_em ? lead.dispensado_em.slice(0, 10) : lead.data_entrada);
         }
         eventDateStr = addDays(anchorDate, gap);
+      } else if (cat === "agendado") {
+        // Para agendado, ancorar sempre na data_agendamento atual (suporta reagendamentos)
+        const baseDate = lead.data_agendamento || lead.data_entrada;
+        eventDateStr = addDays(baseDate, gap);
       } else {
         const lastConcluded = leadEventos
           .filter((e) => e.concluido && e.data_conclusao)
