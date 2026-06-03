@@ -57,7 +57,15 @@ export const AgentDashboard = () => {
 
   const today = getToday();
 
-  const allMyLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser.id), [leads, currentUser.id]);
+  const allMyLeads = useMemo(() => {
+    const unitIds = new Set<string>(
+      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
+    );
+    if (currentUser.unidade_padrao) unitIds.add(currentUser.unidade_padrao);
+    return leads.filter(
+      (l) => l.id_agente === currentUser.id || (l.id_unidade && unitIds.has(l.id_unidade))
+    );
+  }, [leads, currentUser.id, currentUser.unidade_padrao, agentUnidades]);
 
   const myLeads = useMemo(() => {
     return allMyLeads
