@@ -166,6 +166,13 @@ export const EventoPanel = () => {
     });
   }, [followupsByCategory, fupSearch, myLeads, fupCategoryFilter]);
 
+  const reagendadoAtrasadosCount = useMemo(() => {
+    return followupsByCategory.reagendado.filter((e) => {
+      const lead = myLeads.find((l) => l.id === e.id_lead);
+      return !!lead?.data_agendamento && lead.data_agendamento < today;
+    }).length;
+  }, [followupsByCategory, myLeads, today]);
+
   const fupPagination = usePagination(allPendingFollowups, { pageSize: 20 });
   const concludedPagination = usePagination(concluidos, { pageSize: 20 });
 
@@ -426,6 +433,11 @@ export const EventoPanel = () => {
               onClick={() => setFupCategoryFilter(fupCategoryFilter === cat.key ? null : cat.key)}
             >
               {cat.label}: {cat.count}
+              {cat.key === "reagendado" && reagendadoAtrasadosCount > 0 && (
+                <span className="ml-1 text-destructive font-semibold">
+                  ({reagendadoAtrasadosCount} atrasados)
+                </span>
+              )}
             </Badge>
           ))}
         </div>
