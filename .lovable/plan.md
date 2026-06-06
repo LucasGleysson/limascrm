@@ -1,29 +1,30 @@
-# Adicionar Reagendados aos Eventos
-
-## Problema
-Hoje, na aba de Eventos do agente, os leads com `etapa = "reagendado"` são agrupados junto com os `agendado` nas categorias `Amanhã / Agend. Hoje / Atrasados`, o que torna difícil identificá-los e priorizá-los separadamente.
-
-## Solução
-Separar "Reagendado" como uma categoria própria na lista de follow-ups pendentes, com botão de filtro próprio (no mesmo padrão dos botões "Atrasados" e "Dispensados").
+## Objetivo
+Reagendados com `data_agendamento` vencida ainda devem entrar no processo de follow-up (FUP1 cai no dia do agendamento — quando vencido, é gerado para hoje). Hoje eles já caem no grupo "Reagendados" do EventoPanel, mas:
+- não há destaque visual de "atrasado";
+- não há sub-contador para os vencidos;
+- o backlog (leads que já passaram da data sem FUP gerado) só vai virar evento na próxima execução do cron.
 
 ## Mudanças
 
-### `src/components/EventoPanel.tsx`
+### 1. `src/components/EventoPanel.tsx` — destacar reagendados atrasados
+- Computar `reagendadoAtrasadosCount` = nº de eventos na categoria `reagendado` cujo `lead.data_agendamento < today`.
+- No botão de filtro "Reagendados", quando houver atrasados, mostrar sufixo em destaque, por ex.:
+  `Reagendados: N  (M atrasados)` — sub-texto em `text-destructive`.
+- Em cada linha da lista, quando o lead for `reagendado` e `data_agendamento < today`, adicionar:
+  - badge extra `Atrasado` em vermelho ao lado do badge de etapa;
+  - manter a borda vermelha já aplicada por `isOverdue(evento.data_prevista)` (já cobre, pois o FUP gerado fica com data ≤ hoje).
+- Nenhuma mudança em `categorizeFollowup`/elegibilidade — `reagendado` continua sempre elegível.
 
-1. **`categorizeFollowup`**: Antes de cair na lógica de datas para `agendado/reagendado`, retornar `"reagendado"` quando `lead.etapa === "reagendado"`. Assim, reagendados não somem em `ignore` mesmo se a `data_agendamento` for futura (>amanhã).
+### 2. Backlog — gerar FUPs agora para reagendados vencidos
+- Invocar manualmente a edge function `generate-followups` (já cobre `reagendado` com `data_agendamento` no passado e sem `checkin`).
+- Hoje há 1 lead nessa condição; após executar, ele recebe FUP1 com `data_prevista = data_agendamento` (no passado) → aparece no grupo Reagendados marcado como atrasado.
+- Não precisa alterar a lógica da edge function nem da trigger `leads_reset_fup_on_reagendamento` — a regra atual já gera o FUP corretamente.
 
-2. **`followupsByCategory`**: Adicionar a chave `reagendado: []` no objeto de categorias inicial.
-
-3. **Botões de filtro de categoria** (linhas ~409-): Adicionar uma nova entrada entre "Atrasados" e "Dispensados":
-   ```
-   { key: "reagendado", label: "Reagendados",
-     count: followupsByCategory.reagendado.length,
-     cls: "bg-warning/10 text-warning border-warning/30" }
-   ```
-
-4. Nenhuma mudança no edge function `generate-followups` — reagendados já estão incluídos lá (categoria `agendado`).
+### Detalhes técnicos
+- A categoria `reagendado` no `followupsByCategory` já existe (lines 139, 419); a contagem extra é puramente derivada e local ao componente.
+- `isOverdue` (já presente no arquivo) usa `data_prevista` do evento; como o FUP gerado para reagendado vencido sai com data passada, a borda vermelha aparece automaticamente.
+- Sem novas migrações, sem mudanças de schema, sem mudanças nas demais telas.
 
 ## Resultado
-- Reagendados aparecem como um grupo próprio nos follow-ups pendentes.
-- Novo botão "Reagendados (n)" filtra a lista por essa categoria, igual a "Atrasados" e "Dispensados".
-- Reagendados com `data_agendamento` no futuro (não só hoje/amanhã/atrasado) também ficam visíveis nesse filtro.
+- Reagendados vencidos continuam no botão "Reagendados", mas com contador "(M atrasados)" em vermelho e badge "Atrasado" por linha.
+- O lead atualmente vencido (e quaisquer outros que entrarem nessa condição) ganha imediatamente o FUP1 ao rodar a função uma vez.
