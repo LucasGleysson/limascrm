@@ -72,7 +72,12 @@ Deno.serve(async (req) => {
       const cat = categoryOf(lead.etapa);
       if (!cat) return false;
       if (cat === "novo") return lead.data_entrada < today;
-      if (cat === "agendado") return !!lead.data_agendamento && !lead.checkin;
+      if (cat === "agendado") {
+        if (!lead.data_agendamento) return false;
+        // reagendado: cliente já passou pela loja anteriormente; checkin antigo não bloqueia
+        if (lead.etapa === "reagendado") return true;
+        return !lead.checkin;
+      }
       if (cat === "dispensado") return true;
       return false;
     });
