@@ -18,22 +18,38 @@ interface Props {
 }
 
 export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) => {
-  const { updateLead, unidades, leads } = useLeads();
+  const { updateLead, unidades, leads, agentUnidades } = useLeads();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const submittingRef = useRef(false);
 
+  const leadAtual = leads.find((l) => l.id === leadId);
+  // Unidades do agente responsável pelo lead (N:N). Se não houver vínculos, cai pra todas as unidades.
+  const agentUnitIds = leadAtual?.id_agente
+    ? agentUnidades.filter((au) => au.id_agente === leadAtual.id_agente).map((au) => au.id_unidade)
+    : [];
+  const availableUnidades = agentUnitIds.length > 0
+    ? unidades.filter((u) => agentUnitIds.includes(u.id))
+    : unidades;
+  const onlyOneUnit = availableUnidades.length === 1;
+
   useEffect(() => {
     if (open) {
-      setUnidade("");
+      // pre-select if agent has only one unit, otherwise keep current lead unit if it's allowed
+      const preselect = onlyOneUnit
+        ? availableUnidades[0].id
+        : (leadAtual?.id_unidade && availableUnidades.some((u) => u.id === leadAtual.id_unidade)
+            ? leadAtual.id_unidade
+            : "");
+      setUnidade(preselect);
       setData("");
       setOs("");
       setTags([]);
       submittingRef.current = false;
     }
-  }, [open, leadId]);
+  }, [open, leadId, onlyOneUnit, availableUnidades.length]);
 
   const toggleTag = (tag: string) => {
     setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
@@ -45,7 +61,6 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
     if (!unidade || !data || !os || submittingRef.current) return;
     submittingRef.current = true;
     try {
-      const leadAtual = leads.find((l) => l.id === leadId);
       const unidadeNome = unidades.find((u) => u.id === unidade)?.nome || "Unidade";
       const isReagendamento = !!leadAtual && ["dispensado", "perdido", "desqualificado_agendado", "reagendado"].includes(leadAtual.etapa);
       const novoStatus = isReagendamento ? "reagendado" : "agendado";
@@ -79,14 +94,20 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
         <div className="space-y-4">
           <div>
             <Label>Unidade / Cidade</Label>
-            <Select value={unidade} onValueChange={setUnidade}>
+            <Select value={unidade} onValueChange={setUnidade} disabled={onlyOneUnit}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
               <SelectContent>
-                {unidades.map((u) => (
+                {availableUnidades.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {onlyOneUnit && (
+              <p className="text-xs text-muted-foreground mt-1">Única unidade atendida pelo agente.</p>
+            )}
+            {availableUnidades.length === 0 && (
+              <p className="text-xs text-destructive mt-1">Agente sem unidades vinculadas. Avise o gestor.</p>
+            )}
           </div>
           <div>
             <Label>Data do Agendamento</Label>

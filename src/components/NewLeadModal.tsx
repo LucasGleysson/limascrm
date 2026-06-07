@@ -10,6 +10,8 @@ import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { UserPlus } from "lucide-react";
 import { maskPhoneInput, formatPhone } from "@/lib/phoneUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   open: boolean;
@@ -20,25 +22,19 @@ interface Props {
 }
 
 export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist }: Props) => {
-  const { addLead, agentUnidades, unidades } = useLeads();
+  const { addLead } = useLeads();
   const { currentUser } = useRole();
+  const { toast } = useToast();
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
   const [origem, setOrigem] = useState((isPorta || isReceptionist) ? "Porta" : "Instagram");
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
   const [confirmEntryOpen, setConfirmEntryOpen] = useState(false);
-
-  // For agents: list of units they attend
-  const myAgentUnits = (() => {
-    if (!currentUser || currentUser.cargo !== "agente") return [] as string[];
-    const ids = new Set<string>(
-      agentUnidades.filter((au) => au.id_agente === currentUser.id).map((au) => au.id_unidade)
-    );
-    if (currentUser.unidade_padrao) ids.add(currentUser.unidade_padrao);
-    return Array.from(ids);
-  })();
-  const [selectedUnidade, setSelectedUnidade] = useState<string>("");
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [dupOpen, setDupOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const isPrivileged = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
 
   useEffect(() => {
     if (!open) return;
@@ -48,9 +44,9 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     setNumeroOs("");
     setEtapa(isPorta ? "na_loja" : "novo");
     setConfirmEntryOpen(false);
-    // Default unit pre-fill: prop > single unit > unidade_padrao
-    const defaultUnit = unidadeId || (myAgentUnits.length === 1 ? myAgentUnits[0] : currentUser?.unidade_padrao || "");
-    setSelectedUnidade(defaultUnit);
+    setDuplicates([]);
+    setDupOpen(false);
+    setSubmitting(false);
   }, [open, isPorta, isReceptionist]);
 
   const receptionistEtapas = ETAPAS_FUNIL.filter((e) =>
@@ -63,7 +59,8 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     const today = now.split("T")[0];
     const isWalkIn = isReceptionist ? darEntradaAgora : isPorta || false;
     const finalEtapa = isReceptionist ? (darEntradaAgora ? "confirmado" : "novo") : (isPorta ? "na_loja" : "novo");
-    const finalUnidade = unidadeId || selectedUnidade || null;
+    // Unidade só vem do contexto da tela (porta/recepcionista). Agente registra sem unidade.
+    const finalUnidade = unidadeId || (isReceptionist ? (currentUser?.unidade_padrao || null) : null);
     await addLead({
       nome,
       telefone: formatPhone(telefone),
@@ -79,33 +76,47 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       id_recepcionista: isReceptionist ? currentUser.id : null,
       visitas_loja: isWalkIn ? 1 : 0,
     } as any);
-    setNome("");
-    setTelefone("");
-    setOrigem("");
-    setNumeroOs("");
-    setEtapa(isPorta ? "na_loja" : "novo");
     onOpenChange(false);
   };
 
-  const handlePrimarySubmit = () => {
+  const checkDuplicateAndSubmit = async () => {
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    try {
+      const digits = telefone.replace(/\D/g, "");
+      if (digits.length >= 8) {
+        const { data } = await supabase.rpc("find_lead_by_phone" as any, { _phone_digits: digits });
+        if (data && (data as any[]).length > 0) {
+          setDuplicates(data as any[]);
+          setDupOpen(true);
+          return;
+        }
+      }
+      await proceedSubmit();
+    } catch (e: any) {
+      toast({ title: "Erro ao verificar duplicidade", description: e?.message || String(e), variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const proceedSubmit = async () => {
     if (!canSubmit) return;
     if (isReceptionist) {
       setConfirmEntryOpen(true);
       return;
     }
-    handleSubmit(isPorta || false);
+    await handleSubmit(isPorta || false);
   };
 
-  const needsUnitChoice = !isReceptionist && !unidadeId && myAgentUnits.length > 1;
   const canSubmit =
     !!nome && !!telefone &&
-    (!isPorta && !isReceptionist ? !!origem : true) &&
-    (!needsUnitChoice || !!selectedUnidade);
+    (!isPorta && !isReceptionist ? !!origem : true);
 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && canSubmit) { e.preventDefault(); handlePrimarySubmit(); } }}>
+      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && canSubmit) { e.preventDefault(); checkDuplicateAndSubmit(); } }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
@@ -138,28 +149,55 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
               </SelectContent>
             </Select>
           </div>
-          {needsUnitChoice && (
-            <div>
-              <Label>Unidade</Label>
-              <Select value={selectedUnidade} onValueChange={setSelectedUnidade}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione a loja..." /></SelectTrigger>
-                <SelectContent>
-                  {myAgentUnits.map((id) => {
-                    const u = unidades.find((x) => x.id === id);
-                    if (!u) return null;
-                    return <SelectItem key={id} value={id}>{u.nome}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+          {!isReceptionist && !isPorta && (
+            <p className="text-xs text-muted-foreground">
+              A unidade será definida na hora do agendamento.
+            </p>
           )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handlePrimarySubmit} disabled={!canSubmit}>Cadastrar</Button>
+          <Button onClick={checkDuplicateAndSubmit} disabled={!canSubmit || submitting}>
+            {submitting ? "Verificando..." : "Cadastrar"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={dupOpen} onOpenChange={setDupOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Telefone já cadastrado</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p>Já existe {duplicates.length === 1 ? "um lead" : `${duplicates.length} leads`} com este telefone:</p>
+              <ul className="space-y-1 text-sm">
+                {duplicates.map((d) => (
+                  <li key={d.id} className="rounded-md border border-border bg-muted/30 p-2">
+                    <span className="font-semibold">{d.nome}</span>
+                    <span className="text-muted-foreground"> • {d.etapa}</span>
+                    {d.agente_nome && <span className="text-muted-foreground"> • {d.agente_nome}</span>}
+                    {d.unidade_nome && <span className="text-muted-foreground"> • {d.unidade_nome}</span>}
+                  </li>
+                ))}
+              </ul>
+              {!isPrivileged && (
+                <p className="text-xs text-muted-foreground">
+                  Procure o lead existente. Caso precise criar mesmo assim, peça a um gestor.
+                </p>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          {isPrivileged && (
+            <AlertDialogAction onClick={async () => { setDupOpen(false); await proceedSubmit(); }}>
+              Cadastrar mesmo assim
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AlertDialog open={confirmEntryOpen} onOpenChange={setConfirmEntryOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
