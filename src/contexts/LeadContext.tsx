@@ -13,6 +13,7 @@ interface LeadContextType {
   leads: Lead[];
   eventos: Evento[];
   unidades: Unidade[];
+  unidadesAtivas: Unidade[];
   profiles: { id: string; nome: string; cargo: string; unidade_padrao?: string | null }[];
   agentUnidades: AgentUnidade[];
   loading: boolean;
@@ -66,7 +67,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
     // Load support tables first; agente_unidades is needed to compute visible leads for agents
     const [unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
-      supabase.from("unidades").select("*").order("nome"),
+      supabase.from("unidades").select("*").order("ordem", { ascending: true, nullsFirst: false }).order("nome"),
       supabase.from("profiles").select("id, nome, cargo, unidade_padrao"),
       supabase.from("agente_unidades").select("*"),
     ]);
