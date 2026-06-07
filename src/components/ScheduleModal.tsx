@@ -18,7 +18,7 @@ interface Props {
 }
 
 export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) => {
-  const { updateLead, unidades, leads, agentUnidades } = useLeads();
+  const { updateLead, unidades, unidadesAtivas, leads, agentUnidades } = useLeads();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
   const [os, setOs] = useState("");
@@ -31,8 +31,8 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
     ? agentUnidades.filter((au) => au.id_agente === leadAtual.id_agente).map((au) => au.id_unidade)
     : [];
   const availableUnidades = agentUnitIds.length > 0
-    ? unidades.filter((u) => agentUnitIds.includes(u.id))
-    : unidades;
+    ? unidadesAtivas.filter((u) => agentUnitIds.includes(u.id))
+    : unidadesAtivas;
   const onlyOneUnit = availableUnidades.length === 1;
 
   useEffect(() => {
