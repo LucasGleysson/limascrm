@@ -311,7 +311,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <LeadContext.Provider value={{
-      leads, eventos, unidades, profiles, agentUnidades, loading,
+      leads, eventos, unidades, unidadesAtivas: unidades.filter((u) => u.ativa !== false), profiles, agentUnidades, loading,
       addLead, updateLead, deleteLead, addEvento, concluirEvento,
       refreshAll: () => fetchAll(true),
     }}>
