@@ -70,7 +70,7 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasUnidadesPanel = ({ profiles }: Props) => {
-  const { unidades, unidadesAtivas, agentUnidades } = useLeads();
+  const { unidadesAtivas, agentUnidades } = useLeads();
   const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
