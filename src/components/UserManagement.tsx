@@ -14,6 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AgentUnitMatrix } from "./AgentUnitMatrix";
 
 type AppRole = "agente" | "recepcionista" | "supervisor" | "gestor";
 
@@ -307,6 +308,10 @@ export const UserManagement = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <div className="pt-8 border-t border-border">
+        <AgentUnitMatrix />
+      </div>
     </div>
   );
 };

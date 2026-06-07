@@ -37,7 +37,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
 };
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, addEvento, unidades, profiles, eventos } = useLeads();
+  const { updateLead, addEvento, unidades, profiles, eventos, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -59,6 +59,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editTelefone, setEditTelefone] = useState("");
   const [editOrigem, setEditOrigem] = useState("");
   const [editUnidade, setEditUnidade] = useState("");
+  const [editAgente, setEditAgente] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editNumeroOs, setEditNumeroOs] = useState("");
   const [editDataAgendamento, setEditDataAgendamento] = useState("");
@@ -128,6 +129,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     setEditTelefone(lead.telefone);
     setEditOrigem(lead.origem);
     setEditUnidade(lead.id_unidade || "");
+    setEditAgente(lead.id_agente || "");
     setEditTags(lead.tags_servico || []);
     setEditNumeroOs(lead.numero_os || "");
     setEditDataAgendamento(lead.data_agendamento || "");
@@ -146,6 +148,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
     if (editDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editDataAgendamento || null;
     const currentTags = lead.tags_servico || [];
     if (JSON.stringify(editTags.sort()) !== JSON.stringify([...currentTags].sort())) updates.tags_servico = editTags;
+
+    // gestor/supervisor podem trocar o agente responsável
+    if (isSupervisorOrGestor && editAgente !== (lead.id_agente || "")) {
+      (updates as any).id_agente = editAgente || null;
+      const oldAg = profiles.find((p) => p.id === lead.id_agente)?.nome || "—";
+      const newAg = profiles.find((p) => p.id === editAgente)?.nome || "—";
+      updates.notas = appendNota(lead.notas, `Ficha editada por ${currentUser?.nome || "Sistema"}`, `Agente: ${oldAg} → ${newAg}`);
+    }
+    if (isSupervisorOrGestor && editUnidade !== (lead.id_unidade || "")) {
+      const oldUn = unidades.find((u) => u.id === lead.id_unidade)?.nome || "—";
+      const newUn = unidades.find((u) => u.id === editUnidade)?.nome || "—";
+      const prevNotas = updates.notas ?? lead.notas;
+      updates.notas = appendNota(prevNotas, `Ficha editada por ${currentUser?.nome || "Sistema"}`, `Unidade: ${oldUn} → ${newUn}`);
+    }
 
     if (Object.keys(updates).length > 0) {
       await updateLead(lead.id, updates);
@@ -375,10 +391,37 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editUnidade} onValueChange={setEditUnidade}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+                      {(() => {
+                        // se houver agente escolhido, restringe às unidades dele
+                        const agentId = editAgente || lead.id_agente;
+                        const agentUnits = agentId
+                          ? agentUnidades.filter((au) => au.id_agente === agentId).map((au) => au.id_unidade)
+                          : [];
+                        const opts = (isSupervisorOrGestor || agentUnits.length === 0)
+                          ? unidades
+                          : unidades.filter((u) => agentUnits.includes(u.id));
+                        return opts.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>);
+                      })()}
                     </SelectContent>
                   </Select>
+                  {isSupervisorOrGestor && editAgente && !agentUnidades.some((au) => au.id_agente === editAgente && au.id_unidade === editUnidade) && editUnidade && (
+                    <p className="text-xs text-warning mt-1">Aviso: este agente não atende esta loja. Vincule no painel de Usuários.</p>
+                  )}
                 </div>
+                {isSupervisorOrGestor && (
+                  <div>
+                    <Label>Agente responsável</Label>
+                    <Select value={editAgente} onValueChange={setEditAgente}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        {profiles.filter((p) => p.cargo === "agente").map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">Métricas se movem para o novo agente imediatamente.</p>
+                  </div>
+                )}
                 <div>
                   <Label>Número da OS</Label>
                   <Input value={editNumeroOs} onChange={(e) => setEditNumeroOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />

@@ -336,6 +336,20 @@ export type Database = {
     }
     Functions: {
       agente_unidades_de: { Args: { _user_id: string }; Returns: string[] }
+      find_lead_by_phone: {
+        Args: { _phone_digits: string }
+        Returns: {
+          agente_nome: string
+          created_at: string
+          etapa: string
+          id: string
+          id_agente: string
+          id_unidade: string
+          nome: string
+          telefone: string
+          unidade_nome: string
+        }[]
+      }
       get_user_cargo: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
