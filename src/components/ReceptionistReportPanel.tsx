@@ -9,7 +9,7 @@ import { StatsCard } from "@/components/StatsCard";
 import type { Lead } from "@/data/mockData";
 
 export const ReceptionistReportPanel = () => {
-  const { leads, unidades, profiles } = useLeads();
+  const { leads, unidades, unidadesAtivas, profiles } = useLeads();
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
@@ -82,7 +82,7 @@ export const ReceptionistReportPanel = () => {
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as Unidades</SelectItem>
-              {unidades.map((u) => (
+              {unidadesAtivas.map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
               ))}
             </SelectContent>
