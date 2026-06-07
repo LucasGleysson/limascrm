@@ -42,7 +42,7 @@ const CARGO_COLORS: Record<AppRole, string> = {
 };
 
 export const UserManagement = () => {
-  const { unidades } = useLeads();
+  const { unidadesAtivas: unidades } = useLeads();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [agentUnidadesMap, setAgentUnidadesMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);

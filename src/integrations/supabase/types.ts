@@ -296,19 +296,25 @@ export type Database = {
       }
       unidades: {
         Row: {
+          ativa: boolean
           created_at: string
           id: string
           nome: string
+          ordem: number | null
         }
         Insert: {
+          ativa?: boolean
           created_at?: string
           id?: string
           nome: string
+          ordem?: number | null
         }
         Update: {
+          ativa?: boolean
           created_at?: string
           id?: string
           nome?: string
+          ordem?: number | null
         }
         Relationships: []
       }

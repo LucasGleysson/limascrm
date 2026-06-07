@@ -10,7 +10,7 @@ import { Search, AlertTriangle } from "lucide-react";
 const SOFT_LIMIT = 3;
 
 export const AgentUnitMatrix = () => {
-  const { unidades, profiles, agentUnidades, refreshAll } = useLeads();
+  const { unidadesAtivas: unidades, profiles, agentUnidades, refreshAll } = useLeads();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [localLinks, setLocalLinks] = useState<Set<string>>(new Set());

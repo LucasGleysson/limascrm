@@ -83,4 +83,6 @@ export interface Evento {
 export interface Unidade {
   id: string;
   nome: string;
+  ativa?: boolean;
+  ordem?: number | null;
 }
