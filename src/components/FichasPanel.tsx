@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const FichasPanel = () => {
-  const { leads, unidades, profiles, deleteLead } = useLeads();
+  const { leads, unidades, unidadesAtivas, profiles, deleteLead } = useLeads();
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const [search, setSearch] = useState("");
@@ -143,7 +143,7 @@ export const FichasPanel = () => {
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas Lojas</SelectItem>
-            {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+            {unidadesAtivas.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={agenteFilter} onValueChange={setAgenteFilter}>

@@ -11,7 +11,7 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--suc
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export const DailyReportPanel = () => {
-  const { leads, unidades, profiles, agentUnidades } = useLeads();
+  const { leads, unidades, unidadesAtivas, profiles, agentUnidades } = useLeads();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const dateStr = selectedDate.toISOString().split("T")[0];
@@ -69,7 +69,7 @@ export const DailyReportPanel = () => {
   }, [createdToday, passaramNaLojaNoDia, concluidosNoDia, dispensadosNoDia]);
 
   const unitStats = useMemo(() => {
-    return unidades.map((u) => {
+    return unidadesAtivas.map((u) => {
       const uCreated = createdToday.filter((l) => l.id_unidade === u.id);
       const uAgendados = agendadosNoDia.filter((l) => l.id_unidade === u.id);
       const uPassaram = passaramNaLojaNoDia.filter((l) => l.id_unidade === u.id);
@@ -86,7 +86,7 @@ export const DailyReportPanel = () => {
         txConversao: passaramNaLoja > 0 ? Math.round((uConcluidos.length / passaramNaLoja) * 100) : 0,
       };
     }).filter((u) => u.totalRegistros > 0 || u.agendados > 0);
-  }, [createdToday, agendadosNoDia, unidades, passaramNaLojaNoDia, concluidosNoDia]);
+  }, [createdToday, agendadosNoDia, unidadesAtivas, passaramNaLojaNoDia, concluidosNoDia]);
 
   const agentStats = useMemo(() => {
     return agentes.map((a) => {

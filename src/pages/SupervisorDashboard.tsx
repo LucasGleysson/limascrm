@@ -37,7 +37,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos, unidades, profiles, agentUnidades, refreshAll } = useLeads();
+  const { leads, eventos, unidades, unidadesAtivas, profiles, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("visao_geral");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
@@ -149,7 +149,7 @@ export const SupervisorDashboard = () => {
   }, [filteredLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
 
   const unidadeStats = useMemo(() => {
-    return unidades.map((u) => {
+    return unidadesAtivas.map((u) => {
       // Agents linked to this unit via agente_unidades
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
@@ -231,7 +231,7 @@ export const SupervisorDashboard = () => {
 
             <DashboardOverviewPanel
               filteredLeads={filteredLeads}
-              unidades={unidades}
+              unidades={unidadesAtivas}
               profiles={profiles}
               eventos={eventos}
               agentUnidades={agentUnidades}

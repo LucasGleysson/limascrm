@@ -18,10 +18,8 @@ const DONUT_COLORS = {
   outros: "hsl(var(--muted))",
 };
 
-const UNIT_ORDER = ["Laranjeiras", "Grandville", "Patrocínio", "Araguari", "Catalão"];
-
 export const TVDashboardPanel: React.FC = () => {
-  const { leads, unidades, refreshAll } = useLeads();
+  const { leads, unidadesAtivas, refreshAll } = useLeads();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -40,11 +38,7 @@ export const TVDashboardPanel: React.FC = () => {
 
   const hoje = getToday();
 
-  const orderedUnidades = useMemo(() => {
-    return UNIT_ORDER
-      .map((name) => unidades.find((u) => u.nome === name))
-      .filter(Boolean) as typeof unidades;
-  }, [unidades]);
+  const orderedUnidades = useMemo(() => unidadesAtivas, [unidadesAtivas]);
 
   const unitStats = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
