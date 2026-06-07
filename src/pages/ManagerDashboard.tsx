@@ -44,7 +44,7 @@ const PIE_COLORS = [
 ];
 
 export const ManagerDashboard = () => {
-  const { leads, unidades, profiles, eventos, agentUnidades, refreshAll } = useLeads();
+  const { leads, unidades, unidadesAtivas, profiles, eventos, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
@@ -149,7 +149,7 @@ export const ManagerDashboard = () => {
   const agentes = profiles.filter((u) => u.cargo === "agente");
 
   const porUnidade = useMemo(() => {
-    return unidades.map((u) => {
+    return unidadesAtivas.map((u) => {
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
@@ -268,7 +268,7 @@ export const ManagerDashboard = () => {
       <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value="todas">Todas as Unidades</SelectItem>
-        {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+        {unidadesAtivas.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
       </SelectContent>
     </Select>
   );
