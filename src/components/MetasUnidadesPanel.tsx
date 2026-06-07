@@ -70,7 +70,7 @@ function businessDaysElapsed(mesRef: string) {
 }
 
 export const MetasUnidadesPanel = ({ profiles }: Props) => {
-  const { unidades, agentUnidades } = useLeads();
+  const { unidades, unidadesAtivas, agentUnidades } = useLeads();
   const [metaLeads, setMetaLeads] = useState<any[]>([]);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
@@ -119,7 +119,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
 
   const unitData = useMemo(() => {
-    return unidades.map((u) => {
+    return unidadesAtivas.map((u) => {
       const meta = metas.find((m) => m.id_unidade === u.id);
       const metaVal = meta?.meta_carros || 0;
 
@@ -172,7 +172,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
         totalLeads: monthLeads.length, agentBreakdown,
       };
     });
-  }, [unidades, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes, agentUnidades]);
+  }, [unidadesAtivas, metas, metaLeads, monthRange, elapsedBizDays, totalBizDays, isCurrentMonth, agentes, agentUnidades]);
 
   const globalStats = useMemo(() => {
     const totalMeta = unitData.reduce((s, u) => s + u.metaVal, 0);
@@ -186,7 +186,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
 
   const handleSave = async () => {
     setSaving(true);
-    for (const u of unidades) {
+    for (const u of unidadesAtivas) {
       const val = drafts[u.id] ?? 0;
       const existing = metas.find((m) => m.id_unidade === u.id);
       if (existing) {
@@ -300,7 +300,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
           </Button>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {unidades.map((u) => (
+          {unidadesAtivas.map((u) => (
             <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
               <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
