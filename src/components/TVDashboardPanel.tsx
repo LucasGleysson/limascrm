@@ -19,7 +19,7 @@ const DONUT_COLORS = {
 };
 
 export const TVDashboardPanel: React.FC = () => {
-  const { leads, unidades, unidadesAtivas, refreshAll } = useLeads();
+  const { leads, unidadesAtivas, refreshAll } = useLeads();
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
