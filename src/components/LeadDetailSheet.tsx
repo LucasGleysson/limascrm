@@ -37,7 +37,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
 };
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
-  const { updateLead, addEvento, unidades, profiles, eventos, agentUnidades } = useLeads();
+  const { updateLead, addEvento, unidades, unidadesAtivas, profiles, eventos, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
@@ -397,9 +397,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                         const agentUnits = agentId
                           ? agentUnidades.filter((au) => au.id_agente === agentId).map((au) => au.id_unidade)
                           : [];
+                        const base = unidadesAtivas;
                         const opts = (isSupervisorOrGestor || agentUnits.length === 0)
-                          ? unidades
-                          : unidades.filter((u) => agentUnits.includes(u.id));
+                          ? base
+                          : base.filter((u) => agentUnits.includes(u.id));
                         return opts.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>);
                       })()}
                     </SelectContent>
@@ -456,7 +457,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                   <Select value={editSchedUnidade} onValueChange={setEditSchedUnidade}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {unidades.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+                      {unidadesAtivas.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
