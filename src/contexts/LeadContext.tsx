@@ -82,14 +82,16 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
         q = q.eq("id_agente", user.id);
         // E somente das unidades às quais ele está atualmente vinculado
         // (impede o "fantasma" de unidades antigas/inativas como Catalão).
+        // Leads criados pelo agente sem unidade (id_unidade IS NULL) também aparecem.
         const myUnitIds = allAgentUnidades
           .filter((au) => au.id_agente === user.id)
           .map((au) => au.id_unidade);
         if (myUnitIds.length === 0) {
-          // Sem unidades vinculadas → não traz nenhum lead
-          q = q.eq("id_unidade", "00000000-0000-0000-0000-000000000000");
+          // Sem unidades vinculadas → só traz leads sem unidade que são dele
+          q = q.is("id_unidade", null);
         } else {
-          q = q.in("id_unidade", myUnitIds);
+          const unitList = myUnitIds.map((id) => `"${id}"`).join(",");
+          q = q.or(`id_unidade.in.(${unitList}),id_unidade.is.null`);
         }
       } else if (user?.cargo === "recepcionista" && user.unidade_padrao) {
         q = q.eq("id_unidade", user.unidade_padrao);
