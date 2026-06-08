@@ -65,6 +65,22 @@ export const isTrabalhado = (etapa: string): boolean =>
 export const getToday = (): string => new Date().toISOString().split("T")[0];
 
 /**
+ * "Carros na loja" ancorado em data única e imutável (checkin).
+ * Garante que cada carro é contado em exatamente um mês, e que números
+ * de meses fechados não mudam retroativamente quando o status do lead muda.
+ */
+export function foiNaLojaNoPeriodo(
+  lead: { checkin?: string | null },
+  from: string | null | undefined,
+  to: string | null | undefined,
+): boolean {
+  if (!lead.checkin) return false;
+  if (!from || !to) return true;
+  const dia = lead.checkin.slice(0, 10);
+  return dia >= from && dia <= to;
+}
+
+/**
  * Mês de referência da meta para um lead:
  * - Se houve check-in, usa a data do check-in.
  * - Senão, usa data_agendamento.
