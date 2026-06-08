@@ -17,6 +17,7 @@ import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarC
 import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
+import { AgentPanelOverview } from "@/components/AgentPanelOverview";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, foiNaLoja, getToday } from "@/lib/leadUtils";
@@ -31,18 +32,18 @@ import { ORIGENS } from "@/data/mockData";
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
 
 const SIDEBAR_TABS = [
+  { id: "meu_painel", label: "Meu Painel", icon: Trophy },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
   { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
-  { id: "minha_loja", label: "Meu Desempenho", icon: TrendingUp },
 ];
 
 export const AgentDashboard = () => {
   const { leads, updateLead, eventos, unidades, profiles, agentUnidades } = useLeads();
   const { currentUser } = useRole();
-  const [activeTab, setActiveTab] = useState("leads");
+  const [activeTab, setActiveTab] = useState("meu_painel");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleLead, setScheduleLead] = useState<{ id: string; nome: string } | null>(null);
