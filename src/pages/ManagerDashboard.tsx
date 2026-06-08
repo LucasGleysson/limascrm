@@ -539,6 +539,7 @@ export const ManagerDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground" title="Meta = Concluídos + Perdidos">META</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FANTASMAS</th>
                     </tr>
                   </thead>
@@ -556,6 +557,7 @@ export const ManagerDashboard = () => {
                           <td className="py-3 text-center text-success">{u.concluidos}</td>
                           <td className="py-3 text-center text-purple-500">{u.dispensados}</td>
                           <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                          <td className="py-3 text-center font-bold text-primary">{u.concluidos + u.perdidos}</td>
                           <td className="py-3 text-center text-destructive font-medium">{u.naLojaOutros}</td>
                         </tr>
                       );
