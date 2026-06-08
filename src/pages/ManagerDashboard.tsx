@@ -557,6 +557,7 @@ export const ManagerDashboard = () => {
                           <td className="py-3 text-center text-success">{u.concluidos}</td>
                           <td className="py-3 text-center text-purple-500">{u.dispensados}</td>
                           <td className="py-3 text-center text-destructive">{u.perdidos}</td>
+                          <td className="py-3 text-center font-bold text-primary">{u.concluidos + u.perdidos}</td>
                           <td className="py-3 text-center text-destructive font-medium">{u.naLojaOutros}</td>
                         </tr>
                       );
