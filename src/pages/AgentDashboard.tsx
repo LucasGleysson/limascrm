@@ -18,6 +18,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { AgentPanelOverview } from "@/components/AgentPanelOverview";
+import { AgentDayPanel } from "@/components/AgentDayPanel";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, foiNaLoja, getToday } from "@/lib/leadUtils";
@@ -33,11 +34,11 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--suc
 
 const SIDEBAR_TABS = [
   { id: "meu_painel", label: "Meu Painel", icon: Trophy },
+  { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
-  { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
 ];
 
 export const AgentDashboard = () => {
