@@ -38,7 +38,10 @@ export const TVDashboardPanel: React.FC = () => {
 
   const hoje = getToday();
 
-  const orderedUnidades = useMemo(() => unidadesAtivas, [unidadesAtivas]);
+  const orderedUnidades = useMemo(() => {
+    const allowed = new Set(["Laranjeiras", "Grandville", "Patrocinio", "Araguari"]);
+    return unidadesAtivas.filter((u) => allowed.has(u.nome));
+  }, [unidadesAtivas]);
 
   const unitStats = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
