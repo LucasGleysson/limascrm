@@ -125,17 +125,17 @@ export const TVDashboardPanel: React.FC = () => {
   const dateStr = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 
   return (
-    <div className="space-y-4 xl:space-y-6">
+    <div className="space-y-4 xl:space-y-6 w-full max-w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 xl:gap-3">
-          <Car className="h-7 w-7 xl:h-10 xl:w-10 text-primary" />
-          <div>
-            <h1 className="text-2xl xl:text-4xl font-bold tracking-tight">Painel do Dia</h1>
-            <p className="text-muted-foreground text-xs xl:text-base">Acompanhamento em tempo real</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 xl:gap-3 min-w-0">
+          <Car className="h-7 w-7 xl:h-10 xl:w-10 text-primary shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl xl:text-4xl font-bold tracking-tight truncate">Painel do Dia</h1>
+            <p className="text-muted-foreground text-xs xl:text-base truncate">Acompanhamento em tempo real</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 xl:gap-4 text-muted-foreground">
+        <div className="flex items-center gap-3 xl:gap-4 text-muted-foreground ml-auto">
           <div className="flex items-center gap-1.5 xl:gap-2">
             <Calendar className="h-4 w-4 xl:h-6 xl:w-6" />
             <span className="text-sm xl:text-xl font-medium">{dateStr}</span>
@@ -148,14 +148,14 @@ export const TVDashboardPanel: React.FC = () => {
       </div>
 
       {/* Global summary */}
-      <div className="grid grid-cols-3 gap-3 xl:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 xl:gap-5">
         <SummaryCard icon={Car} label="Carros Hoje" value={`${globalStats.totalNaLoja}/${globalStats.totalMeta}`} variant="warning" />
         <SummaryCard icon={Calendar} label="Agendados Hoje" value={globalStats.totalAgendados} variant="info" />
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
       {/* Unit cards grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 xl:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 xl:gap-5">
         {unitStats.map((us) => (
           <UnitCard key={us.unidade.id} data={us} />
         ))}
