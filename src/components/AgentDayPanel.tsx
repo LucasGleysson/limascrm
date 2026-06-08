@@ -168,25 +168,37 @@ export const AgentDayPanel = () => {
     return format(selectedDate, "EEEE", { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase());
   })();
 
-  const LeadCard = ({ lead, hint, accent = "primary" }: { lead: Lead; hint?: string; accent?: "primary" | "destructive" | "warning" | "purple" | "info" | "muted" }) => (
-    <button
-      onClick={() => open(lead)}
-      className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:border-${accent}/40 hover:bg-${accent}/5 transition-colors`}
-    >
-      <Avatar className={`h-10 w-10 bg-${accent}/15 text-${accent}`}>
-        <AvatarFallback className={`text-sm font-semibold bg-${accent}/15 text-${accent}`}>{initials(lead.nome)}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{lead.nome}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {getUnidadeNome(lead.id_unidade)}
-          {lead.telefone && <> · {lead.telefone}</>}
-        </p>
-        {hint && <p className={`text-[11px] mt-0.5 text-${accent} font-medium`}>{hint}</p>}
-      </div>
-      <Phone className={`h-4 w-4 text-${accent} shrink-0`} />
-    </button>
-  );
+  const ACCENT: Record<string, { hoverBorder: string; hoverBg: string; avatar: string; text: string; icon: string }> = {
+    primary:     { hoverBorder: "hover:border-primary/40",     hoverBg: "hover:bg-primary/5",     avatar: "bg-primary/15 text-primary",         text: "text-primary",         icon: "text-primary" },
+    destructive: { hoverBorder: "hover:border-destructive/40", hoverBg: "hover:bg-destructive/5", avatar: "bg-destructive/15 text-destructive", text: "text-destructive",     icon: "text-destructive" },
+    warning:     { hoverBorder: "hover:border-warning/40",     hoverBg: "hover:bg-warning/5",     avatar: "bg-warning/15 text-warning",         text: "text-warning",         icon: "text-warning" },
+    purple:      { hoverBorder: "hover:border-purple/40",      hoverBg: "hover:bg-purple/5",      avatar: "bg-purple/15 text-purple",           text: "text-purple",          icon: "text-purple" },
+    info:        { hoverBorder: "hover:border-info/40",        hoverBg: "hover:bg-info/5",        avatar: "bg-info/15 text-info",               text: "text-info",            icon: "text-info" },
+    muted:       { hoverBorder: "hover:border-muted-foreground/40", hoverBg: "hover:bg-muted/30", avatar: "bg-muted text-muted-foreground",     text: "text-muted-foreground", icon: "text-muted-foreground" },
+  };
+
+  const LeadCard = ({ lead, hint, accent = "primary" }: { lead: Lead; hint?: string; accent?: keyof typeof ACCENT }) => {
+    const a = ACCENT[accent];
+    return (
+      <button
+        onClick={() => open(lead)}
+        className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border border-border bg-card ${a.hoverBorder} ${a.hoverBg} transition-colors`}
+      >
+        <Avatar className={`h-10 w-10 ${a.avatar}`}>
+          <AvatarFallback className={`text-sm font-semibold ${a.avatar}`}>{initials(lead.nome)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{lead.nome}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {getUnidadeNome(lead.id_unidade)}
+            {lead.telefone && <> · {lead.telefone}</>}
+          </p>
+          {hint && <p className={`text-[11px] mt-0.5 font-medium ${a.text}`}>{hint}</p>}
+        </div>
+        <Phone className={`h-4 w-4 shrink-0 ${a.icon}`} />
+      </button>
+    );
+  };
 
   return (
     <div className="p-6 space-y-6">
