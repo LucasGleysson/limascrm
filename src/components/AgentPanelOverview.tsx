@@ -128,12 +128,17 @@ export const AgentPanelOverview = () => {
 
   // Por loja — apenas lojas onde o agente atende
   const myUnidades = unidades.filter((u) => myUnitIds.has(u.id));
+  const metaPorLoja = myUnidades.length > 0 ? Math.round(META_AGENTE / myUnidades.length) : META_AGENTE;
 
   const lojaCards = myUnidades.map((u) => {
     const subset = myMonthLeads.filter((l) => l.id_unidade === u.id);
     const c = subset.filter((l) => l.etapa === "concluido").length;
     const p = subset.filter((l) => l.etapa === "perdido").length;
-    const ag = subset.filter((l) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+    const ag = subset.filter((l) => l.etapa === "agendado").length;
+    const conf = subset.filter((l) => l.etapa === "confirmado").length;
+    const rea = subset.filter((l) => l.etapa === "reagendado").length;
+    const disp = subset.filter((l) => l.etapa === "dispensado").length;
+    const an = subset.filter((l) => l.etapa === "analise_supervisor").length;
     const nl = subset.filter((l) => l.etapa === "na_loja").length;
     const prog = c + p;
     return {
@@ -142,9 +147,13 @@ export const AgentPanelOverview = () => {
       concluidos: c,
       perdidos: p,
       agendados: ag,
+      confirmados: conf,
+      reagendados: rea,
+      dispensados: disp,
+      analise: an,
       naLoja: nl,
       progresso: prog,
-      pct: Math.min(Math.round((prog / META_AGENTE) * 100), 100),
+      pct: Math.min(Math.round((prog / metaPorLoja) * 100), 100),
     };
   });
 
@@ -295,11 +304,11 @@ export const AgentPanelOverview = () => {
                   </div>
                   <Badge
                     variant="outline"
-                    className={l.progresso >= META_AGENTE
+                    className={l.progresso >= metaPorLoja
                       ? "bg-success/15 text-success border-success/30"
                       : "bg-primary/10 text-primary border-primary/30"}
                   >
-                    {l.progresso} / {META_AGENTE}
+                    {l.progresso} / {metaPorLoja}
                   </Badge>
                 </div>
                 <Progress value={l.pct} className="h-2.5" />
@@ -310,8 +319,24 @@ export const AgentPanelOverview = () => {
                     <p className="text-[10px] text-muted-foreground">Agend.</p>
                   </div>
                   <div className="rounded-lg bg-muted/40 p-2 text-center">
+                    <p className="text-lg font-bold text-info">{l.confirmados}</p>
+                    <p className="text-[10px] text-muted-foreground">Confirm.</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2 text-center">
+                    <p className="text-lg font-bold text-purple">{l.reagendados}</p>
+                    <p className="text-[10px] text-muted-foreground">Reagend.</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2 text-center">
                     <p className="text-lg font-bold text-warning">{l.naLoja}</p>
                     <p className="text-[10px] text-muted-foreground">Na Loja</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2 text-center">
+                    <p className="text-lg font-bold text-destructive">{l.dispensados}</p>
+                    <p className="text-[10px] text-muted-foreground">Disp.</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/40 p-2 text-center">
+                    <p className="text-lg font-bold text-warning">{l.analise}</p>
+                    <p className="text-[10px] text-muted-foreground">Análise</p>
                   </div>
                   <div className="rounded-lg bg-muted/40 p-2 text-center">
                     <p className="text-lg font-bold text-success">{l.concluidos}</p>
