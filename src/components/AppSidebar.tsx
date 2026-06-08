@@ -1,6 +1,7 @@
 import { Car, LogOut } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { useLeads } from "@/contexts/LeadContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -34,10 +35,11 @@ export const AppSidebar = ({ activeTab, onTabChange, tabs }: AppSidebarProps) =>
         <div className="rounded-lg bg-sidebar-primary p-2">
           <Car className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-sidebar-foreground">AutoCRM</p>
-          <p className="text-xs text-sidebar-foreground/60">{unidadeNome}</p>
+          <p className="text-xs text-sidebar-foreground/60 truncate">{unidadeNome}</p>
         </div>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 px-3 py-2 space-y-1">

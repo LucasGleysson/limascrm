@@ -19,10 +19,11 @@ interface Props {
   isPorta?: boolean;
   unidadeId?: string;
   isReceptionist?: boolean;
+  allowAgentSelection?: boolean;
 }
 
-export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist }: Props) => {
-  const { addLead } = useLeads();
+export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist, allowAgentSelection }: Props) => {
+  const { addLead, profiles } = useLeads() as any;
   const { currentUser } = useRole();
   const { toast } = useToast();
   const [nome, setNome] = useState("");
@@ -30,11 +31,13 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
   const [origem, setOrigem] = useState((isPorta || isReceptionist) ? "Porta" : "Instagram");
   const [numeroOs, setNumeroOs] = useState("");
   const [etapa, setEtapa] = useState(isPorta ? "na_loja" : "novo");
+  const [agenteId, setAgenteId] = useState<string>("");
   const [confirmEntryOpen, setConfirmEntryOpen] = useState(false);
   const [duplicates, setDuplicates] = useState<any[]>([]);
   const [dupOpen, setDupOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const isPrivileged = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
+  const agentes = (profiles || []).filter((p: any) => p.cargo === "agente");
 
   useEffect(() => {
     if (!open) return;
@@ -43,6 +46,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     setOrigem((isPorta || isReceptionist) ? "Porta" : "Instagram");
     setNumeroOs("");
     setEtapa(isPorta ? "na_loja" : "novo");
+    setAgenteId("");
     setConfirmEntryOpen(false);
     setDuplicates([]);
     setDupOpen(false);
@@ -61,6 +65,9 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     const finalEtapa = isReceptionist ? (darEntradaAgora ? "confirmado" : "novo") : (isPorta ? "na_loja" : "novo");
     // Unidade só vem do contexto da tela (porta/recepcionista). Agente registra sem unidade.
     const finalUnidade = unidadeId || (isReceptionist ? (currentUser?.unidade_padrao || null) : null);
+    const finalAgente = allowAgentSelection
+      ? (agenteId || null)
+      : (isReceptionist ? null : currentUser.id);
     await addLead({
       nome,
       telefone: formatPhone(telefone),
@@ -68,7 +75,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
       etapa: finalEtapa,
       data_entrada: today,
       data_agendamento: isReceptionist && darEntradaAgora ? today : null,
-      id_agente: isReceptionist ? null : currentUser.id,
+      id_agente: finalAgente,
       id_unidade: finalUnidade,
       is_porta: isWalkIn,
       checkin: isWalkIn ? now : null,
@@ -111,7 +118,8 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
 
   const canSubmit =
     !!nome && !!telefone &&
-    (!isPorta && !isReceptionist ? !!origem : true);
+    (!isPorta && !isReceptionist ? !!origem : true) &&
+    (allowAgentSelection ? !!agenteId : true);
 
   return (
     <>
@@ -149,6 +157,19 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
               </SelectContent>
             </Select>
           </div>
+          {allowAgentSelection && (
+            <div>
+              <Label>Agente responsável</Label>
+              <Select value={agenteId} onValueChange={setAgenteId}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o agente..." /></SelectTrigger>
+                <SelectContent>
+                  {agentes.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {!isReceptionist && !isPorta && (
             <p className="text-xs text-muted-foreground">
               A unidade será definida na hora do agendamento.

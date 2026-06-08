@@ -15,6 +15,9 @@ import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/Per
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Search, Trash2, CalendarIcon } from "lucide-react";
+import { Plus } from "lucide-react";
+import { NewLeadModal } from "@/components/NewLeadModal";
+import { useRole } from "@/contexts/RoleContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -25,6 +28,9 @@ import {
 
 export const FichasPanel = () => {
   const { leads, unidades, unidadesAtivas, profiles, deleteLead } = useLeads();
+  const { currentUser } = useRole();
+  const canCreate = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
+  const [newOpen, setNewOpen] = useState(false);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const [search, setSearch] = useState("");
@@ -130,7 +136,14 @@ export const FichasPanel = () => {
           <h1 className="text-2xl font-bold">Fichas dos Clientes</h1>
           <p className="text-muted-foreground text-sm">Visão completa — {filtered.length} fichas</p>
         </div>
-        {!hasDateRangeFilter && <PeriodFilter value={period} onChange={setPeriod} />}
+        <div className="flex items-center gap-2">
+          {!hasDateRangeFilter && <PeriodFilter value={period} onChange={setPeriod} />}
+          {canCreate && (
+            <Button onClick={() => setNewOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Nova Ficha
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -236,6 +249,10 @@ export const FichasPanel = () => {
       </div>
 
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+
+      {canCreate && (
+        <NewLeadModal open={newOpen} onOpenChange={setNewOpen} allowAgentSelection />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
