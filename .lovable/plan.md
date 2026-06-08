@@ -1,64 +1,72 @@
 
-## Diagnóstico
+# Meu Painel — Nova primeira aba do Agente
 
-Sim, hoje um mesmo carro pode ser contado como "na loja" em mais de um mês. O bug está em `ManagerDashboard.tsx` (linhas 60-85) e `SupervisorDashboard.tsx` (linhas 62-74), no cálculo de `filteredLeads`:
+Substitui a aba **"Meu Desempenho"** por uma nova aba **"Meu Painel"** focada em mostrar ao agente, de forma gamificada, sua situação do dia, semana e mês — com destaque para a META.
 
-```ts
-const entradaIn = l.data_entrada >= from && l.data_entrada <= to;
-const agendIn = l.data_agendamento && l.data_agendamento >= from && l.data_agendamento <= to;
-if (entradaIn || agendIn) return true;
-```
+## Mudanças na navegação
 
-O lead entra em `filteredLeads` se **a data de entrada OU a data de agendamento** caem no mês. Depois, `carrosNaLoja = filteredLeads.filter(foiNaLoja).length` apenas olha o status atual do lead.
+- Renomeia a tab `minha_loja` ("Meu Desempenho") para `meu_painel` ("Meu Painel"), ícone `Trophy`.
+- Move `meu_painel` para a **primeira posição** do sidebar (substituindo `leads` como entrada inicial).
+- `activeTab` inicial passa a ser `"meu_painel"` em `AgentDashboard.tsx`.
+- O conteúdo antigo de "Meu Desempenho" (gráficos detalhados, pie, etc.) é removido — sai do escopo desta aba.
 
-Consequências reais:
+## Estrutura da nova aba (top → bottom)
 
-1. **Duplicidade entre meses** — lead que entrou em abril e foi reagendado para maio:
-   - Abril: `data_entrada` em abril → entra no filtro → se status é `na_loja/concluido/...` é contado.
-   - Maio: `data_agendamento` em maio → também entra no filtro → contado de novo.
-   - O mesmo carro aparece em "carros na loja" de abril E de maio.
+### 1. Cabeçalho de boas-vindas
+- "Olá, {nome do agente} 👋" + data atual.
+- Subtítulo curto motivacional ("Vamos bater a meta de hoje!").
 
-2. **Contagem retroativa** — lead que entrou em abril mas só foi à loja em maio:
-   - No início de maio (status ainda `agendado`), abril mostrava ele como agendamento, não como na loja.
-   - Quando o status virou `na_loja/concluido` em maio, abril passou a contá-lo (porque `data_entrada` é abril e `foiNaLoja` agora é true).
-   - É exatamente o que você observou: o número de "carros na loja" de abril cresceu depois.
+### 2. Card META do mês (destaque máximo)
+- Card grande, full-width, com gradiente do primary.
+- Mostra: **Progresso da Meta = Concluídos + Perdidos** vs **75**.
+- Barra de progresso grande (`Progress`) com % alcançado.
+- Texto: "X de 75 carros" + "faltam Y".
+- Badge dinâmica de status: 🏆 "Meta batida!" (≥75) / 🔥 "No ritmo" (em dia c/ dias úteis) / ⚠️ "Acelerar" (abaixo).
+- Mostra média diária realizada e a média necessária para fechar 75 (em dias úteis restantes).
+- Soma somente os leads onde o agente é responsável (`l.id_agente === currentUser.id`) no mês corrente, usando `getLeadMetaDate` para ancorar o mês.
 
-Observação: `DailyReportPanel` e `TVDashboardPanel` já usam a regra correta (`checkin` do dia). `MetasUnidadesPanel`/`MetasAgentesPanel` usam `getLeadMetaDate` (checkin → data_agendamento) que já é uma data única por lead. O problema está concentrado nos dashboards "Visão Geral" e "Por Loja/Por Agente" do gestor e supervisor.
+### 3. Calendário da semana atual
+- Faixa horizontal com 7 dias (Seg→Dom da semana atual, destacando hoje).
+- Cada dia mostra: data + nº de agendamentos (`agendado` + `reagendado` + `confirmado` com `data_agendamento` naquele dia).
+- Pequena barrinha colorida indicando densidade (vazio / leve / cheio).
+- Click no dia abre a aba "Agendamentos" filtrada (fase 2; nesta entrega só destaque visual).
 
-## Correção proposta
+### 4. Grid de status (mês atual)
+Cards pequenos coloridos com contagens do mês para os leads do agente, na ordem pedida:
+- Novo Lead • Agendados • Confirmados • Na Loja • Reagendados • Dispensados • Em Análise • Concluídos • Perdidos
+- Cada card usa cor semântica via `getStatusBadgeClass` e ícone.
+- Cards menores que o card META, em grid responsivo (3-5 colunas).
 
-Ancorar **"carros na loja"** em uma data única e imutável por lead: a data do `checkin`. Sem checkin, o carro nunca foi à loja, ponto.
+### 5. Desempenho por Loja
+- Se o agente atende **N lojas** (via `agente_unidades`), renderiza **N cards** lado a lado.
+- Cada card de loja mostra:
+  - Nome da unidade.
+  - Mini-meta: progresso (Concluídos + Perdidos do agente naquela loja) vs **75**.
+  - Barra de progresso.
+  - Mini contagens: Agendados / Na Loja / Concluídos / Perdidos (do agente, naquela loja, no mês).
+- Se o agente tem só 1 loja, mostra 1 card; se 3 lojas, 3 cards.
 
-Para os demais indicadores manter a lógica atual de leads que "tocaram o mês" (entrada OU agendamento), mas adicionar um helper claro para distinguir:
+## Lógica de cálculo
 
-1. **Em `src/lib/leadUtils.ts`**: adicionar
-   ```ts
-   export function foiNaLojaNoPeriodo(lead, from, to): boolean {
-     if (!lead.checkin) return false;
-     const dia = lead.checkin.slice(0, 10);
-     return dia >= from && dia <= to;
-   }
-   ```
-   Isso garante que **cada carro conta em exatamente um mês** (o mês do check-in real).
+- **Mês corrente:** `mesAtual.from`/`to` (já existe).
+- **Leads do agente no mês:** filtrar `allMyLeads` por `l.id_agente === currentUser.id` e `getLeadMetaDate(l)` dentro do mês.
+- **Meta (75):** constante por enquanto (`META_AGENTE = 75`). Futuramente pode vir de `metas_agentes`.
+- **Progresso meta:** `concluidos + perdidos` (regra já consolidada via `isCarroParaMeta`).
+- **Dias úteis:** reutilizar contagem já presente em `desempenho.bizDays`.
+- **Por loja:** filtrar leads do agente onde `l.id_unidade === unidade.id`.
+- **Semana atual:** `startOfWeek`/`endOfWeek` do `date-fns` com `weekStartsOn: 1`.
 
-2. **`ManagerDashboard.tsx` e `SupervisorDashboard.tsx`**:
-   - Substituir `filteredLeads.filter((l) => foiNaLoja(l)).length` por `leads.filter((l) => foiNaLojaNoPeriodo(l, from, to)).length` para os cards/blocos:
-     - "Carros na loja"
-     - Concluídos / Dispensados / Perdidos / Análise supervisor (quando contados como "na loja do mês")
-     - Os recortes equivalentes em "Por Origem", "Por Unidade" e "Por Agente" (linhas ~94, 123, 320, 422 em DashboardOverviewPanel e equivalentes nos dashboards).
-   - Manter `filteredLeads` como está para "novos", "agendados", "trabalhados", "desqualificados" — essas etapas continuam fazendo sentido pela data de entrada/agendamento.
+## Arquivos afetados
 
-3. **`DashboardOverviewPanel.tsx`**: aceitar `periodRange` (já recebe) e usar `foiNaLojaNoPeriodo` nos mesmos pontos. As contagens "snapshot" de status atual (`confirmado`, `na_loja`, `analise_supervisor`) continuam usando `filteredLeads` porque representam o pipeline corrente, não histórico fechado.
+- `src/pages/AgentDashboard.tsx`
+  - Atualiza `SIDEBAR_TABS` (renomeia, reordena, novo ícone).
+  - Muda `useState("leads")` → `useState("meu_painel")`.
+  - Remove bloco JSX da antiga `minha_loja` e adiciona novo bloco `meu_painel` montando o componente novo.
+- `src/components/AgentPanelOverview.tsx` (novo)
+  - Componente da nova aba, com todas as seções acima. Recebe leads/unidades/agentUnidades/currentUser via props ou via `useLeads`/`useRole`.
+- (Opcional) pequeno subcomponente `WeekStrip` interno ao mesmo arquivo.
 
-4. **Sem mudanças em**: `DailyReportPanel`, `TVDashboardPanel`, `MetasUnidadesPanel`, `MetasAgentesPanel`, `FichasPanel`, `FollowUpTrackingPanel` — já usam regra correta ou não somam "na loja" por período.
-
-## Resultado esperado
-
-- Cada carro conta em **um único mês** (o do check-in).
-- O número de "carros na loja" de um mês fechado **não muda mais** depois que o mês acabou (porque depende só de `checkin`, que é imutável após o atendimento).
-- Leads antigos sem `checkin` mas com status legado (`confirmado`, `perdido` em dados históricos pré-checkin) deixam de ser contados como "na loja" — alinhado com a regra que já vale no Relatório Diário e no Painel TV.
-
-## Pontos a confirmar antes de implementar
-
-1. Concorda em **ancorar "carros na loja" exclusivamente no `checkin`** (regra que já vale no Relatório Diário e no Painel TV)? Leads históricos com status `dispensado/perdido/concluido` mas sem `checkin` deixarão de aparecer no card, mas continuam visíveis na ficha.
-2. Para "Concluídos" e "Perdidos" no card do mês: contar pelo mês do `checkin` também (recomendado, casa com Metas) ou manter pelo mês de entrada/agendamento?
+## Fora de escopo
+- Editar a meta de 75 por agente (mantida como constante; pode virar configurável depois).
+- Click no dia da semana abrir a aba de agendamentos filtrada.
+- Animações elaboradas (mantemos gamificação leve: ícones, emojis, cores, badge de status, barra de progresso).

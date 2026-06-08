@@ -17,6 +17,7 @@ import { Plus, Search, Users, CalendarDays, Calendar, CalendarCheck, LogIn, BarC
 import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
+import { AgentPanelOverview } from "@/components/AgentPanelOverview";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, foiNaLoja, getToday } from "@/lib/leadUtils";
@@ -31,18 +32,18 @@ import { ORIGENS } from "@/data/mockData";
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(var(--destructive))", "hsl(var(--info))", "#8b5cf6", "#f97316"];
 
 const SIDEBAR_TABS = [
+  { id: "meu_painel", label: "Meu Painel", icon: Trophy },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
   { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
-  { id: "minha_loja", label: "Meu Desempenho", icon: TrendingUp },
 ];
 
 export const AgentDashboard = () => {
   const { leads, updateLead, eventos, unidades, profiles, agentUnidades } = useLeads();
   const { currentUser } = useRole();
-  const [activeTab, setActiveTab] = useState("leads");
+  const [activeTab, setActiveTab] = useState("meu_painel");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleLead, setScheduleLead] = useState<{ id: string; nome: string } | null>(null);
@@ -588,167 +589,7 @@ export const AgentDashboard = () => {
           </div>
         )}
 
-        {activeTab === "minha_loja" && (
-          <div className="p-6 space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-primary" /> Meu Desempenho
-              </h1>
-              <p className="text-muted-foreground text-sm">Métricas do mês atual</p>
-            </div>
-
-            {/* KPI Cards Row 1 */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatsCard title="Registros Feitos" value={desempenho.registrosFeitos} icon={Users} variant="info" subtitle="Cadastrados por mim" />
-              <StatsCard title="Desqualificados" value={desempenho.desqNovos} icon={XCircle} variant="destructive" />
-              <StatsCard title="Produtivos" value={desempenho.produtivos} icon={CheckCircle2} variant="primary" subtitle={`${desempenho.total} - ${desempenho.desqNovos} desq.`} />
-              <StatsCard title="Agendamentos Feitos" value={desempenho.agendamentosFeitos} icon={CalendarCheck} variant="primary" subtitle="Agendados por mim" />
-            </div>
-
-            {/* KPI Cards Row 2 */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Média Carros Loja/Dia</p>
-                <p className={`text-3xl font-bold ${desempenho.mediaCarrosLojaDia >= 4 ? "text-success" : desempenho.mediaCarrosLojaDia >= 3 ? "text-warning" : "text-destructive"}`}>
-                  {desempenho.mediaCarrosLojaDia.toFixed(1)}
-                </p>
-                <p className="text-xs text-muted-foreground">Meta: 4/dia</p>
-                <Progress value={Math.min((desempenho.mediaCarrosLojaDia / 4) * 100, 100)} className="h-2 mt-2" />
-              </div>
-              <StatsCard title="Na Loja" value={desempenho.naLoja} icon={Car} variant="warning" />
-              <StatsCard title="Concluídos" value={desempenho.concluidos} icon={CheckCircle2} variant="success" />
-              <StatsCard title="No-Show" value={desempenho.noShow} icon={NoShowIcon} variant="destructive" subtitle="Não compareceram" />
-            </div>
-
-            {/* Resultado vs Pendente */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-success/30 bg-card p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-muted-foreground">🎯 Progressão da Meta</h3>
-                  <span className="text-3xl font-bold text-success">{desempenho.progressoMeta}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Concluídos + Perdidos (resultado já realizado)</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-success/10 p-3 text-center">
-                    <p className="text-xl font-bold text-success">{desempenho.concluidos}</p>
-                    <p className="text-xs text-muted-foreground">Concluídos</p>
-                  </div>
-                  <div className="rounded-lg bg-destructive/10 p-3 text-center">
-                    <p className="text-xl font-bold text-destructive">{desempenho.perdidos}</p>
-                    <p className="text-xs text-muted-foreground">Perdidos</p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-xl border border-warning/30 bg-card p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-muted-foreground">⏳ Pendentes</h3>
-                  <span className="text-3xl font-bold text-warning">{desempenho.pendentes}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Dispensados + Em Análise (ainda podem virar resultado)</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-purple-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-purple-500">{desempenho.dispensados}</p>
-                    <p className="text-xs text-muted-foreground">Dispensados</p>
-                  </div>
-                  <div className="rounded-lg bg-info/10 p-3 text-center">
-                    <p className="text-xl font-bold text-info">{desempenho.emAnalise}</p>
-                    <p className="text-xs text-muted-foreground">Em Análise</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* KPI Cards Row 3 - Rates */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Tx. Comparecimento</p>
-                <p className="text-3xl font-bold text-primary">{desempenho.txComparecimento}%</p>
-                <p className="text-xs text-muted-foreground">Na Loja / Agendados</p>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Tx. Conversão</p>
-                <p className="text-3xl font-bold text-success">{desempenho.txConversao}%</p>
-                <p className="text-xs text-muted-foreground">Na Loja / Produtivos</p>
-              </div>
-              <div className="rounded-xl border border-success/30 bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">🔄 Resgatados</p>
-                <p className="text-3xl font-bold text-success">{desempenho.resgatados}</p>
-                <p className="text-xs text-muted-foreground">Dispensados convertidos</p>
-              </div>
-              <div className="rounded-xl border border-primary/30 bg-card p-4 text-center">
-                <p className="text-xs text-muted-foreground mb-1">🏆 Ganhos c/ FUP</p>
-                <p className="text-3xl font-bold text-primary">{desempenho.ganhosFup}</p>
-                <p className="text-xs text-muted-foreground">Aprovados pelo supervisor</p>
-              </div>
-            </div>
-
-            {/* Charts */}
-            <div className="grid lg:grid-cols-2 gap-4">
-              {/* Daily chart */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold mb-3">📊 Agendamentos e Na Loja por Dia</h3>
-                <div className="flex gap-4 mb-2 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm" style={{ background: "hsl(var(--primary))" }} />
-                    <span className="text-muted-foreground">Agendamentos: <strong className="text-foreground">{dailyChartData.reduce((s, d) => s + d.agendamentos, 0)}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-sm" style={{ background: "hsl(142, 71%, 45%)" }} />
-                    <span className="text-muted-foreground">Na Loja: <strong className="text-foreground">{dailyChartData.reduce((s, d) => s + d.naLoja, 0)}</strong></span>
-                  </div>
-                </div>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dia" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                      <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                      <Tooltip />
-                      <ReferenceLine y={4} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label={{ value: "Meta: 4", position: "right", fontSize: 10, fill: "hsl(var(--destructive))" }} />
-                      <Bar dataKey="agendamentos" name="Agendamentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="naLoja" name="Na Loja" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Pie chart: aproveitamento */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h3 className="font-semibold mb-3">🎯 Aproveitamento de Produtivos</h3>
-                {pieDesempenho.length > 0 ? (
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={pieDesempenho} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                          {pieDesempenho.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                        </Pie>
-                        <Legend verticalAlign="bottom" height={36} />
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center pt-20">Sem dados suficientes</p>
-                )}
-              </div>
-            </div>
-
-            {/* Meta progress */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Flame className="h-5 w-5 text-warning" /> Progresso da Meta
-              </h3>
-              <div className="flex items-center gap-3">
-                <Progress value={Math.min((desempenho.concluidos / 75) * 100, 100)} className="flex-1 h-3" />
-                <span className="text-sm font-bold">{desempenho.concluidos} / 75</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                {Math.round((desempenho.concluidos / 75) * 100)}% da meta de 75 carros atingida neste mês
-              </p>
-            </div>
-          </div>
-        )}
+        {activeTab === "meu_painel" && <AgentPanelOverview />}
 
         <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} />
         {scheduleLead && (
