@@ -80,6 +80,17 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       if (user?.cargo === "agente") {
         // Agente só vê seus próprios leads, mesmo compartilhando loja com outros agentes
         q = q.eq("id_agente", user.id);
+        // E somente das unidades às quais ele está atualmente vinculado
+        // (impede o "fantasma" de unidades antigas/inativas como Catalão).
+        const myUnitIds = allAgentUnidades
+          .filter((au) => au.id_agente === user.id)
+          .map((au) => au.id_unidade);
+        if (myUnitIds.length === 0) {
+          // Sem unidades vinculadas → não traz nenhum lead
+          q = q.eq("id_unidade", "00000000-0000-0000-0000-000000000000");
+        } else {
+          q = q.in("id_unidade", myUnitIds);
+        }
       } else if (user?.cargo === "recepcionista" && user.unidade_padrao) {
         q = q.eq("id_unidade", user.unidade_padrao);
       }
