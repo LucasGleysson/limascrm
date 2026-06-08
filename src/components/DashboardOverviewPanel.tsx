@@ -16,6 +16,12 @@ const PIE_COLORS = [
 
 interface Props {
   filteredLeads: Lead[];
+  /**
+   * Subconjunto de leads cujo check-in caiu no período selecionado.
+   * Usado para tudo que representa "carros na loja" naquele mês, garantindo
+   * que cada carro conte em exatamente um mês (não muda retroativamente).
+   */
+  naLojaPeriodLeads: Lead[];
   unidades: { id: string; nome: string }[];
   profiles: { id: string; nome: string; cargo: string; unidade_padrao?: string | null }[];
   eventos: { id: string; id_lead: string; tipo: string; concluido: boolean; data_prevista: string }[];
@@ -24,7 +30,7 @@ interface Props {
 }
 
 export const DashboardOverviewPanel: React.FC<Props> = ({
-  filteredLeads, unidades, profiles, eventos, agentUnidades, periodRange,
+  filteredLeads, naLojaPeriodLeads, unidades, profiles, eventos, agentUnidades, periodRange,
 }) => {
   const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
 
@@ -40,25 +46,27 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
   }, [agentUnidades]);
 
   const stats = useMemo(() => {
-    const carrosNaLoja = filteredLeads.filter((l) => foiNaLoja(l)).length;
-    const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
+    // "Na Loja" e sub-etapas: ancoradas ao mês do check-in (imutável).
+    const carrosNaLoja = naLojaPeriodLeads.length;
+    const concluidos = naLojaPeriodLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = naLojaPeriodLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = naLojaPeriodLeads.filter((l) => l.etapa === "perdido").length;
+    const naLojaConfirmado = naLojaPeriodLeads.filter((l) => l.etapa === "confirmado").length;
+    const naLojaEmLoja = naLojaPeriodLeads.filter((l) => l.etapa === "na_loja").length;
+    const naLojaAnalise = naLojaPeriodLeads.filter((l) => l.etapa === "analise_supervisor").length;
+    const reagendados = naLojaPeriodLeads.filter((l) => l.etapa === "reagendado").length;
+    const NA_LOJA_ETAPAS = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
+    const naLojaOutros = naLojaPeriodLeads.filter((l) => !NA_LOJA_ETAPAS.includes(l.etapa)).length;
+    // Indicadores do pipeline corrente continuam usando filteredLeads (entrada/agendamento no período).
     const totalAgendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
     const novos = filteredLeads.filter((l) => l.etapa === "novo").length;
-    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
-    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
-    const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
     const desqNovos = filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length;
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
     const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-    const naLojaConfirmado = filteredLeads.filter((l) => l.etapa === "confirmado").length;
-    const naLojaEmLoja = filteredLeads.filter((l) => l.etapa === "na_loja").length;
-    const naLojaAnalise = filteredLeads.filter((l) => l.etapa === "analise_supervisor").length;
-    const NA_LOJA_ETAPAS = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
-    const naLojaOutros = filteredLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS.includes(l.etapa)).length;
     return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise, naLojaOutros };
-  }, [filteredLeads]);
+  }, [filteredLeads, naLojaPeriodLeads]);
 
   const porOrigem = useMemo(() => {
     return ORIGENS.map((origem) => {
@@ -70,11 +78,11 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
   const funnelData = useMemo(() => {
     const total = filteredLeads.length;
     const agendamentos = filteredLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
-    const naLoja = filteredLeads.filter((l) => foiNaLoja(l)).length;
-    const concluidos = filteredLeads.filter((l) => l.etapa === "concluido").length;
-    const dispensados = filteredLeads.filter((l) => l.etapa === "dispensado").length;
+    const naLoja = naLojaPeriodLeads.length;
+    const concluidos = naLojaPeriodLeads.filter((l) => l.etapa === "concluido").length;
+    const dispensados = naLojaPeriodLeads.filter((l) => l.etapa === "dispensado").length;
+    const perdidos = naLojaPeriodLeads.filter((l) => l.etapa === "perdido").length;
     const reagendados = filteredLeads.filter((l) => l.etapa === "reagendado").length;
-    const perdidos = filteredLeads.filter((l) => l.etapa === "perdido").length;
     return [
       { name: "Leads Produtivos", value: total - filteredLeads.filter((l) => l.etapa === "desqualificado_novo").length },
       { name: "Agendamentos", value: agendamentos },
@@ -84,27 +92,28 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
       { name: "Reagendados", value: reagendados },
       { name: "Perdidos", value: perdidos },
     ].filter((d) => d.value > 0);
-  }, [filteredLeads]);
+  }, [filteredLeads, naLojaPeriodLeads]);
 
   const porUnidade = useMemo(() => {
     return unidades.map((u) => {
       const unitAgentIds = new Set(agentUnidades.filter((au) => au.id_unidade === u.id).map((au) => au.id_agente));
       const uAgents = agentes.filter((a) => unitAgentIds.has(a.id));
       const uLeads = filteredLeads.filter((l) => l.id_unidade === u.id);
-      const carrosNaLoja = uLeads.filter((l) => foiNaLoja(l)).length;
-      const naLojaConfirmado = uLeads.filter((l) => l.etapa === "confirmado").length;
-      const naLojaEmLoja = uLeads.filter((l) => l.etapa === "na_loja").length;
-      const naLojaAnalise = uLeads.filter((l) => l.etapa === "analise_supervisor").length;
-      const reagendados = uLeads.filter((l) => l.etapa === "reagendado").length;
+      const uNaLoja = naLojaPeriodLeads.filter((l) => l.id_unidade === u.id);
+      const carrosNaLoja = uNaLoja.length;
+      const naLojaConfirmado = uNaLoja.filter((l) => l.etapa === "confirmado").length;
+      const naLojaEmLoja = uNaLoja.filter((l) => l.etapa === "na_loja").length;
+      const naLojaAnalise = uNaLoja.filter((l) => l.etapa === "analise_supervisor").length;
+      const reagendados = uNaLoja.filter((l) => l.etapa === "reagendado").length;
       const NA_LOJA_ETAPAS_U = ["confirmado","na_loja","analise_supervisor","reagendado","concluido","dispensado","perdido"];
-      const naLojaOutros = uLeads.filter((l) => foiNaLoja(l) && !NA_LOJA_ETAPAS_U.includes(l.etapa)).length;
+      const naLojaOutros = uNaLoja.filter((l) => !NA_LOJA_ETAPAS_U.includes(l.etapa)).length;
       const totalAgendamentos = uLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       const desqNovos = uLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = uLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
       const desqAgendados = uLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
-      const dispensados = uLeads.filter((l) => l.etapa === "dispensado").length;
-      const perdidos = uLeads.filter((l) => l.etapa === "perdido").length;
-      const concluidos = uLeads.filter((l) => l.etapa === "concluido").length;
+      const dispensados = uNaLoja.filter((l) => l.etapa === "dispensado").length;
+      const perdidos = uNaLoja.filter((l) => l.etapa === "perdido").length;
+      const concluidos = uNaLoja.filter((l) => l.etapa === "concluido").length;
       const txConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
       return {
         ...u, total: uLeads.length, carrosNaLoja, totalAgendamentos,
@@ -113,14 +122,15 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
         naLojaConfirmado, naLojaEmLoja, naLojaAnalise, reagendados, naLojaOutros,
       };
     });
-  }, [filteredLeads, unidades, agentes, agentUnidades]);
+  }, [filteredLeads, naLojaPeriodLeads, unidades, agentes, agentUnidades]);
 
   const agenteTable = useMemo(() => {
     return agentes.map((agente) => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
+      const aNaLoja = naLojaPeriodLeads.filter((l) => l.id_agente === agente.id);
       const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
       const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
-      const carrosNaLoja = aLeads.filter((l) => foiNaLoja(l)).length;
+      const carrosNaLoja = aNaLoja.length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
@@ -128,8 +138,8 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
         novo: aLeads.filter((l) => l.etapa === "novo").length,
         agendado: totalAgendamentos,
         carrosNaLoja,
-        concluido: aLeads.filter((l) => l.etapa === "concluido").length,
-        perdidos: aLeads.filter((l) => l.etapa === "perdido").length,
+        concluido: aNaLoja.filter((l) => l.etapa === "concluido").length,
+        perdidos: aNaLoja.filter((l) => l.etapa === "perdido").length,
         perdidosAntes: aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
         total: aLeads.length,
         taxa: aLeads.length > 0 ? Math.round((carrosNaLoja / aLeads.length) * 100) : 0,
@@ -137,7 +147,7 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
         fupPending: agFollowUps.filter((e) => !e.concluido).length,
       };
     });
-  }, [filteredLeads, agentes, unidades, eventos, agentUnitMap]);
+  }, [filteredLeads, naLojaPeriodLeads, agentes, unidades, eventos, agentUnitMap]);
 
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));
@@ -316,13 +326,14 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
               {ORIGENS.map((origem) => {
                 const oLeads = filteredLeads.filter((l) => l.origem === origem);
                 if (oLeads.length === 0) return null;
+                const oNaLoja = naLojaPeriodLeads.filter((l) => l.origem === origem);
                 const desqNovo = oLeads.filter((l) => l.etapa === "desqualificado_novo").length;
-                const naLoja = oLeads.filter((l) => foiNaLoja(l)).length;
-                const dispensados = oLeads.filter((l) => l.etapa === "dispensado").length;
+                const naLoja = oNaLoja.length;
+                const dispensados = oNaLoja.filter((l) => l.etapa === "dispensado").length;
                 const agendados = oLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                 const noShow = oLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
-                const perdidos = oLeads.filter((l) => l.etapa === "perdido").length;
-                const concluidos = oLeads.filter((l) => l.etapa === "concluido").length;
+                const perdidos = oNaLoja.filter((l) => l.etapa === "perdido").length;
+                const concluidos = oNaLoja.filter((l) => l.etapa === "concluido").length;
                 const conv = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
                 return (
                   <tr key={origem} className="border-b border-border/50 hover:bg-muted/30">
@@ -416,6 +427,7 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
                 const elapsed = Math.max(bizDays, 1);
                 return agenteTable.map((a) => {
                   const aLeads = filteredLeads.filter((l) => l.id_agente === a.agenteId);
+                  const aNaLoja = naLojaPeriodLeads.filter((l) => l.id_agente === a.agenteId);
                   const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
                   const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
                   const produtivos = aLeads.length - desqNovos;
@@ -423,9 +435,9 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
                   const mediaAgend = (a.agendado / elapsed).toFixed(1);
                   const mediaLoja = (a.carrosNaLoja / elapsed).toFixed(1);
                   const isExpanded = expandedAgente === a.agenteId;
-                  const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
-                  const resgatados = aLeads.filter((l) => l.etapa === "reagendado").length;
-                  const ganhosFup = aLeads.filter((l) => l.etapa === "concluido" && l.fup_concluido).length;
+                  const dispensados = aNaLoja.filter((l) => l.etapa === "dispensado").length;
+                  const resgatados = aNaLoja.filter((l) => l.etapa === "reagendado").length;
+                  const ganhosFup = aNaLoja.filter((l) => l.etapa === "concluido" && l.fup_concluido).length;
                   const txComparecimento = a.agendado > 0 ? Math.round((a.carrosNaLoja / a.agendado) * 100) : 0;
                   const txAproveitamento = produtivos > 0 ? Math.round((a.carrosNaLoja / produtivos) * 100) : 0;
                   return (
