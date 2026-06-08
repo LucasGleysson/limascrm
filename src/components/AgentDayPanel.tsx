@@ -21,6 +21,8 @@ import { foiNaLoja } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 const META_AGENTE = 75;
+const META_MIN_POR_UNIDADE = 2;
+const META_ALVO_POR_UNIDADE = 4;
 
 function countBusinessDays(from: Date, to: Date): number {
   let count = 0;
@@ -125,6 +127,26 @@ export const AgentDayPanel = () => {
     return { label: "Acelerar", icon: AlertTriangle, cls: "bg-destructive/20 text-destructive border-destructive/40" };
   })();
   const BadgeIcon = metaBadge.icon;
+
+  // ===== Meta por unidade — cada loja tem mínimo de 2 e alvo de 4 carros/dia
+  const metaPorUnidade = useMemo(() => {
+    const naLojaPorUnidade: Record<string, number> = {};
+    myLeads.forEach((l) => {
+      if (!l.checkin || l.checkin.slice(0, 10) !== dayStr) return;
+      if (!foiNaLoja(l)) return;
+      if (!l.id_unidade) return;
+      naLojaPorUnidade[l.id_unidade] = (naLojaPorUnidade[l.id_unidade] || 0) + 1;
+    });
+    return Array.from(myUnitIds).map((uid) => {
+      const u = unidades.find((x) => x.id === uid);
+      const count = naLojaPorUnidade[uid] || 0;
+      const faltaMin = Math.max(META_MIN_POR_UNIDADE - count, 0);
+      const faltaAlvo = Math.max(META_ALVO_POR_UNIDADE - count, 0);
+      const status: "alvo" | "minimo" | "abaixo" =
+        count >= META_ALVO_POR_UNIDADE ? "alvo" : count >= META_MIN_POR_UNIDADE ? "minimo" : "abaixo";
+      return { id: uid, nome: u?.nome || "—", count, faltaMin, faltaAlvo, status };
+    }).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [myLeads, dayStr, myUnitIds, unidades]);
 
   // ===== Tentar Resgatar (apenas faz sentido para hoje)
   const resgatar = useMemo(() => {
