@@ -78,16 +78,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     const buildLeadsQuery = () => {
       let q = supabase.from("leads").select("*").order("created_at", { ascending: false });
       if (user?.cargo === "agente") {
-        const myUnits = allAgentUnidades
-          .filter((au) => au.id_agente === user.id)
-          .map((au) => au.id_unidade);
-        if (myUnits.length > 0) {
-          // Lead is mine OR belongs to one of my units
-          const unitsCsv = myUnits.map((u) => `"${u}"`).join(",");
-          q = q.or(`id_agente.eq.${user.id},id_unidade.in.(${unitsCsv})`);
-        } else {
-          q = q.eq("id_agente", user.id);
-        }
+        // Agente só vê seus próprios leads, mesmo compartilhando loja com outros agentes
+        q = q.eq("id_agente", user.id);
       } else if (user?.cargo === "recepcionista" && user.unidade_padrao) {
         q = q.eq("id_unidade", user.unidade_padrao);
       }
@@ -192,11 +184,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       if (eventType === "INSERT") {
         const lead = mapLead(newRow);
         if (user?.cargo === "agente") {
-          const myUnits = new Set(
-            agentUnidades.filter((au) => au.id_agente === user.id).map((au) => au.id_unidade)
-          );
-          const visible = lead.id_agente === user.id || (lead.id_unidade && myUnits.has(lead.id_unidade));
-          if (!visible) return;
+          if (lead.id_agente !== user.id) return;
         }
         if (user?.cargo === "recepcionista" && lead.id_unidade !== user.unidade_padrao) return;
         setLeads((prev) => prev.some((l) => l.id === lead.id) ? prev : [lead, ...prev]);
