@@ -21,6 +21,8 @@ import { foiNaLoja } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 const META_AGENTE = 75;
+const META_MIN_POR_UNIDADE = 2;
+const META_ALVO_POR_UNIDADE = 4;
 
 function countBusinessDays(from: Date, to: Date): number {
   let count = 0;
@@ -125,6 +127,26 @@ export const AgentDayPanel = () => {
     return { label: "Acelerar", icon: AlertTriangle, cls: "bg-destructive/20 text-destructive border-destructive/40" };
   })();
   const BadgeIcon = metaBadge.icon;
+
+  // ===== Meta por unidade — cada loja tem mínimo de 2 e alvo de 4 carros/dia
+  const metaPorUnidade = useMemo(() => {
+    const naLojaPorUnidade: Record<string, number> = {};
+    myLeads.forEach((l) => {
+      if (!l.checkin || l.checkin.slice(0, 10) !== dayStr) return;
+      if (!foiNaLoja(l)) return;
+      if (!l.id_unidade) return;
+      naLojaPorUnidade[l.id_unidade] = (naLojaPorUnidade[l.id_unidade] || 0) + 1;
+    });
+    return Array.from(myUnitIds).map((uid) => {
+      const u = unidades.find((x) => x.id === uid);
+      const count = naLojaPorUnidade[uid] || 0;
+      const faltaMin = Math.max(META_MIN_POR_UNIDADE - count, 0);
+      const faltaAlvo = Math.max(META_ALVO_POR_UNIDADE - count, 0);
+      const status: "alvo" | "minimo" | "abaixo" =
+        count >= META_ALVO_POR_UNIDADE ? "alvo" : count >= META_MIN_POR_UNIDADE ? "minimo" : "abaixo";
+      return { id: uid, nome: u?.nome || "—", count, faltaMin, faltaAlvo, status };
+    }).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [myLeads, dayStr, myUnitIds, unidades]);
 
   // ===== Tentar Resgatar (apenas faz sentido para hoje)
   const resgatar = useMemo(() => {
@@ -291,6 +313,48 @@ export const AgentDayPanel = () => {
           </div>
         </div>
       </div>
+
+      {/* META POR UNIDADE — cada loja tem mínimo de 2 e alvo de 4 carros */}
+      {metaPorUnidade.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-warning" />
+              <h3 className="font-semibold">Meta por unidade</h3>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Mínimo {META_MIN_POR_UNIDADE} · Alvo {META_ALVO_POR_UNIDADE} carros/dia em cada loja
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {metaPorUnidade.map((u) => {
+              const pct = Math.min(Math.round((u.count / META_ALVO_POR_UNIDADE) * 100), 100);
+              const tone =
+                u.status === "alvo"
+                  ? { border: "border-success/40", bg: "bg-success/5", text: "text-success", label: "Alvo batido" }
+                  : u.status === "minimo"
+                  ? { border: "border-warning/40", bg: "bg-warning/5", text: "text-warning", label: `Faltam ${u.faltaAlvo} p/ alvo` }
+                  : { border: "border-destructive/40", bg: "bg-destructive/5", text: "text-destructive", label: `Faltam ${u.faltaMin} p/ mínimo` };
+              return (
+                <div key={u.id} className={`rounded-lg border ${tone.border} ${tone.bg} p-3 space-y-2`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold truncate">{u.nome}</p>
+                    <span className={`text-lg font-extrabold ${tone.text}`}>
+                      {u.count}
+                      <span className="text-xs text-muted-foreground font-bold"> / {META_ALVO_POR_UNIDADE}</span>
+                    </span>
+                  </div>
+                  <Progress value={pct} className="h-2" />
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Mín. {META_MIN_POR_UNIDADE}</span>
+                    <span className={`font-medium ${tone.text}`}>{tone.label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Safra + Agendamentos da unidade */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
