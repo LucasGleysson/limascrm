@@ -39,7 +39,7 @@ export const TVDashboardPanel: React.FC = () => {
   const hoje = getToday();
 
   const orderedUnidades = useMemo(() => {
-    const allowed = new Set(["Laranjeiras", "Grandville", "Patrocinio", "Araguari"]);
+  const allowed = new Set(["Laranjeiras", "Grandville", "Patrocínio", "Araguari"]);
     return unidadesAtivas.filter((u) => allowed.has(u.nome));
   }, [unidadesAtivas]);
 
