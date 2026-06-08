@@ -24,6 +24,8 @@ import { StoreAgentAssigner } from "@/components/StoreAgentAssigner";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
+import { ManagerByAgentPanel } from "@/components/ManagerByAgentPanel";
+import { ManagerByStorePanel } from "@/components/ManagerByStorePanel";
 
 const SIDEBAR_TABS = [
   { id: "painel_tv", label: "Painel TV", icon: Monitor },
