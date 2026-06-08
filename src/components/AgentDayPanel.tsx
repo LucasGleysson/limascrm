@@ -143,11 +143,16 @@ export const AgentDayPanel = () => {
     // 3. Trabalhados — ainda dá pra retomar
     const trabalhados = myLeads.filter((l) => l.etapa === "trabalhado").slice(0, 6);
     // 4. Followups pendentes com data_prevista <= hoje
+    // Só faz sentido em etapas onde o ciclo de FUP ainda está ativo.
+    // Exclui leads já encerrados (trabalhado, desqualificado*, dispensado, perdido, concluido)
+    // e em análise do supervisor (fora das mãos do agente).
+    const etapasComFupAtivo = new Set(["novo", "agendado", "reagendado", "confirmado", "na_loja"]);
     const fupsHoje = eventos
       .filter((e) => !e.concluido && e.tipo === "followup" && e.data_prevista <= dayStr)
       .map((e) => {
         const lead = myLeads.find((l) => l.id === e.id_lead);
-        return lead ? { lead, evento: e } : null;
+        if (!lead || !etapasComFupAtivo.has(lead.etapa)) return null;
+        return { lead, evento: e };
       })
       .filter((x): x is { lead: Lead; evento: any } => !!x)
       .slice(0, 6);
