@@ -427,6 +427,7 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
                 const elapsed = Math.max(bizDays, 1);
                 return agenteTable.map((a) => {
                   const aLeads = filteredLeads.filter((l) => l.id_agente === a.agenteId);
+                  const aNaLoja = naLojaPeriodLeads.filter((l) => l.id_agente === a.agenteId);
                   const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
                   const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
                   const produtivos = aLeads.length - desqNovos;
@@ -434,9 +435,9 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
                   const mediaAgend = (a.agendado / elapsed).toFixed(1);
                   const mediaLoja = (a.carrosNaLoja / elapsed).toFixed(1);
                   const isExpanded = expandedAgente === a.agenteId;
-                  const dispensados = aLeads.filter((l) => l.etapa === "dispensado").length;
-                  const resgatados = aLeads.filter((l) => l.etapa === "reagendado").length;
-                  const ganhosFup = aLeads.filter((l) => l.etapa === "concluido" && l.fup_concluido).length;
+                  const dispensados = aNaLoja.filter((l) => l.etapa === "dispensado").length;
+                  const resgatados = aNaLoja.filter((l) => l.etapa === "reagendado").length;
+                  const ganhosFup = aNaLoja.filter((l) => l.etapa === "concluido" && l.fup_concluido).length;
                   const txComparecimento = a.agendado > 0 ? Math.round((a.carrosNaLoja / a.agendado) * 100) : 0;
                   const txAproveitamento = produtivos > 0 ? Math.round((a.carrosNaLoja / produtivos) * 100) : 0;
                   return (
