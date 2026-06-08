@@ -3,7 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
   Trophy, Flame, AlertTriangle, Target, Users, CalendarCheck, CheckCircle2,
-  Car, XCircle, RefreshCw, ClipboardCheck, MapPin, TrendingUp, Skull,
+  Car, XCircle, RefreshCw, ClipboardCheck, MapPin, Skull, CheckCheck, RotateCcw, Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isPerdidoAntesLoja } from "@/lib/leadUtils";
@@ -89,11 +89,9 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       const restante = Math.max(meta - progresso, 0);
       const mediaAtual = progresso / bizDays.elapsed;
       const ritmoEsperado = (meta / bizDays.total) * bizDays.elapsed;
-      const produtivos = a.total - a.desqNovos;
-      const noShow = a.leads.filter((l: any) =>
-        ["agendado", "reagendado"].includes(l.etapa) &&
-        l.data_agendamento && l.data_agendamento < new Date().toISOString().split("T")[0]
-      ).length;
+      const confirmados = a.leads.filter((l: any) => l.etapa === "confirmado").length;
+      const reagendados = a.leads.filter((l: any) => l.etapa === "reagendado").length;
+      const emAnalise = a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
 
       let badge: { label: string; icon: any; cls: string };
       if (progresso >= meta) {
@@ -103,7 +101,7 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       } else {
         badge = { label: "Acelerar", icon: AlertTriangle, cls: "bg-destructive/20 text-destructive border-destructive/40" };
       }
-      return { ...a, meta, progresso, pct, restante, mediaAtual, produtivos, noShow, badge };
+      return { ...a, meta, progresso, pct, restante, mediaAtual, confirmados, reagendados, emAnalise, badge };
     }).sort((a, b) => b.pct - a.pct);
   }, [agenteStats, metasMap, bizDays]);
 
@@ -180,15 +178,16 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
               </div>
 
               {/* Status grid */}
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <StatTile icon={Users} label="Leads" value={a.total} color="text-foreground" />
-                <StatTile icon={TrendingUp} label="Produt." value={a.produtivos} color="text-info" />
                 <StatTile icon={CalendarCheck} label="Agend." value={a.totalAgendamentos} color="text-primary" />
+                <StatTile icon={CheckCheck} label="Confirm." value={a.confirmados} color="text-info" />
+                <StatTile icon={RotateCcw} label="Reagend." value={a.reagendados} color="text-purple-500" />
                 <StatTile icon={Car} label="Na Loja" value={a.passaramNaLoja} color="text-warning" />
                 <StatTile icon={CheckCircle2} label="Concl." value={a.concluidos} color="text-success" />
                 <StatTile icon={XCircle} label="Disp." value={a.dispensados} color="text-purple-500" />
                 <StatTile icon={Skull} label="Perd." value={a.perdidos} color="text-destructive" />
-                <StatTile icon={AlertTriangle} label="No-Show" value={a.noShow} color="text-destructive" />
+                <StatTile icon={Search} label="Análise" value={a.emAnalise} color="text-warning" />
               </div>
 
               {/* FUP row */}
