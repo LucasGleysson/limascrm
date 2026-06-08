@@ -250,6 +250,10 @@ export const FichasPanel = () => {
 
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
+      {canCreate && (
+        <NewLeadModal open={newOpen} onOpenChange={setNewOpen} allowAgentSelection />
+      )}
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
