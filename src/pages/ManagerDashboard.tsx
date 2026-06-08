@@ -698,281 +698,34 @@ export const ManagerDashboard = () => {
         )}
 
         {activeTab === "por_loja" && (
-          <>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold">Desempenho por Loja</h1>
-                <p className="text-muted-foreground text-sm">Leads atribuídos pela unidade ou pelo agente vinculado</p>
-              </div>
-              <div className="flex items-center gap-3">
+          <ManagerByStorePanel
+            porUnidade={porUnidade}
+            mesRef={mesRef}
+            periodRange={periodRange}
+            headerActions={
+              <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
                 <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
               </div>
-            </div>
-            <div className="space-y-2">
-              {porUnidade.map((u) => (
-                <div key={u.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer ${selectedUnidade === u.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
-                  onClick={() => setSelectedUnidade(selectedUnidade === u.id ? null : u.id)}
-                >
-                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold">{u.nome}</span>
-                      {u.recepcionista && (
-                        <Badge variant="outline" className="text-xs gap-1 bg-warning/10 text-warning border-warning/20">
-                          <LogIn className="h-3 w-3" /> Recep: {u.recepcionista.nome}
-                        </Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs gap-1">
-                        <Users className="h-3 w-3" /> {u.unitAgents.length} agente{u.unitAgents.length === 1 ? "" : "s"}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                      <span>{u.total} registros</span>
-                      <span className="text-primary">{u.totalAgendamentos} agend.</span>
-                      <span className="text-warning">{u.carrosNaLoja} na loja</span>
-                      <span className="text-success">{u.concluidos} concl.</span>
-                      <span className="text-purple-500">{u.dispensados} disp.</span>
-                      <span className="text-destructive">{u.perdidos} perd.</span>
-                      {u.emAnalise > 0 && <span className="text-info">{u.emAnalise} análise</span>}
-                      <span className="font-medium">{u.txConversao}% conv.</span>
-                    </div>
-                  </div>
-                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedUnidade === u.id ? "rotate-90" : ""}`} />
-                </div>
-              ))}
-            </div>
-            {(() => {
-              const sel = selectedUnidade ? porUnidade.find((u) => u.id === selectedUnidade) : null;
-              if (!sel) return null;
-              const funnelChartData = [
-                { name: "Registros", value: sel.total },
-                { name: "Agendamentos", value: sel.totalAgendamentos },
-                { name: "Na Loja", value: sel.carrosNaLoja },
-                { name: "Concluídos", value: sel.concluidos },
-              ];
-              const evasionChartData = [
-                { name: "Desq. Novo", value: sel.desqNovos, color: "hsl(38, 92%, 50%)" },
-                { name: "Outra Cidade", value: sel.desqOutraCidade, color: "hsl(25, 95%, 53%)" },
-                { name: "Desq. Agend.", value: sel.desqAgendados, color: "hsl(0, 72%, 51%)" },
-                { name: "Dispensados", value: sel.dispensados, color: "hsl(280, 65%, 60%)" },
-                { name: "Perdidos", value: sel.perdidos, color: "hsl(0, 50%, 40%)" },
-              ].filter((d) => d.value > 0);
-              const funnelColors = ["hsl(217, 91%, 60%)", "hsl(280, 65%, 60%)", "hsl(38, 92%, 50%)", "hsl(142, 71%, 45%)"];
-              return (
-                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-5">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <h3 className="font-semibold flex items-center gap-2 text-lg"><MapPin className="h-5 w-5 text-primary" />{sel.nome}</h3>
-                    <div className="flex items-center gap-2 text-sm">
-                      {sel.recepcionista ? (
-                        <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
-                          <LogIn className="h-3.5 w-3.5" /> Recepção: <strong className="ml-1">{sel.recepcionista.nome}</strong>
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">Sem recepcionista atribuída</Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{sel.total}</p><p className="text-xs text-muted-foreground">Registros</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{sel.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.carrosNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{sel.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
-                  </div>
-
-                  <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{sel.desqNovos}</p><p className="text-xs text-muted-foreground">Desq. Novo</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-orange-500">{sel.desqOutraCidade}</p><p className="text-xs text-muted-foreground">Outra Cidade</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.desqAgendados}</p><p className="text-xs text-muted-foreground">Desq. Agendado</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-purple-500">{sel.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-info">{sel.emAnalise}</p><p className="text-xs text-muted-foreground">Em Análise</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{sel.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    <div>
-                      <h4 className="text-sm font-medium mb-2 text-muted-foreground">Funil de Conversão</h4>
-                      <div className="h-56">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={funnelChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                            <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                            <Tooltip />
-                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                              {funnelChartData.map((_, i) => <Cell key={i} fill={funnelColors[i]} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-                    {evasionChartData.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2 text-muted-foreground">Evasão do Funil</h4>
-                        <div className="h-56">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={evasionChartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                              <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                              <Tooltip />
-                              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                                {evasionChartData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <StoreAgentAssigner
-                    unidadeId={sel.id}
-                    unitAgents={sel.unitAgents}
-                    allAgents={agentes}
-                    agentUnidades={agentUnidades}
-                    onUpdated={() => refreshAll()}
-                  />
-
-                  {sel.unitAgents.length > 0 && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-2 font-medium text-muted-foreground">AGENTE</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">REGISTROS</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">PARTIC.</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">AGEND.</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">NA LOJA</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">DESQ.</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
-                            <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sel.unitAgents.map((ag) => {
-                            const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLojaList = naLojaPeriodLeads.filter((l) => l.id_agente === ag.id && l.id_unidade === sel.id);
-                            const agNaLoja = agNaLojaList.length;
-                            const agConcl = agNaLojaList.filter((l) => l.etapa === "concluido").length;
-                            const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
-                            const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-                            const agDisp = agNaLojaList.filter((l) => l.etapa === "dispensado").length;
-                            const agPerd = agNaLojaList.filter((l) => l.etapa === "perdido").length;
-                            const partic = sel.total > 0 ? Math.round((agLeads.length / sel.total) * 100) : 0;
-                            return (
-                              <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
-                                <td className="py-2 font-medium">{ag.nome}</td>
-                                <td className="py-2 text-center">{agLeads.length}</td>
-                                <td className="py-2 text-center font-medium text-primary">{partic}%</td>
-                                <td className="py-2 text-center text-primary">{agAgend}</td>
-                                <td className="py-2 text-center text-warning">{agNaLoja}</td>
-                                <td className="py-2 text-center text-success">{agConcl}</td>
-                                <td className="py-2 text-center text-muted-foreground">{agDesq}</td>
-                                <td className="py-2 text-center text-purple-500">{agDisp}</td>
-                                <td className="py-2 text-center text-destructive">{agPerd}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </>
+            }
+          />
         )}
 
         {activeTab === "por_agente" && (
-          <>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold">Desempenho por Agente</h1>
-                <p className="text-muted-foreground text-sm">Clique em um agente para ver detalhes</p>
+          <ManagerByAgentPanel
+            agenteStats={agenteStats}
+            period={period}
+            mesRef={mesRef}
+            periodRange={periodRange}
+            headerActions={
+              <div className="flex items-center gap-3 flex-wrap">
+                {RefreshButton}
+                <PeriodFilter value={period} onChange={setPeriod} />
+                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
               </div>
-              <div className="flex items-center gap-3">{RefreshButton}<PeriodFilter value={period} onChange={setPeriod} />{period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}</div>
-            </div>
-            <div className="space-y-2">
-              {agenteStats.map((ag) => (
-                <div key={ag.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl bg-card border transition-all cursor-pointer ${selectedAgente === ag.id ? "border-primary shadow-sm" : "border-border hover:border-primary/30"}`}
-                  onClick={() => setSelectedAgente(selectedAgente === ag.id ? null : ag.id)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{ag.nome}</span>
-                      <span className="text-xs text-muted-foreground">({ag.unidadeNome})</span>
-                    </div>
-                    <div className="flex gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                      <span>{ag.total} leads</span>
-                      <span className="text-primary">{ag.totalAgendamentos} agend.</span>
-                      <span className="text-warning">{ag.passaramNaLoja} loja</span>
-                      <span className="text-success">{ag.concluidos} concl.</span>
-                      <span className="text-destructive">{ag.perdidos} perd.</span>
-                      <span className="font-medium">{ag.txAgendamento}% ag. | {ag.txConversao}% conv.</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 text-xs">
-                    <p className="text-success">{ag.fupConcluidos} FUP ✓</p>
-                    {ag.fupPendentes > 0 && <p className="text-warning">{ag.fupPendentes} FUP ⏳</p>}
-                  </div>
-                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${selectedAgente === ag.id ? "rotate-90" : ""}`} />
-                </div>
-              ))}
-            </div>
-            {selectedAgent && (() => {
-              const todayStr4 = new Date().toISOString().split("T")[0];
-              const produtivos = selectedAgent.total - selectedAgent.desqNovos;
-              const noShow = selectedAgent.leads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr4).length;
-              const resgatados = selectedAgent.leads.filter((l: Lead) => l.etapa === "reagendado").length;
-              const ganhosFup = selectedAgent.leads.filter((l: Lead) => l.etapa === "concluido" && l.fup_concluido).length;
-              const txComparecimento = selectedAgent.totalAgendamentos > 0 ? Math.round((selectedAgent.passaramNaLoja / selectedAgent.totalAgendamentos) * 100) : 0;
-              const txAproveitamento = produtivos > 0 ? Math.round((selectedAgent.passaramNaLoja / produtivos) * 100) : 0;
-              const rangeStart = new Date(periodRange.from + "T00:00:00");
-              const rangeEnd = new Date(Math.min(new Date(periodRange.to + "T00:00:00").getTime(), new Date().setHours(0,0,0,0)));
-              let bizDays = 0;
-              for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
-                const dow = d.getDay(); if (dow !== 0 && dow !== 6) bizDays++;
-              }
-              const elapsed = Math.max(bizDays, 1);
-              const mediaAgend = (selectedAgent.totalAgendamentos / elapsed).toFixed(1);
-              const mediaLoja = (selectedAgent.passaramNaLoja / elapsed).toFixed(1);
-              return (
-                <div className="rounded-xl border border-primary/20 bg-card p-5 animate-slide-in space-y-4">
-                  <h3 className="font-semibold text-lg">{selectedAgent.nome} — {selectedAgent.unidadeNome}</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{selectedAgent.total}</p><p className="text-xs text-muted-foreground">Leads Recebidos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.desqNovos + selectedAgent.desqAgendados}</p><p className="text-xs text-muted-foreground">Desqualificados</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{produtivos}</p><p className="text-xs text-muted-foreground">Produtivos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-primary">{selectedAgent.totalAgendamentos}</p><p className="text-xs text-muted-foreground">Agendamentos</p></div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-warning">{selectedAgent.passaramNaLoja}</p><p className="text-xs text-muted-foreground">Na Loja</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{noShow}</p><p className="text-xs text-muted-foreground">No-Show</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-muted-foreground">{mediaAgend}</p><p className="text-xs text-muted-foreground">Méd. Agend./Dia</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-muted-foreground">{mediaLoja}</p><p className="text-xs text-muted-foreground">Méd. Loja/Dia</p></div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{txComparecimento}%</p><p className="text-xs text-muted-foreground">Tx Comparecimento</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold">{txAproveitamento}%</p><p className="text-xs text-muted-foreground">Aproveitamento</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-info">{resgatados}</p><p className="text-xs text-muted-foreground">Resgatados</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{ganhosFup}</p><p className="text-xs text-muted-foreground">Ganhos c/ FUP</p></div>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selectedAgent.concluidos}</p><p className="text-xs text-muted-foreground">Concluídos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.dispensados}</p><p className="text-xs text-muted-foreground">Dispensados</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-destructive">{selectedAgent.perdidos}</p><p className="text-xs text-muted-foreground">Perdidos</p></div>
-                    <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-success">{selectedAgent.fupConcluidos}</p><p className="text-xs text-muted-foreground">FUPs Concluídos</p></div>
-                  </div>
-                  <AgentDailyChart leads={selectedAgent.leads} periodFrom={periodRange.from} periodTo={periodRange.to} />
-                </div>
-              );
-            })()}
-          </>
+            }
+          />
         )}
 
 
