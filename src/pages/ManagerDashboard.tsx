@@ -539,6 +539,7 @@ export const ManagerDashboard = () => {
                       <th className="text-center py-2 font-medium text-muted-foreground">CONCL.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">DISP.</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">PERD.</th>
+                      <th className="text-center py-2 font-medium text-muted-foreground" title="Meta = Concluídos + Perdidos">META</th>
                       <th className="text-center py-2 font-medium text-muted-foreground">FANTASMAS</th>
                     </tr>
                   </thead>
