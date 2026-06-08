@@ -3,7 +3,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
   Trophy, Flame, AlertTriangle, Target, Users, CalendarCheck, CheckCircle2,
-  Car, XCircle, MapPin, TrendingUp, Skull, LogIn,
+  Car, XCircle, MapPin, Skull, LogIn, CheckCheck, RotateCcw, Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -175,14 +175,14 @@ export const ManagerByStorePanel: React.FC<Props> = ({ porUnidade, mesRef, perio
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                <StatTile icon={Users} label="Leads" value={u.total} color="text-foreground" />
                 <StatTile icon={CalendarCheck} label="Agend." value={u.totalAgendamentos} color="text-primary" />
+                <StatTile icon={CheckCheck} label="Confirm." value={u.naLojaConfirmado} color="text-info" />
+                <StatTile icon={RotateCcw} label="Reagend." value={u.reagendados} color="text-purple-500" />
                 <StatTile icon={Car} label="Na Loja" value={u.carrosNaLoja} color="text-warning" />
                 <StatTile icon={CheckCircle2} label="Concl." value={u.concluidos} color="text-success" />
                 <StatTile icon={XCircle} label="Disp." value={u.dispensados} color="text-purple-500" />
                 <StatTile icon={Skull} label="Perd." value={u.perdidos} color="text-destructive" />
-                <StatTile icon={AlertTriangle} label="Análise" value={u.emAnalise} color="text-info" />
-                <StatTile icon={TrendingUp} label="Desq." value={u.desqNovos + u.desqAgendados} color="text-muted-foreground" />
+                <StatTile icon={Search} label="Análise" value={u.emAnalise} color="text-warning" />
               </div>
             </div>
           );
