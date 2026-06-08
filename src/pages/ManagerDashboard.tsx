@@ -851,12 +851,13 @@ export const ManagerDashboard = () => {
                         <tbody>
                           {sel.unitAgents.map((ag) => {
                             const agLeads = sel.leads.filter((l) => l.id_agente === ag.id);
-                            const agNaLoja = agLeads.filter((l) => foiNaLoja(l)).length;
-                            const agConcl = agLeads.filter((l) => l.etapa === "concluido").length;
+                            const agNaLojaList = naLojaPeriodLeads.filter((l) => l.id_agente === ag.id && l.id_unidade === sel.id);
+                            const agNaLoja = agNaLojaList.length;
+                            const agConcl = agNaLojaList.filter((l) => l.etapa === "concluido").length;
                             const agAgend = agLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                             const agDesq = agLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-                            const agDisp = agLeads.filter((l) => l.etapa === "dispensado").length;
-                            const agPerd = agLeads.filter((l) => l.etapa === "perdido").length;
+                            const agDisp = agNaLojaList.filter((l) => l.etapa === "dispensado").length;
+                            const agPerd = agNaLojaList.filter((l) => l.etapa === "perdido").length;
                             const partic = sel.total > 0 ? Math.round((agLeads.length / sel.total) * 100) : 0;
                             return (
                               <tr key={ag.id} className="border-b border-border/50 hover:bg-muted/30">
