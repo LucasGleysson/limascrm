@@ -492,13 +492,14 @@ export const ManagerDashboard = () => {
                       return ORIGENS.map((origem) => {
                         const oLeads = filteredLeads.filter((l) => l.origem === origem);
                         if (oLeads.length === 0) return null;
+                        const oNaLoja = naLojaPeriodLeads.filter((l) => l.origem === origem);
                         const desqNovo = oLeads.filter((l) => l.etapa === "desqualificado_novo").length;
-                        const naLoja = oLeads.filter((l) => foiNaLoja(l)).length;
-                        const dispensados = oLeads.filter((l) => l.etapa === "dispensado").length;
+                        const naLoja = oNaLoja.length;
+                        const dispensados = oNaLoja.filter((l) => l.etapa === "dispensado").length;
                         const agendados = oLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
                         const noShow = oLeads.filter((l: Lead) => ["agendado", "reagendado"].includes(l.etapa) && l.data_agendamento && l.data_agendamento < todayStr).length;
-                        const perdidos = oLeads.filter((l) => l.etapa === "perdido").length;
-                        const concluidos = oLeads.filter((l) => l.etapa === "concluido").length;
+                        const perdidos = oNaLoja.filter((l) => l.etapa === "perdido").length;
+                        const concluidos = oNaLoja.filter((l) => l.etapa === "concluido").length;
                         const conv = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
                         return (
                           <tr key={origem} className="border-b border-border/50 hover:bg-muted/30">
