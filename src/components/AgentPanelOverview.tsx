@@ -58,7 +58,9 @@ export const AgentPanelOverview = () => {
   const myMonthLeads = useMemo(() => {
     return leads.filter((l) => {
       if (l.id_agente !== currentUser.id) return false;
-      const ref = getLeadMetaDate(l);
+      // Âncora: checkin → data_agendamento → data_entrada (para que leads
+      // "novo" recém-criados também apareçam nos cards do mês corrente).
+      const ref = getLeadMetaDate(l) ?? (l.data_entrada ? l.data_entrada.slice(0, 10) : null);
       if (!ref) return false;
       return ref >= monthFrom && ref <= monthTo;
     });
