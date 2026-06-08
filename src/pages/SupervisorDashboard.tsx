@@ -23,6 +23,8 @@ import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNa
 import { ReceptionistReportPanel } from "@/components/ReceptionistReportPanel";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 import { DashboardOverviewPanel } from "@/components/DashboardOverviewPanel";
+import { ManagerByStorePanel } from "@/components/ManagerByStorePanel";
+import { ManagerByAgentPanel } from "@/components/ManagerByAgentPanel";
 
 const SIDEBAR_TABS = [
   { id: "visao_geral", label: "Visão Geral", icon: LayoutDashboard },
@@ -173,17 +175,22 @@ export const SupervisorDashboard = () => {
       const dispensados = uNaLoja.filter((l) => l.etapa === "dispensado").length;
       const perdidos = uNaLoja.filter((l) => l.etapa === "perdido").length;
       const analiseSupervisor = uNaLoja.filter((l) => l.etapa === "analise_supervisor").length;
+      const naLojaConfirmado = uNaLoja.filter((l) => l.etapa === "confirmado").length;
+      const naLojaEmLoja = uNaLoja.filter((l) => l.etapa === "na_loja").length;
+      const reagendados = uNaLoja.filter((l) => l.etapa === "reagendado").length;
+      const recepcionista = profiles.find((p) => p.cargo === "recepcionista" && p.unidade_padrao === u.id);
       const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
       return {
-        ...u, total: uLeads.length, passaramNaLoja, totalAgendamentos,
+        ...u, total: uLeads.length, passaramNaLoja, carrosNaLoja: passaramNaLoja, totalAgendamentos,
         agendados: uLeads.filter((l) => ["agendado", "reagendado"].includes(l.etapa)).length,
         concluidos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, analiseSupervisor,
+        emAnalise: analiseSupervisor, naLojaConfirmado, naLojaEmLoja, reagendados, recepcionista,
         naoAgendados: uLeads.filter((l) => ["novo"].includes(l.etapa)).length,
         perdidosAntes: uLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length,
         txConversao, unitAgents: uAgents, leads: uLeads,
       };
     });
-  }, [filteredLeads, naLojaPeriodLeads, unidadesAtivas, agentUnitMap, agentes, agentUnidades]);
+  }, [filteredLeads, naLojaPeriodLeads, unidadesAtivas, agentUnitMap, agentes, agentUnidades, profiles]);
 
   const globalStats = useMemo(() => {
     const naLoja = naLojaPeriodLeads.length;
