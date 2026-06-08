@@ -91,9 +91,18 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
     // Load events scoped to the leads the user can see
     let eventosData: any[] = [];
+    // Limita a janela de eventos resgatados para reduzir custo/tráfego:
+    // somente os últimos 30 dias em diante (inclui agendamentos futuros).
+    const eventosCutoff = new Date();
+    eventosCutoff.setDate(eventosCutoff.getDate() - 30);
+    const eventosCutoffIso = eventosCutoff.toISOString();
     if (user?.cargo === "gestor" || user?.cargo === "supervisor") {
       eventosData = await fetchAllRows<any>(
-        supabase.from("eventos").select("*").order("data_prevista", { ascending: true })
+        supabase
+          .from("eventos")
+          .select("*")
+          .gte("data_prevista", eventosCutoffIso)
+          .order("data_prevista", { ascending: true })
       );
     } else {
       const visibleIds = leadsData.map((l) => l.id);
@@ -108,6 +117,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
               .from("eventos")
               .select("*")
               .in("id_lead", slice)
+              .gte("data_prevista", eventosCutoffIso)
               .order("data_prevista", { ascending: true })
           );
           all.push(...rows);
