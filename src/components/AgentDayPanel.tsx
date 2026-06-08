@@ -114,12 +114,12 @@ export const AgentDayPanel = () => {
     return { concl, perd, total: concl + perd, naLoja };
   }, [myLeads, dayStr]);
 
-  const pctMeta = metaDia > 0 ? Math.min(Math.round((resultadosDoDia.total / metaDia) * 100), 100) : 0;
+  const pctMeta = metaDia > 0 ? Math.min(Math.round((resultadosDoDia.naLoja / metaDia) * 100), 100) : 0;
   const metaBadge = (() => {
-    if (resultadosDoDia.total >= Math.ceil(metaDia)) {
+    if (resultadosDoDia.naLoja >= Math.ceil(metaDia)) {
       return { label: "Meta do dia batida!", icon: Trophy, cls: "bg-success/20 text-success border-success/40" };
     }
-    if (resultadosDoDia.total >= Math.floor(metaDia)) {
+    if (resultadosDoDia.naLoja >= Math.floor(metaDia)) {
       return { label: "No ritmo", icon: Flame, cls: "bg-warning/20 text-warning border-warning/40" };
     }
     return { label: "Acelerar", icon: AlertTriangle, cls: "bg-destructive/20 text-destructive border-destructive/40" };
@@ -256,12 +256,12 @@ export const AgentDayPanel = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Meta do dia</p>
-              <h2 className="text-2xl font-bold">Concluídos + Perdidos</h2>
+              <h2 className="text-2xl font-bold">Carros na loja</h2>
             </div>
           </div>
           <div className="text-right">
             <p className="text-5xl font-extrabold text-primary leading-none">
-              {resultadosDoDia.total}
+              {resultadosDoDia.naLoja}
               <span className="text-2xl text-muted-foreground font-bold"> / {metaDia.toFixed(1)}</span>
             </p>
             <Badge variant="outline" className={`gap-1.5 mt-2 ${metaBadge.cls}`}>
