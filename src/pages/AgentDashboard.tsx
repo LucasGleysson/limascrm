@@ -18,6 +18,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { AgentSchedulePanel } from "@/components/AgentSchedulePanel";
 import { AgentReceptionPanel } from "@/components/AgentReceptionPanel";
 import { AgentPanelOverview } from "@/components/AgentPanelOverview";
+import { AgentDayPanel } from "@/components/AgentDayPanel";
 import { StatsCard } from "@/components/StatsCard";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getStatusBadgeClass, formatDateBR, isCarroDoAgente, foiNaLoja, getToday } from "@/lib/leadUtils";
@@ -33,11 +34,11 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--suc
 
 const SIDEBAR_TABS = [
   { id: "meu_painel", label: "Meu Painel", icon: Trophy },
+  { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
   { id: "leads", label: "Leads", icon: Users },
   { id: "agendamentos", label: "Agendamentos", icon: CalendarCheck },
   { id: "recepcao", label: "Recepção", icon: LogIn },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
-  { id: "meu_dia", label: "Meu Dia", icon: BarChart3 },
 ];
 
 export const AgentDashboard = () => {
@@ -453,141 +454,7 @@ export const AgentDashboard = () => {
         {activeTab === "recepcao" && <AgentReceptionPanel />}
         {activeTab === "eventos" && <EventoPanel />}
 
-        {activeTab === "meu_dia" && (
-          <div className="p-6 space-y-6">
-            <div>
-              <h1 className="text-2xl font-bold">Meu Dia</h1>
-              <p className="text-muted-foreground text-sm">Resumo do seu desempenho hoje</p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Novos Leads Hoje" value={dailyStats.novos} icon={Users} variant="info" />
-              <StatsCard title="Agendados Hoje" value={dailyStats.agendados} icon={CalendarCheck} variant="primary" />
-              <StatsCard title="Foram na Loja" value={dailyStats.carros} icon={Car} variant="warning" />
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <StatsCard title="Dispensados" value={dailyStats.perdidos} icon={XCircle} variant="destructive" />
-              <StatsCard title="FUPs Feitos Hoje" value={dailyStats.fupsDoneToday} icon={CalendarDays} variant="primary" />
-              <StatsCard title="Eventos Pendentes" value={dailyStats.eventosPendentes} icon={CalendarDays} variant="warning" />
-            </div>
-
-            {/* Origin breakdown pie chart */}
-            {origemHoje.length > 0 && (
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                  <PieChartIcon className="h-5 w-5 text-muted-foreground" /> Novos Leads por Origem
-                </h2>
-                <p className="text-xs text-muted-foreground mb-4">Distribuição dos {dailyStats.novos} leads de hoje</p>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-48 h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={origemHoje} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                          {origemHoje.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {origemHoje.map((o, i) => (
-                      <div key={o.name} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                        <span className="text-sm font-medium">{o.name}</span>
-                        <span className="text-sm text-muted-foreground">{o.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Safra de Hoje — Cohort metrics */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-lg font-semibold mb-1">🌱 Aproveitamento da Safra de Hoje</h2>
-              <p className="text-xs text-muted-foreground mb-4">Métricas baseadas nos leads que entraram para você hoje</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-lg bg-muted/50 p-4 text-center space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Safra Produtiva</p>
-                  <p className="text-3xl font-bold">{safraHoje.produtivos}</p>
-                  <p className="text-xs text-muted-foreground">{safraHoje.total} novos − {safraHoje.desqualificados} desq.</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Conversão em Agendamento</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">{safraHoje.txAgendamento}%</span>
-                    <span className="text-sm text-muted-foreground">{safraHoje.agendados}/{safraHoje.produtivos}</span>
-                  </div>
-                  <Progress value={safraHoje.txAgendamento} className="h-2" />
-                </div>
-                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Conversão em Visita</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-warning">{safraHoje.txVisita}%</span>
-                    <span className="text-sm text-muted-foreground">{safraHoje.naLojaOuSuperior}/{safraHoje.produtivos}</span>
-                  </div>
-                  <Progress value={safraHoje.txVisita} className="h-2" />
-                </div>
-              </div>
-            </div>
-
-            {/* Conquistas */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                <h2 className="text-lg font-semibold">Conquistas</h2>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">FUPs Concluídos Hoje</span>
-                    <Badge variant={dailyStats.fupsDoneToday > 0 ? "default" : "secondary"} className="text-xs">
-                      {dailyStats.fupsDoneToday}
-                    </Badge>
-                  </div>
-                  {dailyStats.fupsDoneToday >= 5 && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Trophy className="h-4 w-4 text-warning" />
-                      <span className="text-xs text-warning font-medium">🔥 Excelente! +5 FUPs hoje!</span>
-                    </div>
-                  )}
-                </div>
-                {storeMetaProgress && (
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Carros na Loja</span>
-                      <span className="text-sm font-bold text-warning">{storeMetaProgress.carros}</span>
-                    </div>
-                    <Progress value={storeMetaProgress.total > 0 ? (storeMetaProgress.carros / storeMetaProgress.total) * 100 : 0} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">{storeMetaProgress.total > 0 ? Math.round((storeMetaProgress.carros / storeMetaProgress.total) * 100) : 0}% dos leads foram à loja</p>
-                  </div>
-                )}
-                {safraHoje.txAgendamento >= 70 && (
-                  <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/20 p-3">
-                    <Award className="h-5 w-5 text-success" />
-                    <div>
-                      <p className="text-sm font-semibold text-success">Meta Batida! 🏆</p>
-                      <p className="text-xs text-success/80">Safra com +70% de agendamento</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Minha Carteira */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="text-lg font-semibold mb-4">Minha Carteira</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                  {ETAPAS_FUNIL.slice(0, 6).map((et) => {
-                    const count = allMyLeads.filter((l) => l.etapa === et.id).length;
-                    return (
-                      <div key={et.id} className="rounded-lg bg-muted/50 p-3 text-center">
-                        <p className="text-2xl font-bold">{count}</p>
-                        <p className="text-xs text-muted-foreground">{et.label}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === "meu_dia" && <AgentDayPanel />}
 
         {activeTab === "meu_painel" && <AgentPanelOverview />}
 
