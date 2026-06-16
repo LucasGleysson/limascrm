@@ -1,72 +1,52 @@
+## Mudanças no processo de Follow-up
 
-# Meu Painel — Nova primeira aba do Agente
+### 1. Cadência sempre a partir da última conclusão
 
-Substitui a aba **"Meu Desempenho"** por uma nova aba **"Meu Painel"** focada em mostrar ao agente, de forma gamificada, sua situação do dia, semana e mês — com destaque para a META.
+Hoje o `agendado`/`reagendado` ancora todos os FUPs em `data_agendamento`. Vou mudar para que, depois do 1º FUP, os próximos sejam contados a partir da data da última conclusão (mesmo padrão que `novo` já usa).
 
-## Mudanças na navegação
+**Cadência final (gaps em dias):**
 
-- Renomeia a tab `minha_loja` ("Meu Desempenho") para `meu_painel` ("Meu Painel"), ícone `Trophy`.
-- Move `meu_painel` para a **primeira posição** do sidebar (substituindo `leads` como entrada inicial).
-- `activeTab` inicial passa a ser `"meu_painel"` em `AgentDashboard.tsx`.
-- O conteúdo antigo de "Meu Desempenho" (gráficos detalhados, pie, etc.) é removido — sai do escopo desta aba.
+| Categoria | FUP1 ancora em | Gaps seguintes (a partir da conclusão anterior) |
+|---|---|---|
+| novo | `data_entrada` + 1 | +2, +3, +4 |
+| agendado | `data_agendamento` + 0 | +1, +3 |
+| reagendado | `data_agendamento` + 0 | +1, +3 |
+| dispensado | `dispensado_em` + 1 | +1, +1, +1 |
 
-## Estrutura da nova aba (top → bottom)
+Exemplo prático (novo entrando segunda 15/06):
+- FUP1: terça 16/06 (+1 de 15/06)
+- conclui terça → FUP2: quinta 18/06 (+2)
+- conclui quinta → FUP3: domingo 21/06 (+3)
+- conclui domingo → FUP4: quinta 25/06 (+4)
+- sem retorno → vira `trabalhado`
 
-### 1. Cabeçalho de boas-vindas
-- "Olá, {nome do agente} 👋" + data atual.
-- Subtítulo curto motivacional ("Vamos bater a meta de hoje!").
+Exemplo prático (dispensado em 15/06):
+- FUP1: 16/06 (+1) → FUP2: 17/06 → FUP3: 18/06 → FUP4: 19/06 → `analise_supervisor`.
 
-### 2. Card META do mês (destaque máximo)
-- Card grande, full-width, com gradiente do primary.
-- Mostra: **Progresso da Meta = Concluídos + Perdidos** vs **75**.
-- Barra de progresso grande (`Progress`) com % alcançado.
-- Texto: "X de 75 carros" + "faltam Y".
-- Badge dinâmica de status: 🏆 "Meta batida!" (≥75) / 🔥 "No ritmo" (em dia c/ dias úteis) / ⚠️ "Acelerar" (abaixo).
-- Mostra média diária realizada e a média necessária para fechar 75 (em dias úteis restantes).
-- Soma somente os leads onde o agente é responsável (`l.id_agente === currentUser.id`) no mês corrente, usando `getLeadMetaDate` para ancorar o mês.
+### 2. Separar destino final de `agendado` vs `reagendado`
 
-### 3. Calendário da semana atual
-- Faixa horizontal com 7 dias (Seg→Dom da semana atual, destacando hoje).
-- Cada dia mostra: data + nº de agendamentos (`agendado` + `reagendado` + `confirmado` com `data_agendamento` naquele dia).
-- Pequena barrinha colorida indicando densidade (vazio / leve / cheio).
-- Click no dia abre a aba "Agendamentos" filtrada (fase 2; nesta entrega só destaque visual).
+| Categoria | Destino ao esgotar FUPs |
+|---|---|
+| agendado | `desqualificado_agendado` (cliente nunca foi à loja) |
+| reagendado | `analise_supervisor` (cliente já visitou; supervisor decide entre dispensado/perdido) |
 
-### 4. Grid de status (mês atual)
-Cards pequenos coloridos com contagens do mês para os leads do agente, na ordem pedida:
-- Novo Lead • Agendados • Confirmados • Na Loja • Reagendados • Dispensados • Em Análise • Concluídos • Perdidos
-- Cada card usa cor semântica via `getStatusBadgeClass` e ícone.
-- Cards menores que o card META, em grid responsivo (3-5 colunas).
+Implementação: separar `reagendado` em sua própria categoria no `generate-followups` (hoje cai junto com `agendado`).
 
-### 5. Desempenho por Loja
-- Se o agente atende **N lojas** (via `agente_unidades`), renderiza **N cards** lado a lado.
-- Cada card de loja mostra:
-  - Nome da unidade.
-  - Mini-meta: progresso (Concluídos + Perdidos do agente naquela loja) vs **75**.
-  - Barra de progresso.
-  - Mini contagens: Agendados / Na Loja / Concluídos / Perdidos (do agente, naquela loja, no mês).
-- Se o agente tem só 1 loja, mostra 1 card; se 3 lojas, 3 cards.
+### 3. Proteger lead quando agente atualiza `data_agendamento` sem mudar status
 
-## Lógica de cálculo
+Hoje o trigger `leads_reset_fup_on_reagendamento` só reseta FUPs quando `etapa IN ('agendado','reagendado')`. Resultado: se o agente está no último FUP de um lead `novo` ou `dispensado`, preenche nova `data_agendamento` mas esquece de mudar o status, o cron fecha o ciclo e transforma em `trabalhado`/`analise_supervisor`, perdendo o resgate.
 
-- **Mês corrente:** `mesAtual.from`/`to` (já existe).
-- **Leads do agente no mês:** filtrar `allMyLeads` por `l.id_agente === currentUser.id` e `getLeadMetaDate(l)` dentro do mês.
-- **Meta (75):** constante por enquanto (`META_AGENTE = 75`). Futuramente pode vir de `metas_agentes`.
-- **Progresso meta:** `concluidos + perdidos` (regra já consolidada via `isCarroParaMeta`).
-- **Dias úteis:** reutilizar contagem já presente em `desempenho.bizDays`.
-- **Por loja:** filtrar leads do agente onde `l.id_unidade === unidade.id`.
-- **Semana atual:** `startOfWeek`/`endOfWeek` do `date-fns` com `weekStartsOn: 1`.
+Correção no trigger:
+- Disparar sempre que `data_agendamento` mudar para uma data futura, independente da etapa atual.
+- Promover etapa automaticamente:
+  - `novo` → `agendado` (primeiro agendamento).
+  - `dispensado` → `reagendado` (cliente já passou pela loja anteriormente).
+  - `agendado`/`reagendado` → mantém etapa.
+- Apagar FUPs pendentes e zerar `fup_concluido*` para iniciar o novo ciclo.
 
-## Arquivos afetados
+Assim, qualquer atualização da data de agendamento "salva" o lead, mesmo que o agente esqueça de alterar o status manualmente.
 
-- `src/pages/AgentDashboard.tsx`
-  - Atualiza `SIDEBAR_TABS` (renomeia, reordena, novo ícone).
-  - Muda `useState("leads")` → `useState("meu_painel")`.
-  - Remove bloco JSX da antiga `minha_loja` e adiciona novo bloco `meu_painel` montando o componente novo.
-- `src/components/AgentPanelOverview.tsx` (novo)
-  - Componente da nova aba, com todas as seções acima. Recebe leads/unidades/agentUnidades/currentUser via props ou via `useLeads`/`useRole`.
-- (Opcional) pequeno subcomponente `WeekStrip` interno ao mesmo arquivo.
+### Arquivos afetados
 
-## Fora de escopo
-- Editar a meta de 75 por agente (mantida como constante; pode virar configurável depois).
-- Click no dia da semana abrir a aba de agendamentos filtrada.
-- Animações elaboradas (mantemos gamificação leve: ícones, emojis, cores, badge de status, barra de progresso).
+- `supabase/functions/generate-followups/index.ts`: nova categoria `reagendado`, destino final próprio, cadência do `dispensado` virando [1,1,1,1], ancoragem de `agendado`/`reagendado` na última conclusão a partir do FUP2.
+- Nova migration: atualizar função `leads_reset_fup_on_reagendamento` para também promover etapa automaticamente quando `data_agendamento` muda em leads `novo`/`dispensado`.

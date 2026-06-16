@@ -25,18 +25,21 @@ Deno.serve(async (req) => {
     const GAPS: Record<string, number[]> = {
       novo: [1, 2, 3, 4],
       agendado: [0, 1, 3],
-      dispensado: [1, 2, 3, 4],
+      reagendado: [0, 1, 3],
+      dispensado: [1, 1, 1, 1],
     };
-    const MAX: Record<string, number> = { novo: 4, agendado: 3, dispensado: 4 };
+    const MAX: Record<string, number> = { novo: 4, agendado: 3, reagendado: 3, dispensado: 4 };
     const FINAL: Record<string, string> = {
       novo: "trabalhado",
       agendado: "desqualificado_agendado",
+      reagendado: "analise_supervisor",
       dispensado: "analise_supervisor",
     };
 
-    const categoryOf = (etapa: string): "novo" | "agendado" | "dispensado" | null => {
+    const categoryOf = (etapa: string): "novo" | "agendado" | "reagendado" | "dispensado" | null => {
       if (etapa === "novo") return "novo";
-      if (etapa === "agendado" || etapa === "reagendado") return "agendado";
+      if (etapa === "agendado") return "agendado";
+      if (etapa === "reagendado") return "reagendado";
       if (etapa === "dispensado") return "dispensado";
       return null;
     };
@@ -72,10 +75,10 @@ Deno.serve(async (req) => {
       const cat = categoryOf(lead.etapa);
       if (!cat) return false;
       if (cat === "novo") return lead.data_entrada < today;
-      if (cat === "agendado") {
+      if (cat === "agendado" || cat === "reagendado") {
         if (!lead.data_agendamento) return false;
         // reagendado: cliente já passou pela loja anteriormente; checkin antigo não bloqueia
-        if (lead.etapa === "reagendado") return true;
+        if (cat === "reagendado") return true;
         return !lead.checkin;
       }
       if (cat === "dispensado") return true;
@@ -150,18 +153,15 @@ Deno.serve(async (req) => {
         let anchorDate: string;
         if (cat === "novo") {
           anchorDate = lead.data_entrada;
-        } else if (cat === "agendado") {
+        } else if (cat === "agendado" || cat === "reagendado") {
           anchorDate = lead.data_agendamento || lead.data_entrada;
         } else {
           // dispensado: use dispensado_em (date part), fallback to data_entrada
           anchorDate = (lead.dispensado_em ? lead.dispensado_em.slice(0, 10) : lead.data_entrada);
         }
         eventDateStr = addDays(anchorDate, gap);
-      } else if (cat === "agendado") {
-        // Para agendado, ancorar sempre na data_agendamento atual (suporta reagendamentos)
-        const baseDate = lead.data_agendamento || lead.data_entrada;
-        eventDateStr = addDays(baseDate, gap);
       } else {
+        // FUPs >= 2 (todas as categorias): ancorar na última conclusão
         const lastConcluded = leadEventos
           .filter((e) => e.concluido && e.data_conclusao)
           .sort((a, b) => (b.data_conclusao || "").localeCompare(a.data_conclusao || ""))[0];
@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       let descricao = "";
       if (cat === "novo") {
         descricao = `Follow-up ${nextNum}/${maxForCat}: Ligar para agendar`;
-      } else if (cat === "agendado") {
+      } else if (cat === "agendado" || cat === "reagendado") {
         descricao = nextNum === 1
           ? `Follow-up ${nextNum}/${maxForCat}: Lembrar cliente do agendamento`
           : `Follow-up ${nextNum}/${maxForCat}: Cliente não compareceu - resgatar`;
