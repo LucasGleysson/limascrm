@@ -27,11 +27,20 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const FichasPanel = () => {
-  const { leads, unidades, unidadesAtivas, profiles, deleteLead } = useLeads();
+  const { leads, unidades, unidadesAtivas, profiles, agentUnidades, deleteLead } = useLeads();
   const { currentUser } = useRole();
   const canCreate = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
   const [newOpen, setNewOpen] = useState(false);
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
+
+  const agentesPorUnidade = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    agentUnidades.forEach((au) => {
+      if (!map[au.id_unidade]) map[au.id_unidade] = new Set();
+      map[au.id_unidade].add(au.id_agente);
+    });
+    return map;
+  }, [agentUnidades]);
 
   const [search, setSearch] = useState("");
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
@@ -52,7 +61,14 @@ export const FichasPanel = () => {
 
   const filtered = useMemo(() => {
     let result = leads;
-    if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
+    if (unidadeFilter !== "todas") {
+      const agentesDaUnidade = agentesPorUnidade[unidadeFilter] ?? new Set<string>();
+      result = result.filter(
+        (l) =>
+          l.id_unidade === unidadeFilter ||
+          (l.id_unidade == null && agentesDaUnidade.has(l.id_agente)),
+      );
+    }
     if (agenteFilter !== "todos") result = result.filter((l) => l.id_agente === agenteFilter);
     if (etapaFilter !== "todos") result = result.filter((l) => l.etapa === etapaFilter);
     if (search) {
@@ -88,7 +104,7 @@ export const FichasPanel = () => {
     }
 
     return result;
-  }, [leads, unidadeFilter, agenteFilter, etapaFilter, search, period, entradaStart, entradaEnd, agendStart, agendEnd]);
+  }, [leads, unidadeFilter, agenteFilter, etapaFilter, search, period, entradaStart, entradaEnd, agendStart, agendEnd, agentesPorUnidade]);
 
   const pagination = usePagination(filtered, { pageSize: 20 });
 
