@@ -1,52 +1,51 @@
-## Mudanças no processo de Follow-up
+## Problema
 
-### 1. Cadência sempre a partir da última conclusão
+No painel **Fichas**, ao filtrar por cidade (ex.: Araguari), apenas leads com `id_unidade` preenchido aparecem. Leads em etapa `novo` e `desqualificado_novo` ainda não possuem unidade (a regra só exige unidade a partir de `agendado`), então não aparecem no filtro — mesmo quando foram cadastrados por agentes vinculados àquela cidade.
 
-Hoje o `agendado`/`reagendado` ancora todos os FUPs em `data_agendamento`. Vou mudar para que, depois do 1º FUP, os próximos sejam contados a partir da data da última conclusão (mesmo padrão que `novo` já usa).
+Exemplo real (16/06): a agente Taina (vinculada apenas a Araguari) criou 12 leads hoje. Filtrando por Araguari, apenas 3 (já agendados) aparecem; os outros 9 (`novo`/`desq_novo`) parecem "sumidos".
 
-**Cadência final (gaps em dias):**
+## Solução
 
-| Categoria | FUP1 ancora em | Gaps seguintes (a partir da conclusão anterior) |
-|---|---|---|
-| novo | `data_entrada` + 1 | +2, +3, +4 |
-| agendado | `data_agendamento` + 0 | +1, +3 |
-| reagendado | `data_agendamento` + 0 | +1, +3 |
-| dispensado | `dispensado_em` + 1 | +1, +1, +1 |
+Ampliar o filtro de cidade no Fichas para incluir leads **sem unidade** cujo agente está vinculado àquela cidade via `agente_unidades`.
 
-Exemplo prático (novo entrando segunda 15/06):
-- FUP1: terça 16/06 (+1 de 15/06)
-- conclui terça → FUP2: quinta 18/06 (+2)
-- conclui quinta → FUP3: domingo 21/06 (+3)
-- conclui domingo → FUP4: quinta 25/06 (+4)
-- sem retorno → vira `trabalhado`
+### Regra exata
 
-Exemplo prático (dispensado em 15/06):
-- FUP1: 16/06 (+1) → FUP2: 17/06 → FUP3: 18/06 → FUP4: 19/06 → `analise_supervisor`.
+Um lead aparece no filtro `cidade = X` quando:
+- `lead.id_unidade = X` **OU**
+- `lead.id_unidade IS NULL` **E** o `lead.id_agente` está vinculado a `X` em `agente_unidades`
 
-### 2. Separar destino final de `agendado` vs `reagendado`
+Isso resolve a percepção de "leads perdidos" sem alterar o schema nem a obrigatoriedade de unidade nas etapas avançadas.
 
-| Categoria | Destino ao esgotar FUPs |
-|---|---|
-| agendado | `desqualificado_agendado` (cliente nunca foi à loja) |
-| reagendado | `analise_supervisor` (cliente já visitou; supervisor decide entre dispensado/perdido) |
+## Implementação
 
-Implementação: separar `reagendado` em sua própria categoria no `generate-followups` (hoje cai junto com `agendado`).
+Apenas frontend — uma única alteração em `src/components/FichasPanel.tsx`:
 
-### 3. Proteger lead quando agente atualiza `data_agendamento` sem mudar status
+1. Construir um mapa `agentesPorUnidade: Record<unidadeId, Set<agenteId>>` a partir de `agentUnidades` (já disponível em `useLeads()`).
+2. No `useMemo` `filtered`, substituir:
+   ```ts
+   if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
+   ```
+   por:
+   ```ts
+   if (unidadeFilter !== "todas") {
+     const agentesDaUnidade = agentesPorUnidade[unidadeFilter] ?? new Set();
+     result = result.filter((l) =>
+       l.id_unidade === unidadeFilter ||
+       (l.id_unidade == null && agentesDaUnidade.has(l.id_agente))
+     );
+   }
+   ```
+3. Adicionar `agentUnidades` ao `useLeads()` destructuring no topo do componente.
 
-Hoje o trigger `leads_reset_fup_on_reagendamento` só reseta FUPs quando `etapa IN ('agendado','reagendado')`. Resultado: se o agente está no último FUP de um lead `novo` ou `dispensado`, preenche nova `data_agendamento` mas esquece de mudar o status, o cron fecha o ciclo e transforma em `trabalhado`/`analise_supervisor`, perdendo o resgate.
+### Fora do escopo
 
-Correção no trigger:
-- Disparar sempre que `data_agendamento` mudar para uma data futura, independente da etapa atual.
-- Promover etapa automaticamente:
-  - `novo` → `agendado` (primeiro agendamento).
-  - `dispensado` → `reagendado` (cliente já passou pela loja anteriormente).
-  - `agendado`/`reagendado` → mantém etapa.
-- Apagar FUPs pendentes e zerar `fup_concluido*` para iniciar o novo ciclo.
+- **Não** mexer no Relatório Diário (já está correto, conta tudo que o agente criou).
+- **Não** alterar schema, triggers, ou tornar `id_unidade` obrigatório em `novo`.
+- **Não** mexer em outros painéis (Manager, Supervisor, etc.) — se aparecer a mesma divergência neles, tratar em um pedido separado.
 
-Assim, qualquer atualização da data de agendamento "salva" o lead, mesmo que o agente esqueça de alterar o status manualmente.
+## Validação
 
-### Arquivos afetados
-
-- `supabase/functions/generate-followups/index.ts`: nova categoria `reagendado`, destino final próprio, cadência do `dispensado` virando [1,1,1,1], ancoragem de `agendado`/`reagendado` na última conclusão a partir do FUP2.
-- Nova migration: atualizar função `leads_reset_fup_on_reagendamento` para também promover etapa automaticamente quando `data_agendamento` muda em leads `novo`/`dispensado`.
+Após a mudança, no perfil gestor:
+- Filtrar Fichas por **Araguari** + **data de entrada hoje** → deve mostrar 12 leads (3 agendados + 9 novos/desq_novo da Taina).
+- Filtrar por **outra cidade** sem leads `novo` daquela agente → contagem inalterada.
+- Sem filtro de cidade → contagem total inalterada.
