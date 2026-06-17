@@ -27,13 +27,13 @@ interface Props {
 const ALL_STATUSES = ETAPAS_FUNIL.map((e) => ({ id: e.id, label: e.label }));
 
 const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string; label: string }[] }> = {
-  agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }] },
-  reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }] },
-  desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }] },
-  desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+  agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
+  reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
   trabalhado: { label: "Trabalhado", targets: [{ id: "novo", label: "Novo Lead" }] },
-  dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
-  perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }] },
+  dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
+  perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
 };
 
 export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
