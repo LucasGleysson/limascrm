@@ -1,51 +1,82 @@
 ## Problema
 
-No painel **Fichas**, ao filtrar por cidade (ex.: Araguari), apenas leads com `id_unidade` preenchido aparecem. Leads em etapa `novo` e `desqualificado_novo` ainda não possuem unidade (a regra só exige unidade a partir de `agendado`), então não aparecem no filtro — mesmo quando foram cadastrados por agentes vinculados àquela cidade.
+O lead "juliano" (final 8989, agente Maria Eduarda) foi resgatado de `desqualificado_agendado` → `novo` → `agendado` (Pacaembu, 17/06). Poucos minutos depois, o status voltou sozinho para `desqualificado_agendado`. As anotações registram isso acontecendo duas vezes seguidas (09:44 e 10:07).
 
-Exemplo real (16/06): a agente Taina (vinculada apenas a Araguari) criou 12 leads hoje. Filtrando por Araguari, apenas 3 (já agendados) aparecem; os outros 9 (`novo`/`desq_novo`) parecem "sumidos".
+## Causa raiz
 
-## Solução
+A função `generate-followups` (cron horário) finaliza o ciclo de um lead quando o número de eventos `followup` na tabela `eventos` é maior ou igual ao máximo da categoria — para `agendado`, o máximo é **3**. Quando atinge, ela força `etapa` para `FINAL[agendado] = 'desqualificado_agendado'`.
 
-Ampliar o filtro de cidade no Fichas para incluir leads **sem unidade** cujo agente está vinculado àquela cidade via `agente_unidades`.
+O trigger `leads_reset_fup_on_reagendamento` resetou corretamente `fup_concluido=false`, mas **só apaga os followups pendentes** (`concluido=false`). Os 3 followups antigos do ciclo `novo` ficaram salvos como concluídos:
 
-### Regra exata
+```
+numero=1  concluido=true  (20/05)
+numero=2  concluido=true  (22/05)
+numero=3  concluido=true  (25/05)
+```
 
-Um lead aparece no filtro `cidade = X` quando:
-- `lead.id_unidade = X` **OU**
-- `lead.id_unidade IS NULL` **E** o `lead.id_agente` está vinculado a `X` em `agente_unidades`
+Resultado: `maxExisting = 3 ≥ MAX[agendado] = 3` → a cron reverte a etapa imediatamente. Sempre que Maria muda para `agendado`, a próxima execução do cron derruba de volta.
 
-Isso resolve a percepção de "leads perdidos" sem alterar o schema nem a obrigatoriedade de unidade nas etapas avançadas.
+O mesmo bug afeta qualquer lead resgatado depois de ter completado FUPs em outra categoria (ex.: `novo` → `agendado`, `dispensado` → `reagendado`).
 
-## Implementação
+## Correção
 
-Apenas frontend — uma única alteração em `src/components/FichasPanel.tsx`:
+Alterar o trigger `public.leads_reset_fup_on_reagendamento` para, quando o ciclo é reiniciado (data_agendamento muda e etapa final é `agendado`/`reagendado`), apagar **todos** os followups antigos daquele lead (não só os pendentes). Assim a contagem volta a zero e o novo ciclo da categoria roda do início.
 
-1. Construir um mapa `agentesPorUnidade: Record<unidadeId, Set<agenteId>>` a partir de `agentUnidades` (já disponível em `useLeads()`).
-2. No `useMemo` `filtered`, substituir:
-   ```ts
-   if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
-   ```
-   por:
-   ```ts
-   if (unidadeFilter !== "todas") {
-     const agentesDaUnidade = agentesPorUnidade[unidadeFilter] ?? new Set();
-     result = result.filter((l) =>
-       l.id_unidade === unidadeFilter ||
-       (l.id_unidade == null && agentesDaUnidade.has(l.id_agente))
-     );
-   }
-   ```
-3. Adicionar `agentUnidades` ao `useLeads()` destructuring no topo do componente.
+A trilha de auditoria continua preservada em `leads.notas` (cada FUP concluído já é gravado lá como texto).
 
-### Fora do escopo
+### Detalhes técnicos
 
-- **Não** mexer no Relatório Diário (já está correto, conta tudo que o agente criou).
-- **Não** alterar schema, triggers, ou tornar `id_unidade` obrigatório em `novo`.
-- **Não** mexer em outros painéis (Manager, Supervisor, etc.) — se aparecer a mesma divergência neles, tratar em um pedido separado.
+Migração única alterando a função:
 
-## Validação
+```sql
+CREATE OR REPLACE FUNCTION public.leads_reset_fup_on_reagendamento()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  IF TG_OP = 'UPDATE'
+     AND NEW.data_agendamento IS DISTINCT FROM OLD.data_agendamento
+     AND NEW.data_agendamento IS NOT NULL
+     AND NEW.data_agendamento >= CURRENT_DATE
+  THEN
+    IF NEW.etapa = 'novo' THEN
+      NEW.etapa := 'agendado';
+    ELSIF NEW.etapa = 'dispensado' THEN
+      NEW.etapa := 'reagendado';
+    END IF;
 
-Após a mudança, no perfil gestor:
-- Filtrar Fichas por **Araguari** + **data de entrada hoje** → deve mostrar 12 leads (3 agendados + 9 novos/desq_novo da Taina).
-- Filtrar por **outra cidade** sem leads `novo` daquela agente → contagem inalterada.
-- Sem filtro de cidade → contagem total inalterada.
+    IF NEW.etapa IN ('agendado', 'reagendado') THEN
+      -- Apaga TODO o histórico de followups (concluídos e pendentes)
+      -- para que o novo ciclo da categoria comece do zero. A trilha de
+      -- auditoria permanece em leads.notas.
+      DELETE FROM public.eventos
+       WHERE id_lead = NEW.id
+         AND tipo = 'followup';
+
+      NEW.fup_concluido := false;
+      NEW.fup_concluido_em := NULL;
+      NEW.fup_concluido_numero := NULL;
+      NEW.fup_motivo_conclusao := NULL;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
+
+### Correção pontual do lead afetado
+
+Após aplicar a migração, executar UPDATE no lead `81cbee27-…` para voltá-lo a `agendado` (Maria Eduarda já registrou o agendamento) e apagar os 3 eventos antigos, para destravar o caso reportado imediatamente.
+
+### Escopo
+
+- Apenas a função de trigger e o conserto manual do lead reportado.
+- Sem mudanças no frontend.
+- Sem mudanças em `generate-followups`, painéis ou RLS.
+
+### Validação
+
+1. Lead `juliano` permanece em `agendado` após a próxima execução da cron.
+2. Criar/simular outro resgate (lead com FUPs concluídos → novo agendamento) e confirmar que não reverte.
