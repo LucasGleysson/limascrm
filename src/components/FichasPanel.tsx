@@ -83,7 +83,7 @@ export const FichasPanel = () => {
 
   // Carrega só o necessário para o período em vista. Period "total" → from=null → não busca
   // (volta a usar context, que já cobre a janela móvel de 90 dias).
-  const { rows: scopedLeads, loading: loadingScoped } = useScopedLeads({
+  const { rows: scopedLeads } = useScopedLeads({
     from: effectiveRange.from,
     to: effectiveRange.to,
     anchor: "any",
