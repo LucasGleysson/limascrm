@@ -374,6 +374,48 @@ export const AgentReceptionPanel = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm check-in modal */}
+      <Dialog open={!!confirmCheckinLead} onOpenChange={(v) => { if (!v) setConfirmCheckinLead(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogIn className="h-5 w-5 text-primary" /> Confirmar check-in
+            </DialogTitle>
+          </DialogHeader>
+          {confirmCheckinLead && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">Você está prestes a registrar o check-in de:</p>
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+                <p className="font-semibold text-base">{confirmCheckinLead.nome}</p>
+                <p className="text-muted-foreground">{formatPhone(confirmCheckinLead.telefone)}</p>
+                <p className="text-muted-foreground">
+                  Agendamento: <span className="font-medium text-foreground">{confirmCheckinLead.data_agendamento ? formatDateBR(confirmCheckinLead.data_agendamento) : "—"}</span>
+                </p>
+              </div>
+              {confirmCheckinLead.data_agendamento && confirmCheckinLead.data_agendamento !== today && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <p className="text-xs">
+                    Atenção: este agendamento {confirmCheckinLead.data_agendamento < today ? "está atrasado" : "é para data futura"} ({formatDateBR(confirmCheckinLead.data_agendamento)}). Confirme se é mesmo este cliente.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmCheckinLead(null)}>Cancelar</Button>
+            <Button
+              onClick={() => confirmCheckinLead && handleCheckin(confirmCheckinLead)}
+              disabled={!confirmCheckinLead || loadingAction === `checkin-${confirmCheckinLead.id}`}
+              className="gap-2"
+            >
+              <LogIn className="h-4 w-4" />
+              {confirmCheckinLead && loadingAction === `checkin-${confirmCheckinLead.id}` ? "Aguarde..." : "Confirmar check-in"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
