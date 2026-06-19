@@ -37,6 +37,8 @@ export const AgentReceptionPanel = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
+  const [confirmCheckinLead, setConfirmCheckinLead] = useState<Lead | null>(null);
+
   const today = getToday();
 
   const myLeads = useMemo(() => leads.filter((l) => l.id_agente === currentUser?.id), [leads, currentUser?.id]);
@@ -95,7 +97,10 @@ export const AgentReceptionPanel = () => {
         notas,
         visitas_loja: (lead.visitas_loja ?? 0) + 1,
       } as any);
-    } finally { setLoadingAction(null); }
+    } finally {
+      setLoadingAction(null);
+      setConfirmCheckinLead(null);
+    }
   };
 
   const handleEmServico = async (lead: Lead) => {
@@ -176,7 +181,7 @@ export const AgentReceptionPanel = () => {
   const getActions = (lead: Lead, group: string) => {
     if (group === "hoje" || group === "atrasado") {
       return (
-        <Button onClick={(e) => { e.stopPropagation(); handleCheckin(lead); }} className="gap-1" size="sm" disabled={loadingAction === `checkin-${lead.id}`}>
+        <Button onClick={(e) => { e.stopPropagation(); setConfirmCheckinLead(lead); }} className="gap-1" size="sm" disabled={loadingAction === `checkin-${lead.id}`}>
           <LogIn className="h-3.5 w-3.5" /> {loadingAction === `checkin-${lead.id}` ? "..." : "Check-in"}
         </Button>
       );
