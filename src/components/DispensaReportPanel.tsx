@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
+import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
+import { getLeadWindowCutoff } from "@/lib/leadUtils";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +19,13 @@ import { appendNota } from "@/lib/notasUtils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 export const DispensaReportPanel = () => {
-  const { leads, profiles, unidades, updateLead } = useLeads();
+  const { profiles, unidades, updateLead } = useLeads();
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
   const [agenteFilter, setAgenteFilter] = useState("todos");
   const [etapaFilter, setEtapaFilter] = useState("todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [period, setPeriod] = useState<PeriodKey>("mes");
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [decisionOpen, setDecisionOpen] = useState(false);
@@ -29,12 +33,23 @@ export const DispensaReportPanel = () => {
   const [decisionType, setDecisionType] = useState<"perdido" | "desqualificado_agendado">("perdido");
   const [decisionLoading, setDecisionLoading] = useState(false);
 
+  // Fetch escopado ao período (default: mês). "Total" cai na janela móvel de 90 dias.
+  const range = useMemo(() => {
+    const r = getDateRangeForPeriod(period);
+    return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
+  }, [period]);
+  const { rows: scopedLeads } = useScopedLeads({
+    from: range.from,
+    to: range.to,
+    anchor: "any",
+  });
+
   // All leads that should appear in Análise: dispensado, perdido, desq_agendado, desq_novo, analise_supervisor
   const allAnaliseLeads = useMemo(
-    () => leads.filter((lead) =>
+    () => scopedLeads.filter((lead) =>
       ["dispensado", "perdido", "desqualificado_agendado", "desqualificado_novo", "analise_supervisor"].includes(lead.etapa)
     ),
-    [leads],
+    [scopedLeads],
   );
 
   const filteredLeads = useMemo(() => {
@@ -141,6 +156,9 @@ export const DispensaReportPanel = () => {
       <div>
         <h1 className="text-2xl font-bold">Análise de Leads</h1>
         <p className="text-muted-foreground text-sm">Dispensados, perdas e leads aguardando decisão do supervisor</p>
+      </div>
+      <div className="flex justify-end">
+        <PeriodFilter value={period} onChange={setPeriod} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
