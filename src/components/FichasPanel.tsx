@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const FichasPanel = () => {
-  const { leads, unidades, unidadesAtivas, profiles, agentUnidades, deleteLead } = useLeads();
+  const { unidades, unidadesAtivas, profiles, agentUnidades, deleteLead } = useLeads();
   const { currentUser } = useRole();
   const canCreate = currentUser?.cargo === "gestor" || currentUser?.cargo === "supervisor";
   const [newOpen, setNewOpen] = useState(false);
@@ -59,8 +60,36 @@ export const FichasPanel = () => {
   const [agendStart, setAgendStart] = useState<Date | undefined>();
   const [agendEnd, setAgendEnd] = useState<Date | undefined>();
 
+  // Determina o range efetivo: prioriza date pickers; senão usa period filter.
+  const effectiveRange = useMemo(() => {
+    const hasDateRange = entradaStart || entradaEnd || agendStart || agendEnd;
+    if (hasDateRange) {
+      const fmt = (d?: Date) => (d ? format(d, "yyyy-MM-dd") : null);
+      // Quando há range customizado, fazemos um fetch amplo cobrindo o mínimo e máximo.
+      const candidates = [
+        fmt(entradaStart),
+        fmt(entradaEnd),
+        fmt(agendStart),
+        fmt(agendEnd),
+      ].filter(Boolean) as string[];
+      const from = candidates.length ? candidates.reduce((a, b) => (a < b ? a : b)) : null;
+      const to = candidates.length ? candidates.reduce((a, b) => (a > b ? a : b)) : null;
+      return { from, to };
+    }
+    const r = getDateRangeForPeriod(period);
+    return { from: r.from, to: r.to };
+  }, [period, entradaStart, entradaEnd, agendStart, agendEnd]);
+
+  // Carrega só o necessário para o período em vista. Period "total" → from=null → não busca
+  // (volta a usar context, que já cobre a janela móvel de 90 dias).
+  const { rows: scopedLeads, loading: loadingScoped } = useScopedLeads({
+    from: effectiveRange.from,
+    to: effectiveRange.to,
+    anchor: "any",
+  });
+
   const filtered = useMemo(() => {
-    let result = leads;
+    let result = scopedLeads;
     if (unidadeFilter !== "todas") {
       const agentesDaUnidade = agentesPorUnidade[unidadeFilter] ?? new Set<string>();
       result = result.filter(
@@ -74,14 +103,6 @@ export const FichasPanel = () => {
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((l) => l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (l.numero_os && l.numero_os.toLowerCase().includes(q)));
-    }
-
-    // If date range pickers are used, they override the period filter
-    const hasDateRangeFilter = entradaStart || entradaEnd || agendStart || agendEnd;
-
-    if (!hasDateRangeFilter) {
-      const { from } = getDateRangeForPeriod(period);
-      if (from) result = result.filter((l) => l.data_entrada >= from);
     }
 
     // Data de Entrada range
@@ -104,7 +125,7 @@ export const FichasPanel = () => {
     }
 
     return result;
-  }, [leads, unidadeFilter, agenteFilter, etapaFilter, search, period, entradaStart, entradaEnd, agendStart, agendEnd, agentesPorUnidade]);
+  }, [scopedLeads, unidadeFilter, agenteFilter, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd, agentesPorUnidade]);
 
   const pagination = usePagination(filtered, { pageSize: 20 });
 
