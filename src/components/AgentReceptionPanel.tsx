@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle, Search } from "lucide-react";
+import { LogIn, LogOut, CalendarCheck, AlertTriangle, Wrench, XCircle, Search, Undo2 } from "lucide-react";
 import { formatPhone } from "@/lib/phoneUtils";
 import { getToday, formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
@@ -105,6 +105,23 @@ export const AgentReceptionPanel = () => {
     finally { setLoadingAction(null); }
   };
 
+  const handleUndoCheckin = async (lead: Lead) => {
+    if (loadingAction) return;
+    if (!window.confirm(`Desfazer o check-in de ${lead.nome}? O lead voltará para "Agendado" e a visita será removida da contagem.`)) return;
+    setLoadingAction(`undo-${lead.id}`);
+    try {
+      const novaEtapa = lead.data_agendamento ? (lead.etapa === "na_loja" ? "reagendado" : "agendado") : "novo";
+      const notas = appendNota(lead.notas, "Check-in desfeito", `Check-in anterior (${lead.checkin || "—"}) removido por engano.`);
+      await updateLead(lead.id, {
+        etapa: novaEtapa,
+        checkin: null,
+        checkout: null,
+        visitas_loja: Math.max(0, (lead.visitas_loja ?? 1) - 1),
+        notas,
+      } as any);
+    } finally { setLoadingAction(null); }
+  };
+
   const handleDispensarOpen = (lead: Lead) => {
     setDispensarLead(lead); setDispensarMotivo(""); setDispensarTags([]); setDispensarOpen(true);
   };
@@ -170,6 +187,9 @@ export const AgentReceptionPanel = () => {
           <Button onClick={(e) => { e.stopPropagation(); handleEmServico(lead); }} className="gap-1" size="sm" disabled={loadingAction === `servico-${lead.id}`}>
             <Wrench className="h-3.5 w-3.5" /> {loadingAction === `servico-${lead.id}` ? "..." : "Em Serviço"}
           </Button>
+          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleUndoCheckin(lead); }} className="gap-1" title="Desfazer check-in" disabled={loadingAction === `undo-${lead.id}`}>
+            <Undo2 className="h-3.5 w-3.5" />
+          </Button>
           <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDispensarOpen(lead); }} className="gap-1">
             <XCircle className="h-3.5 w-3.5" />
           </Button>
@@ -181,6 +201,9 @@ export const AgentReceptionPanel = () => {
         <div className="flex gap-1">
           <Button variant="outline" size="sm" className="gap-1 border-success/30 text-success hover:bg-success/10" onClick={(e) => { e.stopPropagation(); setCheckoutLead(lead); setTags(lead.tags_servico || []); setCheckoutMotivo(""); setCheckoutOpen(true); }}>
             <LogOut className="h-3.5 w-3.5" /> Check-out
+          </Button>
+          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleUndoCheckin(lead); }} className="gap-1" title="Desfazer check-in" disabled={loadingAction === `undo-${lead.id}`}>
+            <Undo2 className="h-3.5 w-3.5" />
           </Button>
           <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleDispensarOpen(lead); }} className="gap-1">
             <XCircle className="h-3.5 w-3.5" />
