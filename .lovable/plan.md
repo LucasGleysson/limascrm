@@ -1,84 +1,33 @@
-## Objetivo
+## Correções de dados
 
-Reduzir drasticamente o volume de requisições do app, sem perder integridade de:
-- **Follow-ups** (todos os pendentes continuam carregados, independente da idade do lead);
-- **Pesquisa de leads** (`LeadSearchPanel` continua buscando direto no banco com filtros próprios).
+1. **Rodrigo (Laranjeiras, Gisele)** — ajustar `checkin` de hoje 09:26 para **18/06/2025 18:00** via update no banco. `data_agendamento` permanece 18/06. Adicionar nota de auditoria "Check-in corrigido manualmente para 18/06 18:00".
+2. **EVERTON DE PAULA (Grandville, Gisele)** — desfazer check-in: zerar `checkin`, decrementar `visitas_loja`, manter etapa `agendado` (data 22/06). Adicionar nota "Check-in registrado por engano — desfeito".
 
-## Estratégia em camadas
+Efeito imediato: Relatório Diário e Painel TV passam a contar 2 carros para Gisele em 19/06 (diogo + paulo), batendo com Fichas.
 
-### 1. Janela móvel de 90 dias no `LeadContext` (corte global)
+## Prevenção de check-ins errados
 
-Hoje `fetchAll` traz **todos os leads visíveis** ao usuário (gestor/supervisor = todos). Vamos restringir a:
+### A. Confirmação ao clicar em check-in
+Em `AgentReceptionPanel.tsx` e `LeadDetailSheet.tsx`, envolver o botão "Check-in" num `AlertDialog` com:
+- Nome do cliente em destaque
+- Telefone (mascarado)
+- Data do agendamento (com aviso vermelho se ≠ hoje)
+- Botões "Cancelar" / "Confirmar check-in"
 
-- `data_entrada >= hoje - 90 dias`, **OU**
-- lead com `fup_concluido = false` em etapa ativa (`novo`, `agendado`, `reagendado`, `dispensado`), **OU**
-- lead referenciado por qualquer evento pendente (carregado em seguida).
+Aplica-se aos botões existentes que disparam `handleCheckin`. Sem alteração de regra de negócio.
 
-Implementação:
-1. Query principal: `.or("data_entrada.gte.<cutoff>,and(fup_concluido.eq.false,etapa.in.(novo,agendado,reagendado,dispensado))")`.
-2. Buscar eventos pendentes (igual hoje).
-3. Se algum `id_lead` de evento pendente não estiver no conjunto carregado → segundo fetch só desses ids para "preencher" e garantir que a aba Follow-ups nunca quebre.
+### B. Check-in retroativo para supervisor/gestor
+Em `LeadDetailSheet.tsx` (visível apenas para supervisor/gestor, quando lead tem `checkin` preenchido), adicionar botão **"Ajustar data do check-in"** ao lado do botão de desfazer já existente. Abre dialog com:
+- Input `datetime-local` pré-preenchido com o checkin atual
+- Validação: não pode ser futuro
+- Ao salvar: `update leads set checkin = <novo>` + nota de auditoria com valor antigo→novo
 
-Isso elimina março/fevereiro/janeiro inteiros para gestor/supervisor (que hoje puxam ~milhares de linhas a cada refresh), mantendo follow-ups intactos.
+Isso permite resolver casos como Rodrigo sem precisar mexer no banco.
 
-### 2. Paginação real server-side nos painéis pesados
+## Arquivos afetados (build)
 
-Esses painéis hoje consomem `leads` do contexto e paginam em memória. Vão passar a buscar do banco por página, com filtros aplicados server-side:
+- `src/components/AgentReceptionPanel.tsx` — wrap check-in em AlertDialog de confirmação
+- `src/components/LeadDetailSheet.tsx` — AlertDialog de confirmação + novo botão "Ajustar check-in" (supervisor/gestor)
+- 1 migration/insert para corrigir Rodrigo e Everton
 
-| Painel | Filtros server-side | Page size |
-|---|---|---|
-| `FichasPanel` | unidade, agente, etapa, período (`data_entrada`), busca por nome/telefone/OS | 25 |
-| `DispensaReportPanel` | unidade, período (`dispensado_em`) | 25 |
-| `DailyReportPanel` | unidade, agente, dia | 50 |
-| `ReceptionistReportPanel` | unidade, dia | 50 |
-
-Cada painel ganha:
-- hook próprio `usePaginatedLeads({ filtros, page, pageSize })` que faz `select` com `range()` e `count: "exact"` para total;
-- `TablePagination` já existente reaproveitado;
-- debounce de 300ms na busca para evitar disparos por tecla.
-
-Esses painéis deixam de depender do array `leads` do contexto — apenas de `unidades`/`profiles` (que são pequenos).
-
-### 3. Métricas sob demanda para meses antigos
-
-`ManagerByAgent`, `ManagerByStore`, `ManagerIntelligence`, `MetasUnidades`, `MetasAgentes`, `DashboardOverviewPanel`, `TVDashboardPanel`:
-
-- Enquanto o período selecionado estiver **dentro dos últimos 90 dias** → calcular em cima do `leads` já carregado no contexto (comportamento atual, zero requests extras).
-- Se o usuário escolher mês **anterior aos 90 dias** → disparar fetch direcionado:
-  ```
-  supabase.from("leads").select("...campos necessários...")
-    .gte("data_entrada", inicioPeriodo).lte("data_entrada", fimPeriodo)
-  ```
-  com `useQuery`-style cache local (Map por chave `unidade+mes`), evitando refetch ao alternar abas.
-
-Mantém análise histórica disponível, mas só paga o custo quando alguém realmente abre um mês antigo.
-
-### 4. Followups e Pesquisa: não tocar no fluxo
-
-- `FollowUpTrackingPanel` continua usando `eventos`/`leads` do contexto — já garantido pelo passo 1.3 (preenchimento de leads órfãos referenciados por eventos pendentes).
-- `LeadSearchPanel` permanece como está (já faz query direta paginada por período selecionável).
-
-### 5. Realtime
-
-Subscriptions atuais (agente/recepcionista) continuam, mas o handler de INSERT em `leads` passa a ignorar leads com `data_entrada` fora da janela de 90d (a menos que tenha evento pendente associado), evitando inflar o estado.
-
-## Detalhes técnicos
-
-- Adicionar constante `LEAD_WINDOW_DAYS = 90` em `src/lib/leadUtils.ts`.
-- Novo helper `src/hooks/usePaginatedLeads.ts` (server-side range + count exact + filtros).
-- Novo helper `src/hooks/useHistoricalLeads.ts` (fetch direcionado + cache em ref Map por chave).
-- `LeadContext.fetchAll`: adicionar segundo passo "completar leads órfãos de eventos pendentes" via `.in("id", missingIds)` em chunks de 200.
-- `TablePagination` reaproveitado; adicionar prop `loading` para skeleton durante fetch de página.
-- Sem mudanças de schema, sem migrations.
-
-## Ganhos esperados
-
-- Gestor/supervisor: hoje cada refresh puxa o histórico inteiro de leads (vários milhares). Passa a puxar apenas ~últimos 3 meses + pendentes → redução estimada de **60–80%** no payload e tempo de carga.
-- Fichas/Dispensa/Diários deixam de re-render dependendo do array global e fazem requests pequenos e direcionados.
-- Cron de follow-ups e RLS continuam idênticos.
-
-## Fora de escopo
-
-- Pesquisa de leads (`LeadSearchPanel`): não mexe.
-- Aba Follow-ups: não pagina; só ganha o "preenchimento" para nunca quebrar.
-- Nenhuma alteração em métricas/regras de negócio do funil.
+Nenhuma mudança em métricas, RLS, ou schema.
