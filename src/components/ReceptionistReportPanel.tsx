@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { MonthNavigator, getMonthRef, getMonthRange } from "@/components/MonthNavigator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,13 +10,20 @@ import { StatsCard } from "@/components/StatsCard";
 import type { Lead } from "@/data/mockData";
 
 export const ReceptionistReportPanel = () => {
-  const { leads, unidades, unidadesAtivas, profiles } = useLeads();
+  const { unidades, unidadesAtivas, profiles } = useLeads();
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [selectedRecep, setSelectedRecep] = useState<string | null>(null);
 
   const periodRange = period === "mes" ? getMonthRange(mesRef) : getDateRangeForPeriod(period);
+  // Período antigo → fetch direcionado. Período corrente → reutiliza contexto.
+  const { rows: scopedLeads } = useScopedLeads({
+    from: periodRange.from,
+    to: periodRange.to,
+    anchor: "data_entrada",
+    idUnidade: unidadeFilter !== "todas" ? unidadeFilter : null,
+  });
 
   const recepcionistas = useMemo(
     () => profiles.filter((p) => p.cargo === "recepcionista"),
@@ -23,14 +31,9 @@ export const ReceptionistReportPanel = () => {
   );
 
   const filteredLeads = useMemo(() => {
-    return leads.filter((l) => {
-      if (!l.created_at) return false;
-      const d = l.created_at.split("T")[0];
-      if (d < periodRange.from || d > periodRange.to) return false;
-      if (unidadeFilter !== "todas" && l.id_unidade !== unidadeFilter) return false;
-      return true;
-    });
-  }, [leads, periodRange, unidadeFilter]);
+    // useScopedLeads já filtra por data_entrada + unidade.
+    return scopedLeads;
+  }, [scopedLeads]);
 
   // Leads that have id_recepcionista set
   const recepStats = useMemo(() => {
