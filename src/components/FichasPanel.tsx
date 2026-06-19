@@ -22,7 +22,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { getLeadWindowCutoff, LEAD_WINDOW_DAYS } from "@/lib/leadUtils";
+import { getLeadWindowCutoff } from "@/lib/leadUtils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
