@@ -12,7 +12,7 @@ import { MotivoTagSelector } from "./MotivoTagSelector";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
-import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull, AlertCircle } from "lucide-react";
+import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull, AlertCircle, Undo2 } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -218,6 +218,21 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   // Supervisor/Gestor can always change status; agents can only use transitions
   const canChangeStatus = isSupervisorOrGestor || !!STATUS_TRANSITIONS[lead.etapa];
   const canMarkLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
+  const canUndoCheckin = isSupervisorOrGestor && !!lead.checkin && ["confirmado", "na_loja"].includes(lead.etapa);
+
+  const handleUndoCheckin = async () => {
+    if (!lead.checkin) return;
+    if (!window.confirm(`Desfazer o check-in de ${lead.nome}? O lead voltará para "Agendado" e a visita será removida da contagem.`)) return;
+    const novaEtapa = lead.data_agendamento ? (lead.etapa === "na_loja" ? "reagendado" : "agendado") : "novo";
+    const notas = appendNota(lead.notas, "Check-in desfeito", `Check-in anterior (${lead.checkin}) removido por engano.`);
+    await updateLead(lead.id, {
+      etapa: novaEtapa,
+      checkin: null,
+      checkout: null,
+      visitas_loja: Math.max(0, (lead.visitas_loja ?? 1) - 1),
+      notas,
+    } as any);
+  };
 
   const getDisqualifyStatus = () => {
     if (["novo", "trabalhado"].includes(lead.etapa)) return "desqualificado_novo";
@@ -669,6 +684,12 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 {canEditSchedule && (
                   <Button size="lg" variant="outline" className="w-full gap-2 text-base" onClick={startEditSchedule}>
                     <Calendar className="h-5 w-5" /> {isDispensado || isPerdido || isDesqAgendado ? "Reagendar Cliente" : "Editar Agendamento"}
+                  </Button>
+                )}
+
+                {canUndoCheckin && (
+                  <Button size="lg" variant="outline" className="w-full gap-2 text-base border-warning/40 text-warning hover:bg-warning/10" onClick={handleUndoCheckin}>
+                    <Undo2 className="h-5 w-5" /> Desfazer Check-in
                   </Button>
                 )}
               </>
