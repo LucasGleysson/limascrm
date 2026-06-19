@@ -856,7 +856,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit motivo tags modal */}
       {/* Adjust check-in datetime modal — supervisor/gestor only */}
       <Dialog open={editCheckinOpen} onOpenChange={setEditCheckinOpen}>
         <DialogContent className="sm:max-w-sm">
