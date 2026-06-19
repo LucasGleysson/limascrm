@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { ORIGENS, Lead } from "@/data/mockData";
-import { foiNaLoja, foiNaLojaNoPeriodo, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
+import { foiNaLoja, foiNaLojaNoPeriodo, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja, getLeadWindowCutoff } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -46,7 +47,7 @@ const PIE_COLORS = [
 ];
 
 export const ManagerDashboard = () => {
-  const { leads, unidades, unidadesAtivas, profiles, eventos, agentUnidades, refreshAll } = useLeads();
+  const { unidades, unidadesAtivas, profiles, eventos, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarHidden, setSidebarHidden] = useState(false);
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
@@ -59,20 +60,25 @@ export const ManagerDashboard = () => {
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
 
+  // Range efetivo do período selecionado.
+  const periodRangeAll = useMemo(() => {
+    if (period === "mes") return getMonthRange(mesRef);
+    const r = getDateRangeForPeriod(period);
+    return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
+  }, [period, mesRef]);
+  // Fetch escopado: meses antigos disparam fetch, meses correntes reaproveitam contexto.
+  const { rows: leads } = useScopedLeads({
+    from: periodRangeAll.from,
+    to: periodRangeAll.to,
+    anchor: "any",
+    idUnidade: unidadeFilter !== "todas" ? unidadeFilter : null,
+  });
+
   const filteredLeads = useMemo(() => {
     let result = leads;
     if (unidadeFilter !== "todas") result = result.filter((l) => l.id_unidade === unidadeFilter);
-    let from: string | null = null;
-    let to: string | null = null;
-    if (period === "mes") {
-      const range = getMonthRange(mesRef);
-      from = range.from;
-      to = range.to;
-    } else {
-      const range = getDateRangeForPeriod(period);
-      from = range.from;
-      to = range.to;
-    }
+    const from = periodRangeAll.from;
+    const to = periodRangeAll.to;
     if (from) {
       const seen = new Set<string>();
       result = result.filter((l) => {
@@ -84,17 +90,17 @@ export const ManagerDashboard = () => {
       });
     }
     return result;
-  }, [leads, unidadeFilter, period, mesRef]);
+  }, [leads, unidadeFilter, periodRangeAll]);
 
   // periodRange declared later in original code; recompute here too for naLojaPeriodLeads.
   const naLojaPeriodLeads = useMemo(() => {
-    const from = period === "mes" ? getMonthRange(mesRef).from : getDateRangeForPeriod(period).from;
-    const to = period === "mes" ? getMonthRange(mesRef).to : getDateRangeForPeriod(period).to;
+    const from = periodRangeAll.from;
+    const to = periodRangeAll.to;
     return leads.filter((l) => {
       if (unidadeFilter !== "todas" && l.id_unidade !== unidadeFilter) return false;
       return foiNaLojaNoPeriodo(l, from, to);
     });
-  }, [leads, unidadeFilter, period, mesRef]);
+  }, [leads, unidadeFilter, periodRangeAll]);
 
   const stats = useMemo(() => {
     const carrosNaLoja = naLojaPeriodLeads.length;
