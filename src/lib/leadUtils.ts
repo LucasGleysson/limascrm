@@ -1,6 +1,31 @@
 // Shared utility functions for lead management
 import type { Lead } from "@/data/mockData";
 
+/**
+ * Janela móvel padrão (em dias) para carregar leads no contexto global.
+ * Leads fora dessa janela só são carregados sob demanda (Manager/Daily/Recep/Fichas
+ * com período antigo, LeadSearchPanel, ou referenciados por follow-ups pendentes).
+ */
+export const LEAD_WINDOW_DAYS = 90;
+
+/** Etapas consideradas "ativas" — leads aqui são SEMPRE carregados, independentemente da idade. */
+export const ACTIVE_FUNNEL_ETAPAS = [
+  "novo",
+  "agendado",
+  "reagendado",
+  "confirmado",
+  "na_loja",
+  "dispensado",
+  "analise_supervisor",
+] as const;
+
+/** Retorna o cutoff ISO (YYYY-MM-DD) para a janela móvel. */
+export function getLeadWindowCutoff(days: number = LEAD_WINDOW_DAYS): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().split("T")[0];
+}
+
 export const getStatusBadgeClass = (etapa: string): string => {
   const map: Record<string, string> = {
     novo: "bg-info/15 text-info border-info/30",

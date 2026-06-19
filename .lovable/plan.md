@@ -1,82 +1,84 @@
-## Problema
+## Objetivo
 
-O lead "juliano" (final 8989, agente Maria Eduarda) foi resgatado de `desqualificado_agendado` → `novo` → `agendado` (Pacaembu, 17/06). Poucos minutos depois, o status voltou sozinho para `desqualificado_agendado`. As anotações registram isso acontecendo duas vezes seguidas (09:44 e 10:07).
+Reduzir drasticamente o volume de requisições do app, sem perder integridade de:
+- **Follow-ups** (todos os pendentes continuam carregados, independente da idade do lead);
+- **Pesquisa de leads** (`LeadSearchPanel` continua buscando direto no banco com filtros próprios).
 
-## Causa raiz
+## Estratégia em camadas
 
-A função `generate-followups` (cron horário) finaliza o ciclo de um lead quando o número de eventos `followup` na tabela `eventos` é maior ou igual ao máximo da categoria — para `agendado`, o máximo é **3**. Quando atinge, ela força `etapa` para `FINAL[agendado] = 'desqualificado_agendado'`.
+### 1. Janela móvel de 90 dias no `LeadContext` (corte global)
 
-O trigger `leads_reset_fup_on_reagendamento` resetou corretamente `fup_concluido=false`, mas **só apaga os followups pendentes** (`concluido=false`). Os 3 followups antigos do ciclo `novo` ficaram salvos como concluídos:
+Hoje `fetchAll` traz **todos os leads visíveis** ao usuário (gestor/supervisor = todos). Vamos restringir a:
 
-```
-numero=1  concluido=true  (20/05)
-numero=2  concluido=true  (22/05)
-numero=3  concluido=true  (25/05)
-```
+- `data_entrada >= hoje - 90 dias`, **OU**
+- lead com `fup_concluido = false` em etapa ativa (`novo`, `agendado`, `reagendado`, `dispensado`), **OU**
+- lead referenciado por qualquer evento pendente (carregado em seguida).
 
-Resultado: `maxExisting = 3 ≥ MAX[agendado] = 3` → a cron reverte a etapa imediatamente. Sempre que Maria muda para `agendado`, a próxima execução do cron derruba de volta.
+Implementação:
+1. Query principal: `.or("data_entrada.gte.<cutoff>,and(fup_concluido.eq.false,etapa.in.(novo,agendado,reagendado,dispensado))")`.
+2. Buscar eventos pendentes (igual hoje).
+3. Se algum `id_lead` de evento pendente não estiver no conjunto carregado → segundo fetch só desses ids para "preencher" e garantir que a aba Follow-ups nunca quebre.
 
-O mesmo bug afeta qualquer lead resgatado depois de ter completado FUPs em outra categoria (ex.: `novo` → `agendado`, `dispensado` → `reagendado`).
+Isso elimina março/fevereiro/janeiro inteiros para gestor/supervisor (que hoje puxam ~milhares de linhas a cada refresh), mantendo follow-ups intactos.
 
-## Correção
+### 2. Paginação real server-side nos painéis pesados
 
-Alterar o trigger `public.leads_reset_fup_on_reagendamento` para, quando o ciclo é reiniciado (data_agendamento muda e etapa final é `agendado`/`reagendado`), apagar **todos** os followups antigos daquele lead (não só os pendentes). Assim a contagem volta a zero e o novo ciclo da categoria roda do início.
+Esses painéis hoje consomem `leads` do contexto e paginam em memória. Vão passar a buscar do banco por página, com filtros aplicados server-side:
 
-A trilha de auditoria continua preservada em `leads.notas` (cada FUP concluído já é gravado lá como texto).
+| Painel | Filtros server-side | Page size |
+|---|---|---|
+| `FichasPanel` | unidade, agente, etapa, período (`data_entrada`), busca por nome/telefone/OS | 25 |
+| `DispensaReportPanel` | unidade, período (`dispensado_em`) | 25 |
+| `DailyReportPanel` | unidade, agente, dia | 50 |
+| `ReceptionistReportPanel` | unidade, dia | 50 |
 
-### Detalhes técnicos
+Cada painel ganha:
+- hook próprio `usePaginatedLeads({ filtros, page, pageSize })` que faz `select` com `range()` e `count: "exact"` para total;
+- `TablePagination` já existente reaproveitado;
+- debounce de 300ms na busca para evitar disparos por tecla.
 
-Migração única alterando a função:
+Esses painéis deixam de depender do array `leads` do contexto — apenas de `unidades`/`profiles` (que são pequenos).
 
-```sql
-CREATE OR REPLACE FUNCTION public.leads_reset_fup_on_reagendamento()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-BEGIN
-  IF TG_OP = 'UPDATE'
-     AND NEW.data_agendamento IS DISTINCT FROM OLD.data_agendamento
-     AND NEW.data_agendamento IS NOT NULL
-     AND NEW.data_agendamento >= CURRENT_DATE
-  THEN
-    IF NEW.etapa = 'novo' THEN
-      NEW.etapa := 'agendado';
-    ELSIF NEW.etapa = 'dispensado' THEN
-      NEW.etapa := 'reagendado';
-    END IF;
+### 3. Métricas sob demanda para meses antigos
 
-    IF NEW.etapa IN ('agendado', 'reagendado') THEN
-      -- Apaga TODO o histórico de followups (concluídos e pendentes)
-      -- para que o novo ciclo da categoria comece do zero. A trilha de
-      -- auditoria permanece em leads.notas.
-      DELETE FROM public.eventos
-       WHERE id_lead = NEW.id
-         AND tipo = 'followup';
+`ManagerByAgent`, `ManagerByStore`, `ManagerIntelligence`, `MetasUnidades`, `MetasAgentes`, `DashboardOverviewPanel`, `TVDashboardPanel`:
 
-      NEW.fup_concluido := false;
-      NEW.fup_concluido_em := NULL;
-      NEW.fup_concluido_numero := NULL;
-      NEW.fup_motivo_conclusao := NULL;
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-```
+- Enquanto o período selecionado estiver **dentro dos últimos 90 dias** → calcular em cima do `leads` já carregado no contexto (comportamento atual, zero requests extras).
+- Se o usuário escolher mês **anterior aos 90 dias** → disparar fetch direcionado:
+  ```
+  supabase.from("leads").select("...campos necessários...")
+    .gte("data_entrada", inicioPeriodo).lte("data_entrada", fimPeriodo)
+  ```
+  com `useQuery`-style cache local (Map por chave `unidade+mes`), evitando refetch ao alternar abas.
 
-### Correção pontual do lead afetado
+Mantém análise histórica disponível, mas só paga o custo quando alguém realmente abre um mês antigo.
 
-Após aplicar a migração, executar UPDATE no lead `81cbee27-…` para voltá-lo a `agendado` (Maria Eduarda já registrou o agendamento) e apagar os 3 eventos antigos, para destravar o caso reportado imediatamente.
+### 4. Followups e Pesquisa: não tocar no fluxo
 
-### Escopo
+- `FollowUpTrackingPanel` continua usando `eventos`/`leads` do contexto — já garantido pelo passo 1.3 (preenchimento de leads órfãos referenciados por eventos pendentes).
+- `LeadSearchPanel` permanece como está (já faz query direta paginada por período selecionável).
 
-- Apenas a função de trigger e o conserto manual do lead reportado.
-- Sem mudanças no frontend.
-- Sem mudanças em `generate-followups`, painéis ou RLS.
+### 5. Realtime
 
-### Validação
+Subscriptions atuais (agente/recepcionista) continuam, mas o handler de INSERT em `leads` passa a ignorar leads com `data_entrada` fora da janela de 90d (a menos que tenha evento pendente associado), evitando inflar o estado.
 
-1. Lead `juliano` permanece em `agendado` após a próxima execução da cron.
-2. Criar/simular outro resgate (lead com FUPs concluídos → novo agendamento) e confirmar que não reverte.
+## Detalhes técnicos
+
+- Adicionar constante `LEAD_WINDOW_DAYS = 90` em `src/lib/leadUtils.ts`.
+- Novo helper `src/hooks/usePaginatedLeads.ts` (server-side range + count exact + filtros).
+- Novo helper `src/hooks/useHistoricalLeads.ts` (fetch direcionado + cache em ref Map por chave).
+- `LeadContext.fetchAll`: adicionar segundo passo "completar leads órfãos de eventos pendentes" via `.in("id", missingIds)` em chunks de 200.
+- `TablePagination` reaproveitado; adicionar prop `loading` para skeleton durante fetch de página.
+- Sem mudanças de schema, sem migrations.
+
+## Ganhos esperados
+
+- Gestor/supervisor: hoje cada refresh puxa o histórico inteiro de leads (vários milhares). Passa a puxar apenas ~últimos 3 meses + pendentes → redução estimada de **60–80%** no payload e tempo de carga.
+- Fichas/Dispensa/Diários deixam de re-render dependendo do array global e fazem requests pequenos e direcionados.
+- Cron de follow-ups e RLS continuam idênticos.
+
+## Fora de escopo
+
+- Pesquisa de leads (`LeadSearchPanel`): não mexe.
+- Aba Follow-ups: não pagina; só ganha o "preenchimento" para nunca quebrar.
+- Nenhuma alteração em métricas/regras de negócio do funil.

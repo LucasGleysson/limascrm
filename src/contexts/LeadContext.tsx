@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/contexts/RoleContext";
 import type { Lead, Evento, Unidade } from "@/data/mockData";
+import { getLeadWindowCutoff, ACTIVE_FUNNEL_ETAPAS } from "@/lib/leadUtils";
 
 interface AgentUnidade {
   id: string;
@@ -64,6 +65,13 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const user = currentUserRef.current;
+    const cutoff = getLeadWindowCutoff();
+    // Window filter: lead recente OR lead em etapa ativa com FUP pendente.
+    // Garante que toda ficha "viva" (pendente) é carregada, independente da idade.
+    const activeEtapaList = ACTIVE_FUNNEL_ETAPAS.map((e) => `"${e}"`).join(",");
+    const windowOr =
+      `data_entrada.gte.${cutoff},` +
+      `and(fup_concluido.eq.false,etapa.in.(${activeEtapaList}))`;
 
     // Load support tables first; agente_unidades is needed to compute visible leads for agents
     const [unidadesRes, profilesRes, agentUnidadesRes] = await Promise.all([
@@ -76,7 +84,11 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
 
     // Build leads query per role
     const buildLeadsQuery = () => {
-      let q = supabase.from("leads").select("*").order("created_at", { ascending: false });
+      let q = supabase
+        .from("leads")
+        .select("*")
+        .or(windowOr)
+        .order("created_at", { ascending: false });
       if (user?.cargo === "agente") {
         // Agente só vê seus próprios leads, mesmo compartilhando loja com outros agentes
         q = q.eq("id_agente", user.id);
@@ -137,6 +149,35 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
           all.push(...rows);
         }
         eventosData = all;
+      }
+    }
+
+    // Orphan-fill: garante que TODO follow-up pendente tem o lead carregado,
+    // mesmo que o lead seja anterior à janela (ex.: lead antigo com FUP em aberto).
+    {
+      const loadedIds = new Set(leadsData.map((l) => l.id));
+      const missingIds = Array.from(
+        new Set(
+          eventosData
+            .filter((e) => e.concluido === false)
+            .map((e) => e.id_lead)
+            .filter((id) => id && !loadedIds.has(id)),
+        ),
+      );
+      if (missingIds.length > 0) {
+        const CHUNK = 200;
+        for (let i = 0; i < missingIds.length; i += CHUNK) {
+          const slice = missingIds.slice(i, i + CHUNK);
+          const { data } = await supabase.from("leads").select("*").in("id", slice);
+          if (data) {
+            for (const row of data) {
+              if (!loadedIds.has(row.id)) {
+                leadsData.push(row);
+                loadedIds.add(row.id);
+              }
+            }
+          }
+        }
       }
     }
 

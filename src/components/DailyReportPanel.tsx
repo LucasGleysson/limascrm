@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { StatsCard } from "@/components/StatsCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronDown, Users, CalendarCheck, Car, CheckCircle2, XCircle, MapPin, Skull, AlertTriangle, ClipboardList, PieChart as PieChartIcon } from "lucide-react";
@@ -11,11 +12,15 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--suc
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 export const DailyReportPanel = () => {
-  const { leads, unidades, unidadesAtivas, profiles, agentUnidades } = useLeads();
+  const { unidades, unidadesAtivas, profiles, agentUnidades } = useLeads();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const dateStr = selectedDate.toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
+  // Carrega APENAS leads relevantes para o dia selecionado (entrada, agendamento ou checkin).
+  // Para dias dentro da janela do contexto: zero requests (filtra cache).
+  // Para dias antigos: fetch direcionado e cacheado.
+  const { rows: leads } = useScopedLeads({ from: dateStr, to: dateStr, anchor: "any" });
 
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 

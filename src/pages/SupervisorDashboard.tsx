@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
+import { useScopedLeads } from "@/hooks/useScopedLeads";
+import { getLeadWindowCutoff } from "@/lib/leadUtils";
 import { ETAPAS_FUNIL } from "@/data/mockData";
 import { foiNaLoja, foiNaLojaNoPeriodo, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
@@ -39,7 +41,7 @@ const SIDEBAR_TABS = [
 ];
 
 export const SupervisorDashboard = () => {
-  const { leads, eventos, unidades, unidadesAtivas, profiles, agentUnidades, refreshAll } = useLeads();
+  const { eventos, unidades, unidadesAtivas, profiles, agentUnidades, refreshAll } = useLeads();
   const [activeTab, setActiveTab] = useState("visao_geral");
   const [selectedAgente, setSelectedAgente] = useState<string | null>(null);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
@@ -59,8 +61,14 @@ export const SupervisorDashboard = () => {
     if (period === "mes") {
       return getMonthRange(mesRef);
     }
-    return getDateRangeForPeriod(period);
+    const r = getDateRangeForPeriod(period);
+    return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
   }, [period, mesRef]);
+  const { rows: leads } = useScopedLeads({
+    from: periodRange.from,
+    to: periodRange.to,
+    anchor: "any",
+  });
   const filteredLeads = useMemo(() => {
     if (!periodRange.from) return leads;
     const from = periodRange.from!;
