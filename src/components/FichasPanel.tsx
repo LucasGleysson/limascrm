@@ -22,6 +22,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { getLeadWindowCutoff, LEAD_WINDOW_DAYS } from "@/lib/leadUtils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -65,7 +66,6 @@ export const FichasPanel = () => {
     const hasDateRange = entradaStart || entradaEnd || agendStart || agendEnd;
     if (hasDateRange) {
       const fmt = (d?: Date) => (d ? format(d, "yyyy-MM-dd") : null);
-      // Quando há range customizado, fazemos um fetch amplo cobrindo o mínimo e máximo.
       const candidates = [
         fmt(entradaStart),
         fmt(entradaEnd),
@@ -77,7 +77,8 @@ export const FichasPanel = () => {
       return { from, to };
     }
     const r = getDateRangeForPeriod(period);
-    return { from: r.from, to: r.to };
+    // "Total" sem date range explícito → cap na janela móvel (90 dias) para economizar.
+    return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
   }, [period, entradaStart, entradaEnd, agendStart, agendEnd]);
 
   // Carrega só o necessário para o período em vista. Period "total" → from=null → não busca
