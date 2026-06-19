@@ -80,6 +80,9 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const [editVisitasOpen, setEditVisitasOpen] = useState(false);
   const [editVisitasValue, setEditVisitasValue] = useState<string>("0");
 
+  const [editCheckinOpen, setEditCheckinOpen] = useState(false);
+  const [editCheckinValue, setEditCheckinValue] = useState<string>("");
+
   useEffect(() => {
     setEditing(false);
     setEditingSchedule(false);
@@ -219,6 +222,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   const canChangeStatus = isSupervisorOrGestor || !!STATUS_TRANSITIONS[lead.etapa];
   const canMarkLoss = ["na_loja", "dispensado", "confirmado"].includes(lead.etapa);
   const canUndoCheckin = isSupervisorOrGestor && !!lead.checkin && ["confirmado", "na_loja"].includes(lead.etapa);
+  const canAdjustCheckin = isSupervisorOrGestor && !!lead.checkin;
 
   const handleUndoCheckin = async () => {
     if (!lead.checkin) return;
@@ -690,6 +694,24 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
                 {canUndoCheckin && (
                   <Button size="lg" variant="outline" className="w-full gap-2 text-base border-warning/40 text-warning hover:bg-warning/10" onClick={handleUndoCheckin}>
                     <Undo2 className="h-5 w-5" /> Desfazer Check-in
+                  </Button>
+                )}
+
+                {canAdjustCheckin && (
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full gap-2 text-base"
+                    onClick={() => {
+                      // pre-fill with local datetime in input format yyyy-MM-ddTHH:mm
+                      const d = lead.checkin ? new Date(lead.checkin) : new Date();
+                      const pad = (n: number) => String(n).padStart(2, "0");
+                      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                      setEditCheckinValue(local);
+                      setEditCheckinOpen(true);
+                    }}
+                  >
+                    <CalendarCheck className="h-5 w-5" /> Ajustar data do check-in
                   </Button>
                 )}
               </>
