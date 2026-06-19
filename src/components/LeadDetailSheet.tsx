@@ -857,6 +857,58 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
       </Dialog>
 
       {/* Edit motivo tags modal */}
+      {/* Adjust check-in datetime modal — supervisor/gestor only */}
+      <Dialog open={editCheckinOpen} onOpenChange={setEditCheckinOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-primary" /> Ajustar data do check-in
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Use para corrigir um check-in registrado em data/hora errada (ex: cliente compareceu ontem após o expediente).
+            </p>
+            <Label htmlFor="checkin-input">Data e hora do check-in</Label>
+            <Input
+              id="checkin-input"
+              type="datetime-local"
+              value={editCheckinValue}
+              max={(() => {
+                const d = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+              })()}
+              onChange={(e) => setEditCheckinValue(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Atual: {lead.checkin ? new Date(lead.checkin).toLocaleString("pt-BR") : "—"}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCheckinOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                if (!editCheckinValue) return;
+                const novo = new Date(editCheckinValue);
+                if (isNaN(novo.getTime())) return;
+                if (novo.getTime() > Date.now()) return;
+                const antigo = lead.checkin ? new Date(lead.checkin).toLocaleString("pt-BR") : "—";
+                const novoStr = novo.toLocaleString("pt-BR");
+                const userName = currentUser?.nome || "Sistema";
+                const notas = appendNota(lead.notas, `Check-in ajustado por ${userName}`, `${antigo} → ${novoStr}`);
+                await updateLead(lead.id, { checkin: novo.toISOString(), notas } as any);
+                setEditCheckinOpen(false);
+              }}
+              className="gap-2"
+            >
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit motivo tags modal */}
       <Dialog open={editMotivoTagsOpen} onOpenChange={setEditMotivoTagsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
