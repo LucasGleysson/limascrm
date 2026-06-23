@@ -62,7 +62,9 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
     submittingRef.current = true;
     try {
       const unidadeNome = unidades.find((u) => u.id === unidade)?.nome || "Unidade";
-      const isReagendamento = !!leadAtual && ["dispensado", "perdido", "desqualificado_agendado", "reagendado"].includes(leadAtual.etapa);
+      // Apenas leads que já passaram pela loja (ou já são re-reagendamentos) viram "reagendado".
+      // "desqualificado_agendado" e "desqualificado_novo" nunca foram à loja → voltam para "agendado".
+      const isReagendamento = !!leadAtual && ["dispensado", "perdido", "reagendado"].includes(leadAtual.etapa);
       const novoStatus = isReagendamento ? "reagendado" : "agendado";
       const notaLabel = isReagendamento ? "Reagendado" : "Agendado";
       const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")} • OS: ${os}`;
