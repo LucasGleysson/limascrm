@@ -69,9 +69,10 @@ export const EventoPanel = () => {
   const tomorrowStr = tomorrowDate.toISOString().split("T")[0];
 
   const getEncerrarStatus = (lead: Lead): string => {
-    // Post-store leads go to supervisor analysis instead of directly to "perdido"
-    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "analise_supervisor";
-    if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
+    // Pós-loja (cliente já passou ou foi reagendado após visita) → análise do supervisor
+    if (["na_loja", "dispensado", "confirmado", "reagendado"].includes(lead.etapa)) return "analise_supervisor";
+    // Agendado sem visita → desqualificado_agendado
+    if (lead.etapa === "agendado") return "desqualificado_agendado";
     if (lead.etapa === "novo") return "trabalhado";
     if (lead.etapa === "desqualificado") return "desqualificado_novo";
     return lead.etapa;
@@ -446,8 +447,10 @@ export const EventoPanel = () => {
           {fupPagination.paginatedItems.map((evento) => {
             const lead = getLead(evento.id_lead);
             const canMarkLoss = lead && ["na_loja", "dispensado", "confirmado"].includes(lead.etapa) && lead.etapa !== "perdido";
+            // Agente pode encerrar FUP de dispensado e reagendado (vão para análise do supervisor).
+            // Continua bloqueado para agendado/confirmado/na_loja, que ainda têm jornada ativa.
             const canEncerrar = lead && !lead.fup_concluido
-              && !["agendado","reagendado","confirmado","na_loja","dispensado"].includes(lead.etapa);
+              && !["agendado","confirmado","na_loja"].includes(lead.etapa);
             const etapa = lead ? ETAPAS_FUNIL.find((e) => e.id === lead.etapa) : null;
             const leadFups = eventos.filter((e) => e.tipo === "followup" && e.id_lead === evento.id_lead);
             const done = leadFups.filter((e) => e.concluido).length;
