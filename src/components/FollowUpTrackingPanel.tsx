@@ -75,10 +75,10 @@ export const FollowUpTrackingPanel = () => {
 
   // Smart status logic when closing FUP
   const getEncerrarStatus = useCallback((lead: Lead): string => {
-    // Post-store: na_loja, dispensado, confirmado → analise_supervisor (not directly perdido)
-    if (["na_loja", "dispensado", "confirmado"].includes(lead.etapa)) return "analise_supervisor";
-    // Scheduled but no visit → desqualificado_agendado
-    if (["agendado", "reagendado"].includes(lead.etapa)) return "desqualificado_agendado";
+    // Pós-loja: na_loja, dispensado, confirmado e reagendado (cliente já passou pela loja) → analise_supervisor
+    if (["na_loja", "dispensado", "confirmado", "reagendado"].includes(lead.etapa)) return "analise_supervisor";
+    // Agendado sem visita → desqualificado_agendado
+    if (lead.etapa === "agendado") return "desqualificado_agendado";
     // New lead → trabalhado (lead novo que percorreu todo o processo de FUP sem agendar)
     if (lead.etapa === "novo") return "trabalhado";
     if (lead.etapa === "desqualificado") return "desqualificado_novo";
