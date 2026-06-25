@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       while (true) {
         const { data, error } = await supabase
           .from("eventos")
-          .select("id, id_lead, numero, concluido, data_conclusao")
+          .select("id, id_lead, numero, concluido, data_conclusao, data_prevista")
           .in("id_lead", slice)
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -161,12 +161,18 @@ Deno.serve(async (req) => {
         }
         eventDateStr = addDays(anchorDate, gap);
       } else {
-        // FUPs >= 2 (todas as categorias): ancorar na última conclusão
-        const lastConcluded = leadEventos
+        // FUPs >= 2 (todas as categorias): ancorar no MAIOR entre data prevista
+        // e data de conclusão do FUP anterior. Isso evita que uma conclusão
+        // antecipada (antes da data prevista) gere o próximo FUP no mesmo dia
+        // do anterior — bug que criava 2 FUPs na mesma data.
+        const prev = leadEventos
           .filter((e) => e.concluido && e.data_conclusao)
-          .sort((a, b) => (b.data_conclusao || "").localeCompare(a.data_conclusao || ""))[0];
-        if (!lastConcluded || !lastConcluded.data_conclusao) continue;
-        eventDateStr = addDays(lastConcluded.data_conclusao.slice(0, 10), gap);
+          .sort((a, b) => b.numero - a.numero)[0];
+        if (!prev || !prev.data_conclusao) continue;
+        const concluDate = prev.data_conclusao.slice(0, 10);
+        const prevDate = prev.data_prevista ? prev.data_prevista.slice(0, 10) : concluDate;
+        const anchor = concluDate > prevDate ? concluDate : prevDate;
+        eventDateStr = addDays(anchor, gap);
       }
 
       if (eventDateStr > today) continue;
