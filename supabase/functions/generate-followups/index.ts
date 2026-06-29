@@ -173,6 +173,14 @@ Deno.serve(async (req) => {
         const prevDate = prev.data_prevista ? prev.data_prevista.slice(0, 10) : concluDate;
         const anchor = concluDate > prevDate ? concluDate : prevDate;
         eventDateStr = addDays(anchor, gap);
+
+        // Safety net: even if a cadence gap/config changes, the next FUP must
+        // never become due on the same calendar day the previous FUP was done.
+        // This prevents the agent from receiving two follow-ups for the same
+        // lead in one day when the prior FUP was concluded late/overdue.
+        if (eventDateStr <= concluDate) {
+          eventDateStr = addDays(concluDate, 1);
+        }
       }
 
       if (eventDateStr > today) continue;
