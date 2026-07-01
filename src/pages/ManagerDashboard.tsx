@@ -241,6 +241,12 @@ export const ManagerDashboard = () => {
         total: aLeads.length, passaramNaLoja, concluidos, totalAgendamentos,
         dispensados, perdidos, desqNovos, desqAgendados, perdidosAntes,
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
+        // Contadores ancorados ao check-in (mesma regra de "Na Loja"): assim, quando
+        // o supervisor conclui uma análise no mês seguinte, o resultado permanece no
+        // mês da visita real, não migra para o mês da ação.
+        naLojaConfirmado: aNaLoja.filter((l) => l.etapa === "confirmado").length,
+        naLojaReagendado: aNaLoja.filter((l) => l.etapa === "reagendado").length,
+        naLojaAnalise: aNaLoja.filter((l) => l.etapa === "analise_supervisor").length,
       };
     });
   }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
