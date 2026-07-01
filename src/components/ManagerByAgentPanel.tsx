@@ -40,6 +40,9 @@ interface AgenteStat {
   fupConcluidos: number;
   fupPendentes: number;
   leads: any[];
+  naLojaConfirmado?: number;
+  naLojaReagendado?: number;
+  naLojaAnalise?: number;
 }
 
 interface Props {
@@ -89,9 +92,10 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       const restante = Math.max(meta - progresso, 0);
       const mediaAtual = progresso / bizDays.elapsed;
       const ritmoEsperado = (meta / bizDays.total) * bizDays.elapsed;
-      const confirmados = a.leads.filter((l: any) => l.etapa === "confirmado").length;
-      const reagendados = a.leads.filter((l: any) => l.etapa === "reagendado").length;
-      const emAnalise = a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
+      // Ancorados ao check-in (mês da visita real), consistente com Concluídos/Perdidos/Dispensados.
+      const confirmados = a.naLojaConfirmado ?? a.leads.filter((l: any) => l.etapa === "confirmado").length;
+      const reagendados = a.naLojaReagendado ?? a.leads.filter((l: any) => l.etapa === "reagendado").length;
+      const emAnalise = a.naLojaAnalise ?? a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
 
       let badge: { label: string; icon: any; cls: string };
       if (progresso >= meta) {
