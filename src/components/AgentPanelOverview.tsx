@@ -326,6 +326,77 @@ export const AgentPanelOverview = () => {
         </div>
       </div>
 
+      {/* COMISSÃO — destaque gamificado */}
+      {(() => {
+        const passouMeta = progresso > META_AGENTE;
+        const rate = passouMeta ? 10 : 8;
+        const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+        const nEmLoja = myMonthLeads.filter((l) => ["na_loja", "analise_supervisor"].includes(l.etapa)).length;
+        const nAgendados = myMonthLeads.filter((l) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+        const ganhoMeta = progresso * rate;
+        const ganhoLoja = nEmLoja * rate;
+        const ganhoAgendados = nAgendados * rate;
+        const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+
+        const proxTier = !passouMeta ? META_AGENTE + 1 - progresso : null;
+
+        return (
+          <div className="rounded-2xl border-2 border-success/40 bg-gradient-to-br from-success/20 via-success/10 to-card p-6 space-y-4 shadow-lg">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-success/20 p-3">
+                  <Wallet className="h-7 w-7 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Comissão</p>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    Ganho do mês
+                    <Badge variant="outline" className={passouMeta ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}>
+                      R$ {rate}/carro {passouMeta && "🔥"}
+                    </Badge>
+                  </h2>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-5xl font-extrabold text-success leading-none">{brl(ganhoMeta)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {progresso} carro{progresso !== 1 ? "s" : ""} × R$ {rate}
+                  {proxTier && ` · +${proxTier} p/ virar R$ 10/carro`}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="rounded-lg border border-purple/30 bg-purple/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CalendarCheck className="h-4 w-4 text-purple" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
+                </div>
+                <p className="text-2xl font-extrabold text-purple">{brl(ganhoAgendados)}</p>
+                <p className="text-[11px] text-muted-foreground">{nAgendados} × R$ {rate} — só falta trazer</p>
+              </div>
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Car className="h-4 w-4 text-warning" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
+                </div>
+                <p className="text-2xl font-extrabold text-warning">{brl(ganhoLoja)}</p>
+                <p className="text-[11px] text-muted-foreground">{nEmLoja} × R$ {rate} — em processo</p>
+              </div>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Rocket className="h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
+                </div>
+                <p className="text-2xl font-extrabold text-primary">{brl(ganhoProdutivos)}</p>
+                <p className="text-[11px] text-muted-foreground">Potencial total do mês</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Desempenho por loja */}
       {lojaCards.length > 0 && (
         <div>
