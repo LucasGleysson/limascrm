@@ -21,6 +21,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const { updateLead, unidades, unidadesAtivas, leads, agentUnidades } = useLeads();
   const [unidade, setUnidade] = useState("");
   const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
   const [os, setOs] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const submittingRef = useRef(false);
@@ -45,6 +46,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
             : "");
       setUnidade(preselect);
       setData("");
+      setHora("");
       setOs("");
       setTags([]);
       submittingRef.current = false;
@@ -67,13 +69,15 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
       const isReagendamento = !!leadAtual && ["dispensado", "perdido", "reagendado"].includes(leadAtual.etapa);
       const novoStatus = isReagendamento ? "reagendado" : "agendado";
       const notaLabel = isReagendamento ? "Reagendado" : "Agendado";
-      const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")} • OS: ${os}`;
+      const horaTxt = hora ? ` às ${hora}` : "";
+      const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")}${horaTxt} • OS: ${os}`;
       const notas = appendNota(leadAtual?.notas, notaLabel, notaTexto);
 
       await updateLead(leadId, {
         etapa: novoStatus,
         id_unidade: unidade,
         data_agendamento: data,
+        hora_agendamento: hora || null,
         numero_os: os,
         tags_servico: tags.length > 0 ? tags : null,
         notas,
@@ -114,6 +118,11 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
           <div>
             <Label>Data do Agendamento</Label>
             <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} className="mt-1" />
+          </div>
+          <div>
+            <Label>Horário de Atendimento</Label>
+            <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="mt-1" />
+            <p className="text-[11px] text-muted-foreground mt-1">Opcional — ajuda a ordenar a agenda do dia.</p>
           </div>
           <div>
             <Label>Número da OS</Label>

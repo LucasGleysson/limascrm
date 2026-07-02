@@ -11,7 +11,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import {
   Target, ChevronLeft, ChevronRight, CalendarDays, Users, CalendarCheck,
   Car, MapPin, Sparkles, Phone, RefreshCw, XCircle, Briefcase, Flame,
-  Trophy, AlertTriangle, CalendarIcon, ClipboardCheck,
+  Trophy, AlertTriangle, CalendarIcon, ClipboardCheck, Wallet, Rocket,
 } from "lucide-react";
 import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
@@ -117,6 +117,34 @@ export const AgentDayPanel = () => {
   }, [myLeads, dayStr]);
 
   const pctMeta = metaDia > 0 ? Math.min(Math.round((resultadosDoDia.naLoja / metaDia) * 100), 100) : 0;
+
+  // ===== Comissão do dia
+  const comissaoDia = useMemo(() => {
+    const mStart = format(startOfMonth(now), "yyyy-MM-dd");
+    const mEnd = format(endOfMonth(now), "yyyy-MM-dd");
+    const progressoMes = myLeads.filter((l) => {
+      if (!["concluido", "perdido"].includes(l.etapa)) return false;
+      const ref = l.checkin ? l.checkin.slice(0, 10) : (l.data_agendamento || "");
+      return ref >= mStart && ref <= mEnd;
+    }).length;
+    const rate = progressoMes > META_AGENTE ? 10 : 8;
+
+    const naLojaHoje = myLeads.filter((l) =>
+      ["na_loja", "analise_supervisor"].includes(l.etapa) &&
+      l.checkin && l.checkin.slice(0, 10) === dayStr
+    ).length;
+    const agendadosHoje = myLeads.filter((l) =>
+      ["agendado", "reagendado", "confirmado"].includes(l.etapa) &&
+      l.data_agendamento === dayStr
+    ).length;
+
+    const ganhoMeta = resultadosDoDia.total * rate;
+    const ganhoLoja = naLojaHoje * rate;
+    const ganhoAgendados = agendadosHoje * rate;
+    const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+    return { rate, progressoMes, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, naLojaHoje, agendadosHoje };
+  }, [myLeads, dayStr, resultadosDoDia.total, now]);
+
   const metaBadge = (() => {
     if (resultadosDoDia.naLoja >= Math.ceil(metaDia)) {
       return { label: "Meta do dia batida!", icon: Trophy, cls: "bg-success/20 text-success border-success/40" };
@@ -355,6 +383,63 @@ export const AgentDayPanel = () => {
           </div>
         </div>
       )}
+
+      {/* COMISSÃO DO DIA */}
+      {(() => {
+        const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+        return (
+          <div className="rounded-2xl border-2 border-success/40 bg-gradient-to-br from-success/20 via-success/10 to-card p-6 space-y-4 shadow-lg">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-success/20 p-3">
+                  <Wallet className="h-7 w-7 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Comissão do dia</p>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    Ganho de {dayLabel.toLowerCase()}
+                    <Badge variant="outline" className={comissaoDia.rate === 10 ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}>
+                      R$ {comissaoDia.rate}/carro
+                    </Badge>
+                  </h2>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-extrabold text-success leading-none">{brl(comissaoDia.ganhoMeta)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {resultadosDoDia.total} carro{resultadosDoDia.total !== 1 ? "s" : ""} conquistado{resultadosDoDia.total !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="rounded-lg border border-purple/30 bg-purple/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CalendarCheck className="h-4 w-4 text-purple" />
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
+                </div>
+                <p className="text-xl font-extrabold text-purple">{brl(comissaoDia.ganhoAgendados)}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.agendadosHoje} × R$ {comissaoDia.rate}</p>
+              </div>
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Car className="h-4 w-4 text-warning" />
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
+                </div>
+                <p className="text-xl font-extrabold text-warning">{brl(comissaoDia.ganhoLoja)}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.naLojaHoje} × R$ {comissaoDia.rate}</p>
+              </div>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Rocket className="h-4 w-4 text-primary" />
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
+                </div>
+                <p className="text-xl font-extrabold text-primary">{brl(comissaoDia.ganhoProdutivos)}</p>
+                <p className="text-[11px] text-muted-foreground">Potencial do dia</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Safra + Agendamentos da unidade */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

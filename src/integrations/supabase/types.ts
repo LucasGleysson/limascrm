@@ -105,6 +105,7 @@ export type Database = {
           fup_concluido_em: string | null
           fup_concluido_numero: number | null
           fup_motivo_conclusao: string | null
+          hora_agendamento: string | null
           id: string
           id_agente: string | null
           id_recepcionista: string | null
@@ -133,6 +134,7 @@ export type Database = {
           fup_concluido_em?: string | null
           fup_concluido_numero?: number | null
           fup_motivo_conclusao?: string | null
+          hora_agendamento?: string | null
           id?: string
           id_agente?: string | null
           id_recepcionista?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           fup_concluido_em?: string | null
           fup_concluido_numero?: number | null
           fup_motivo_conclusao?: string | null
+          hora_agendamento?: string | null
           id?: string
           id_agente?: string | null
           id_recepcionista?: string | null
