@@ -117,6 +117,34 @@ export const AgentDayPanel = () => {
   }, [myLeads, dayStr]);
 
   const pctMeta = metaDia > 0 ? Math.min(Math.round((resultadosDoDia.naLoja / metaDia) * 100), 100) : 0;
+
+  // ===== Comissão do dia
+  const comissaoDia = useMemo(() => {
+    const mStart = format(startOfMonth(now), "yyyy-MM-dd");
+    const mEnd = format(endOfMonth(now), "yyyy-MM-dd");
+    const progressoMes = myLeads.filter((l) => {
+      if (!["concluido", "perdido"].includes(l.etapa)) return false;
+      const ref = l.checkin ? l.checkin.slice(0, 10) : (l.data_agendamento || "");
+      return ref >= mStart && ref <= mEnd;
+    }).length;
+    const rate = progressoMes > META_AGENTE ? 10 : 8;
+
+    const naLojaHoje = myLeads.filter((l) =>
+      ["na_loja", "analise_supervisor"].includes(l.etapa) &&
+      l.checkin && l.checkin.slice(0, 10) === dayStr
+    ).length;
+    const agendadosHoje = myLeads.filter((l) =>
+      ["agendado", "reagendado", "confirmado"].includes(l.etapa) &&
+      l.data_agendamento === dayStr
+    ).length;
+
+    const ganhoMeta = resultadosDoDia.total * rate;
+    const ganhoLoja = naLojaHoje * rate;
+    const ganhoAgendados = agendadosHoje * rate;
+    const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+    return { rate, progressoMes, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, naLojaHoje, agendadosHoje };
+  }, [myLeads, dayStr, resultadosDoDia.total, now]);
+
   const metaBadge = (() => {
     if (resultadosDoDia.naLoja >= Math.ceil(metaDia)) {
       return { label: "Meta do dia batida!", icon: Trophy, cls: "bg-success/20 text-success border-success/40" };
