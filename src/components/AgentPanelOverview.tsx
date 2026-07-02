@@ -237,35 +237,69 @@ export const AgentPanelOverview = () => {
           <CalIcon className="h-5 w-5 text-primary" /> Sua semana
         </h3>
         <div className="grid grid-cols-7 gap-2">
-          {weekCounts.map(({ date, count }) => {
+          {weekCounts.map(({ date, count, items }) => {
             const today = isToday(date);
             const intensity = count / maxWeek;
             return (
-              <div
-                key={date.toISOString()}
-                className={`rounded-lg border p-3 text-center transition-colors ${
-                  today
-                    ? "border-primary bg-primary/15"
-                    : "border-border bg-muted/30"
-                }`}
-              >
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
-                  {format(date, "EEE", { locale: ptBR })}
-                </p>
-                <p className={`text-lg font-bold ${today ? "text-primary" : "text-foreground"}`}>
-                  {format(date, "dd")}
-                </p>
-                <p className={`text-2xl font-extrabold ${count > 0 ? "text-primary" : "text-muted-foreground/40"}`}>
-                  {count}
-                </p>
-                <p className="text-[10px] text-muted-foreground">agend.</p>
-                <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${Math.round(intensity * 100)}%` }}
-                  />
-                </div>
-              </div>
+              <Popover key={date.toISOString()}>
+                <PopoverTrigger asChild>
+                  <button
+                    disabled={count === 0}
+                    className={`rounded-lg border p-3 text-center transition-colors ${
+                      today ? "border-primary bg-primary/15" : "border-border bg-muted/30"
+                    } ${count > 0 ? "hover:border-primary/60 hover:bg-primary/10 cursor-pointer" : "cursor-default opacity-90"}`}
+                  >
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                      {format(date, "EEE", { locale: ptBR })}
+                    </p>
+                    <p className={`text-lg font-bold ${today ? "text-primary" : "text-foreground"}`}>
+                      {format(date, "dd")}
+                    </p>
+                    <p className={`text-2xl font-extrabold ${count > 0 ? "text-primary" : "text-muted-foreground/40"}`}>
+                      {count}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">agend.</p>
+                    <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${Math.round(intensity * 100)}%` }}
+                      />
+                    </div>
+                  </button>
+                </PopoverTrigger>
+                {count > 0 && (
+                  <PopoverContent align="center" className="w-80 p-0">
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                        {format(date, "EEEE", { locale: ptBR })}
+                      </p>
+                      <p className="font-semibold text-sm">
+                        {format(date, "dd 'de' MMMM", { locale: ptBR })} · {count} agendamento{count > 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <div className="max-h-72 overflow-auto divide-y divide-border">
+                      {items.map((l) => (
+                        <div key={l.id} className="px-4 py-2.5 flex items-start gap-3">
+                          <div className="rounded-md bg-primary/10 text-primary font-bold text-xs px-2 py-1 min-w-[54px] text-center flex items-center justify-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {l.hora_agendamento || "--:--"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{l.nome}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {l.telefone || "sem telefone"}
+                              {l.numero_os && <> · OS {l.numero_os}</>}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            {l.etapa}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                )}
+              </Popover>
             );
           })}
         </div>
