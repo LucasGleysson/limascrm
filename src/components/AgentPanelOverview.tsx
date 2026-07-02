@@ -112,12 +112,17 @@ export const AgentPanelOverview = () => {
   const weekCounts = useMemo(() => {
     return weekDays.map((d) => {
       const ds = format(d, "yyyy-MM-dd");
-      const count = allMyLeads.filter(
+      const items = allMyLeads.filter(
         (l) =>
           ["agendado", "reagendado", "confirmado"].includes(l.etapa) &&
           l.data_agendamento === ds
-      ).length;
-      return { date: d, count };
+      );
+      const sorted = [...items].sort((a, b) => {
+        const ha = a.hora_agendamento || "99:99";
+        const hb = b.hora_agendamento || "99:99";
+        return ha.localeCompare(hb);
+      });
+      return { date: d, count: items.length, items: sorted };
     });
   }, [allMyLeads, weekDays]);
 
