@@ -48,6 +48,7 @@ export interface Lead {
   id_agente: string | null;
   id_unidade?: string | null;
   data_agendamento?: string | null;
+  hora_agendamento?: string | null;
   numero_os?: string | null;
   valor_servico?: number | null;
   tags_servico?: string[] | null;

@@ -310,7 +310,7 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
   const updateLead = async (id: string, updates: Partial<Lead>) => {
     setLeads((prev) => prev.map((l) => l.id === id ? { ...l, ...updates } : l));
     lastFetchRef.current = 0;
-    const { error } = await supabase.from("leads").update(updates).eq("id", id);
+    const { error } = await supabase.from("leads").update(updates as any).eq("id", id);
     if (error) {
       console.error("updateLead error:", error);
       fetchAll(true);
