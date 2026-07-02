@@ -11,7 +11,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import {
   Target, ChevronLeft, ChevronRight, CalendarDays, Users, CalendarCheck,
   Car, MapPin, Sparkles, Phone, RefreshCw, XCircle, Briefcase, Flame,
-  Trophy, AlertTriangle, CalendarIcon, ClipboardCheck,
+  Trophy, AlertTriangle, CalendarIcon, ClipboardCheck, Wallet, Rocket,
 } from "lucide-react";
 import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
