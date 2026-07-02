@@ -3,10 +3,11 @@ import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Trophy, Flame, AlertTriangle, Target, Users, CalendarCheck,
   CheckCircle2, Car, Calendar as CalIcon, XCircle, RefreshCw,
-  ClipboardCheck, Search, MapPin,
+  ClipboardCheck, Search, MapPin, DollarSign, Wallet, Rocket, Coins, Clock,
 } from "lucide-react";
 import {
   startOfWeek, endOfWeek, addDays, format, isToday, startOfMonth, endOfMonth,
