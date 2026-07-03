@@ -13,6 +13,7 @@ import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { ScheduleModal } from "./ScheduleModal";
 import { Phone, MapPin, Calendar, FileText, User, Tag, Pencil, CalendarCheck, X, Check, Ban, StickyNote, CalendarPlus, ArrowLeftRight, Skull, AlertCircle, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +22,9 @@ interface Props {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  navPosition?: { index: number; total: number };
 }
 
 // Supervisor can change to ANY status
@@ -36,7 +40,7 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
   perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
 };
 
-export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
+export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navPosition }: Props) => {
   const { updateLead, addEvento, unidades, unidadesAtivas, profiles, eventos, agentUnidades } = useLeads();
   const { currentUser } = useRole();
   const [editing, setEditing] = useState(false);
@@ -341,6 +345,18 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange }: Props) => {
   };
 
   const isEditMode = editing || editingSchedule;
+
+  useEffect(() => {
+    if (!open || isEditMode) return;
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key === "ArrowLeft" && onPrev) { e.preventDefault(); onPrev(); }
+      else if (e.key === "ArrowRight" && onNext) { e.preventDefault(); onNext(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, isEditMode, onPrev, onNext]);
 
   // Get available status targets based on role
   const statusTargets = isSupervisorOrGestor
