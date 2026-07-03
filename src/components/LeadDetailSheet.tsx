@@ -369,7 +369,22 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}</span>
+              <div className="flex items-center gap-2">
+                {(onPrev || onNext) && !isEditMode && (
+                  <div className="flex items-center gap-1 mr-1">
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={onPrev} disabled={!onPrev} title="Anterior (←)">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={onNext} disabled={!onNext} title="Próximo (→)">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    {navPosition && (
+                      <span className="text-xs text-muted-foreground ml-1 tabular-nums">{navPosition.index + 1}/{navPosition.total}</span>
+                    )}
+                  </div>
+                )}
+                <span>{editing ? "Editar Ficha" : editingSchedule ? "Editar Agendamento" : "Ficha do Cliente"}</span>
+              </div>
               {!isEditMode && (
                 <div className="flex items-center gap-1">
                   {canChangeStatus && (
