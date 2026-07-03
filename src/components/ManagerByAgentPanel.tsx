@@ -4,12 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Trophy, Flame, AlertTriangle, Target, Users, CalendarCheck, CheckCircle2,
   Car, XCircle, RefreshCw, ClipboardCheck, MapPin, Skull, CheckCheck, RotateCcw, Search,
+  Wallet, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isPerdidoAntesLoja } from "@/lib/leadUtils";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 
 const DEFAULT_META = 75;
+const META_COMISSAO = 75;
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 function countBusinessDays(from: Date, to: Date): number {
   let count = 0;
@@ -97,6 +100,16 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       const reagendados = a.naLojaReagendado ?? a.leads.filter((l: any) => l.etapa === "reagendado").length;
       const emAnalise = a.naLojaAnalise ?? a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
 
+      // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
+      const passouMeta = progresso > META_COMISSAO;
+      const rate = passouMeta ? 10 : 8;
+      const nEmLojaCom = a.leads.filter((l: any) => ["na_loja", "analise_supervisor"].includes(l.etapa)).length;
+      const nAgendadosCom = a.leads.filter((l: any) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+      const ganhoMeta = progresso * rate;
+      const ganhoLoja = nEmLojaCom * rate;
+      const ganhoAgendados = nAgendadosCom * rate;
+      const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+
       let badge: { label: string; icon: any; cls: string };
       if (progresso >= meta) {
         badge = { label: "Meta batida!", icon: Trophy, cls: "bg-success/20 text-success border-success/40" };
@@ -105,7 +118,10 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       } else {
         badge = { label: "Acelerar", icon: AlertTriangle, cls: "bg-destructive/20 text-destructive border-destructive/40" };
       }
-      return { ...a, meta, progresso, pct, restante, mediaAtual, confirmados, reagendados, emAnalise, badge };
+      return {
+        ...a, meta, progresso, pct, restante, mediaAtual, confirmados, reagendados, emAnalise, badge,
+        rate, passouMeta, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, nEmLojaCom, nAgendadosCom,
+      };
     }).sort((a, b) => b.pct - a.pct);
   }, [agenteStats, metasMap, bizDays]);
 
@@ -114,7 +130,9 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
     const prog = enriched.reduce((s, a) => s + a.progresso, 0);
     const naLoja = enriched.reduce((s, a) => s + a.passaramNaLoja, 0);
     const concl = enriched.reduce((s, a) => s + a.concluidos, 0);
-    return { meta, prog, naLoja, concl, pct: meta > 0 ? Math.round((prog / meta) * 100) : 0 };
+    const comissao = enriched.reduce((s, a) => s + a.ganhoMeta, 0);
+    const comissaoPot = enriched.reduce((s, a) => s + a.ganhoProdutivos, 0);
+    return { meta, prog, naLoja, concl, pct: meta > 0 ? Math.round((prog / meta) * 100) : 0, comissao, comissaoPot };
   }, [enriched]);
 
   return (
@@ -130,11 +148,12 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <SummaryTile icon={Users} label="Agentes" value={enriched.length} color="text-info" />
         <SummaryTile icon={Target} label="Meta total" value={totals.meta} color="text-primary" />
         <SummaryTile icon={CheckCircle2} label="Progresso" value={`${totals.prog} (${totals.pct}%)`} color="text-success" />
         <SummaryTile icon={Car} label="Na loja" value={totals.naLoja} color="text-warning" />
+        <SummaryTile icon={Wallet} label="Comissão total" value={brl(totals.comissao)} color="text-success" />
       </div>
 
       {/* Cards */}
@@ -207,6 +226,27 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                   <span className="text-muted-foreground">0 pendentes</span>
                 )}
               </div>
+
+              {/* Comissão */}
+              <div className="rounded-xl border border-success/30 bg-gradient-to-br from-success/15 to-transparent p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-success" />
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comissão</span>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${a.passouMeta ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}`}>
+                      R$ {a.rate}/carro {a.passouMeta && "🔥"}
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xl font-extrabold text-success leading-none">{brl(a.ganhoMeta)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <ComTile icon={CalendarCheck} label="Agendados" value={brl(a.ganhoAgendados)} sub={`${a.nAgendadosCom} × R$ ${a.rate}`} color="text-purple-500" />
+                  <ComTile icon={Car} label="Na loja" value={brl(a.ganhoLoja)} sub={`${a.nEmLojaCom} × R$ ${a.rate}`} color="text-warning" />
+                  <ComTile icon={Rocket} label="Produtivos" value={brl(a.ganhoProdutivos)} sub="Potencial" color="text-primary" />
+                </div>
+              </div>
             </div>
           );
         })}
@@ -235,6 +275,19 @@ function StatTile({ icon: Icon, label, value, color }: { icon: any; label: strin
         <span className="text-lg font-extrabold leading-none">{value}</span>
       </div>
       <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function ComTile({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub: string; color: string }) {
+  return (
+    <div className="rounded-lg bg-muted/30 p-2">
+      <div className={`flex items-center gap-1 ${color}`}>
+        <Icon className="h-3 w-3" />
+        <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">{label}</span>
+      </div>
+      <p className={`text-sm font-extrabold ${color} leading-tight mt-0.5`}>{value}</p>
+      <p className="text-[9px] text-muted-foreground">{sub}</p>
     </div>
   );
 }
