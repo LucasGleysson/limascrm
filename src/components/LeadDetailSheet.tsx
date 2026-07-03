@@ -124,6 +124,18 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
     return entries;
   }, [lead, eventos]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.key === "ArrowLeft" && onPrev) { e.preventDefault(); onPrev(); }
+      else if (e.key === "ArrowRight" && onNext) { e.preventDefault(); onNext(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onPrev, onNext]);
+
   if (!lead) return null;
 
   const etapa = ETAPAS_FUNIL.find((e) => e.id === lead.etapa);
@@ -345,18 +357,6 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   };
 
   const isEditMode = editing || editingSchedule;
-
-  useEffect(() => {
-    if (!open || isEditMode) return;
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-      if (e.key === "ArrowLeft" && onPrev) { e.preventDefault(); onPrev(); }
-      else if (e.key === "ArrowRight" && onNext) { e.preventDefault(); onNext(); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, isEditMode, onPrev, onNext]);
 
   // Get available status targets based on role
   const statusTargets = isSupervisorOrGestor
