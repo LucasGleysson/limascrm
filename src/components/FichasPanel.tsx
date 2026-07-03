@@ -130,6 +130,14 @@ export const FichasPanel = () => {
 
   const pagination = usePagination(filtered, { pageSize: 20 });
 
+  const currentIndex = useMemo(
+    () => (detailLead ? filtered.findIndex((l) => l.id === detailLead.id) : -1),
+    [detailLead, filtered],
+  );
+  const goPrev = currentIndex > 0 ? () => setDetailLead(filtered[currentIndex - 1]) : undefined;
+  const goNext = currentIndex >= 0 && currentIndex < filtered.length - 1
+    ? () => setDetailLead(filtered[currentIndex + 1]) : undefined;
+
   const getAgentName = (id: string) => profiles.find((p) => p.id === id)?.nome || "—";
   const getUnitName = (id?: string | null) => id ? unidades.find((u) => u.id === id)?.nome || "—" : "—";
 
@@ -232,6 +240,7 @@ export const FichasPanel = () => {
           <TableHeader>
             <TableRow>
               <TableHead>CLIENTE</TableHead>
+              <TableHead>OS</TableHead>
               <TableHead>CONTATO</TableHead>
               <TableHead>AGENTE</TableHead>
               <TableHead>LOJA</TableHead>
@@ -244,7 +253,7 @@ export const FichasPanel = () => {
           <TableBody>
             {pagination.paginatedItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                   Nenhuma ficha encontrada com os filtros selecionados.
                 </TableCell>
               </TableRow>
@@ -254,6 +263,7 @@ export const FichasPanel = () => {
                 return (
                   <TableRow key={lead.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailLead(lead); setDetailOpen(true); }}>
                     <TableCell className="font-medium">{lead.nome}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{lead.numero_os || "—"}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{formatPhone(lead.telefone)}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{getAgentName(lead.id_agente)}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{getUnitName(lead.id_unidade)}</TableCell>
@@ -286,7 +296,14 @@ export const FichasPanel = () => {
         />
       </div>
 
-      <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+      <LeadDetailSheet
+        lead={detailLead}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onPrev={goPrev}
+        onNext={goNext}
+        navPosition={currentIndex >= 0 ? { index: currentIndex, total: filtered.length } : undefined}
+      />
 
       {canCreate && (
         <NewLeadModal open={newOpen} onOpenChange={setNewOpen} allowAgentSelection />
