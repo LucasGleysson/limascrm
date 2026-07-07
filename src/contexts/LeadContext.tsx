@@ -391,6 +391,7 @@ function mapLead(row: any): Lead {
     id_unidade: row.id_unidade,
     id_recepcionista: row.id_recepcionista,
     data_agendamento: row.data_agendamento,
+    hora_agendamento: row.hora_agendamento ?? null,
     numero_os: row.numero_os,
     valor_servico: row.valor_servico ? Number(row.valor_servico) : null,
     tags_servico: row.tags_servico,
