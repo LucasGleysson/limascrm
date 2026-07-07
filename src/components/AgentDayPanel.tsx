@@ -129,9 +129,12 @@ export const AgentDayPanel = () => {
     }).length;
     const rate = progressoMes > META_AGENTE ? 10 : 8;
 
+    // "Na Loja" para comissão do dia: registros que foram na loja nesse dia
+    // (têm check-in no dia) e ainda não foram finalizados — Concluído/Perdido
+    // já são contados em ganhoMeta via resultadosDoDia.total.
     const naLojaHoje = myLeads.filter((l) =>
-      ["na_loja", "analise_supervisor"].includes(l.etapa) &&
-      l.checkin && l.checkin.slice(0, 10) === dayStr
+      !!l.checkin && l.checkin.slice(0, 10) === dayStr &&
+      !["concluido", "perdido"].includes(l.etapa)
     ).length;
     const agendadosHoje = myLeads.filter((l) =>
       ["agendado", "reagendado", "confirmado"].includes(l.etapa) &&
