@@ -103,7 +103,12 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
       const passouMeta = progresso > META_COMISSAO;
       const rate = passouMeta ? 10 : 8;
-      const nEmLojaCom = a.leads.filter((l: any) => ["na_loja", "analise_supervisor"].includes(l.etapa)).length;
+      // "Na Loja" para comissão: registros que efetivamente foram na loja
+      // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
+      // entram em ganhoMeta).
+      const nEmLojaCom = a.leads.filter(
+        (l: any) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
+      ).length;
       const nAgendadosCom = a.leads.filter((l: any) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
       const ganhoMeta = progresso * rate;
       const ganhoLoja = nEmLojaCom * rate;

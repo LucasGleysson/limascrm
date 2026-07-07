@@ -332,7 +332,12 @@ export const AgentPanelOverview = () => {
         const rate = passouMeta ? 10 : 8;
         const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-        const nEmLoja = myMonthLeads.filter((l) => ["na_loja", "analise_supervisor"].includes(l.etapa)).length;
+        // "Na Loja" para comissão: registros que efetivamente foram na loja
+        // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
+        // entram em ganhoMeta). Independe do status atual.
+        const nEmLoja = myMonthLeads.filter(
+          (l) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
+        ).length;
         const nAgendados = myMonthLeads.filter((l) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
         const ganhoMeta = progresso * rate;
         const ganhoLoja = nEmLoja * rate;
