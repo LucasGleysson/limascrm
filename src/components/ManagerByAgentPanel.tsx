@@ -46,6 +46,15 @@ interface AgenteStat {
   naLojaConfirmado?: number;
   naLojaReagendado?: number;
   naLojaAnalise?: number;
+  porUnidade?: Array<{
+    id: string;
+    nome: string;
+    naLoja: number;
+    concluidos: number;
+    perdidos: number;
+    dispensados: number;
+    agendamentos: number;
+  }>;
 }
 
 interface Props {
