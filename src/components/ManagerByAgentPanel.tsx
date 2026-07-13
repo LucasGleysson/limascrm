@@ -241,6 +241,44 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                 )}
               </div>
 
+              {/* Split por loja — resolve a confusão de agente multi-loja */}
+              {a.porUnidade && a.porUnidade.length > 1 && (
+                <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-info" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Divisão por loja
+                    </span>
+                  </div>
+                  <div className="overflow-hidden rounded-md border border-border/60">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="text-left px-2 py-1 font-semibold">Loja</th>
+                          <th className="text-center px-1 py-1 font-semibold" title="Agendamentos">Ag.</th>
+                          <th className="text-center px-1 py-1 font-semibold" title="Na Loja">NL</th>
+                          <th className="text-center px-1 py-1 font-semibold text-success" title="Concluídos">Cn</th>
+                          <th className="text-center px-1 py-1 font-semibold text-purple-500" title="Dispensados">Ds</th>
+                          <th className="text-center px-1 py-1 font-semibold text-destructive" title="Perdidos">Pd</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {a.porUnidade.map((u) => (
+                          <tr key={u.id} className="border-t border-border/60">
+                            <td className="px-2 py-1 font-medium truncate">{u.nome}</td>
+                            <td className="text-center px-1 py-1">{u.agendamentos}</td>
+                            <td className="text-center px-1 py-1 font-bold text-warning">{u.naLoja}</td>
+                            <td className="text-center px-1 py-1 text-success">{u.concluidos}</td>
+                            <td className="text-center px-1 py-1 text-purple-500">{u.dispensados}</td>
+                            <td className="text-center px-1 py-1 text-destructive">{u.perdidos}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Comissão */}
               <div className="rounded-xl border border-success/30 bg-gradient-to-br from-success/15 to-transparent p-3 space-y-2">
                 <div className="flex items-center justify-between">
