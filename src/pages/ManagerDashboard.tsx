@@ -236,6 +236,26 @@ export const ManagerDashboard = () => {
       }).length + agLembretes.filter((e) => !e.concluido && e.data_prevista <= todayStr).length;
       const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
       const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+      // Split por loja: cada linha reflete apenas os leads daquela unidade.
+      const unidadeIdsEnvolvidas = new Set<string>();
+      aLeads.forEach((l) => { if (l.id_unidade) unidadeIdsEnvolvidas.add(l.id_unidade); });
+      aNaLoja.forEach((l) => { if (l.id_unidade) unidadeIdsEnvolvidas.add(l.id_unidade); });
+      const porUnidade = Array.from(unidadeIdsEnvolvidas)
+        .map((uid) => {
+          const u = unidades.find((x) => x.id === uid);
+          const uLeads = aLeads.filter((l) => l.id_unidade === uid);
+          const uNaLoja = aNaLoja.filter((l) => l.id_unidade === uid);
+          return {
+            id: uid,
+            nome: u?.nome || "—",
+            naLoja: uNaLoja.length,
+            concluidos: uNaLoja.filter((l) => l.etapa === "concluido").length,
+            perdidos: uNaLoja.filter((l) => l.etapa === "perdido").length,
+            dispensados: uNaLoja.filter((l) => l.etapa === "dispensado").length,
+            agendamentos: uLeads.filter((l) => ["agendado","reagendado","confirmado","na_loja","concluido","dispensado","perdido","desqualificado_agendado","analise_supervisor"].includes(l.etapa)).length,
+          };
+        })
+        .sort((a, b) => b.naLoja - a.naLoja || a.nome.localeCompare(b.nome));
       return {
         ...agente, unidadeNome,
         total: aLeads.length, passaramNaLoja, concluidos, totalAgendamentos,
@@ -247,6 +267,7 @@ export const ManagerDashboard = () => {
         naLojaConfirmado: aNaLoja.filter((l) => l.etapa === "confirmado").length,
         naLojaReagendado: aNaLoja.filter((l) => l.etapa === "reagendado").length,
         naLojaAnalise: aNaLoja.filter((l) => l.etapa === "analise_supervisor").length,
+        porUnidade,
       };
     });
   }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
