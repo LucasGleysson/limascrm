@@ -31,6 +31,7 @@ interface Props {
 const ALL_STATUSES = ETAPAS_FUNIL.map((e) => ({ id: e.id, label: e.label }));
 
 const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string; label: string }[] }> = {
+  novo: { label: "Novo Lead", targets: [{ id: "trabalhado", label: "Trabalhado" }] },
   agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
   desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },

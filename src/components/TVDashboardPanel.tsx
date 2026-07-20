@@ -39,7 +39,7 @@ export const TVDashboardPanel: React.FC = () => {
   const hoje = getToday();
 
   const orderedUnidades = useMemo(() => {
-  const allowed = new Set(["Laranjeiras", "Grandville", "Patrocínio", "Araguari", "Pacaembu"]);
+  const allowed = new Set(["Laranjeiras", "Grandville", "Patrocínio", "Araguari", "Pacaembu", "Serrana"]);
     return unidadesAtivas.filter((u) => allowed.has(u.nome));
   }, [unidadesAtivas]);
 
@@ -152,7 +152,7 @@ export const TVDashboardPanel: React.FC = () => {
       </div>
 
       {/* Unit cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 xl:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 xl:gap-5">
         {unitStats.map((us) => (
           <UnitCard key={us.unidade.id} data={us} />
         ))}
