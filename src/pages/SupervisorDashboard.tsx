@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
   RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle, LogIn,
@@ -47,6 +48,11 @@ export const SupervisorDashboard = () => {
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
+  const [customFrom, setCustomFrom] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
@@ -57,13 +63,40 @@ export const SupervisorDashboard = () => {
     </Button>
   );
 
+  const PeriodControls = (
+    <>
+      <PeriodFilter value={period} onChange={setPeriod} />
+      {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+      {period === "custom" && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="h-9 w-[150px]"
+          />
+          <span className="text-muted-foreground text-sm">até</span>
+          <Input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="h-9 w-[150px]"
+          />
+        </div>
+      )}
+    </>
+  );
+
   const periodRange = useMemo(() => {
     if (period === "mes") {
       return getMonthRange(mesRef);
     }
+    if (period === "custom") {
+      return { from: customFrom || null, to: customTo || new Date().toISOString().split("T")[0] };
+    }
     const r = getDateRangeForPeriod(period);
     return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
-  }, [period, mesRef]);
+  }, [period, mesRef, customFrom, customTo]);
   const { rows: leads } = useScopedLeads({
     from: periodRange.from,
     to: periodRange.to,
@@ -249,8 +282,7 @@ export const SupervisorDashboard = () => {
               </div>
               <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
-                <PeriodFilter value={period} onChange={setPeriod} />
-                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+                {PeriodControls}
               </div>
             </div>
 
@@ -274,8 +306,7 @@ export const SupervisorDashboard = () => {
             headerActions={
               <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
-                <PeriodFilter value={period} onChange={setPeriod} />
-                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+                {PeriodControls}
               </div>
             }
           />
@@ -290,8 +321,7 @@ export const SupervisorDashboard = () => {
             headerActions={
               <div className="flex items-center gap-3 flex-wrap">
                 {RefreshButton}
-                <PeriodFilter value={period} onChange={setPeriod} />
-                {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+                {PeriodControls}
               </div>
             }
           />
