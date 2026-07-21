@@ -63,6 +63,30 @@ export const SupervisorDashboard = () => {
     </Button>
   );
 
+  const PeriodControls = (
+    <>
+      <PeriodFilter value={period} onChange={setPeriod} />
+      {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+      {period === "custom" && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="h-9 w-[150px]"
+          />
+          <span className="text-muted-foreground text-sm">até</span>
+          <Input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="h-9 w-[150px]"
+          />
+        </div>
+      )}
+    </>
+  );
+
   const periodRange = useMemo(() => {
     if (period === "mes") {
       return getMonthRange(mesRef);
