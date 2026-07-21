@@ -1,8 +1,8 @@
 import { startOfWeek, startOfMonth, subDays, format } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Calendar, CalendarDays, CalendarRange, Infinity } from "lucide-react";
+import { Calendar, CalendarDays, CalendarRange, Infinity, SlidersHorizontal } from "lucide-react";
 
-export type PeriodKey = "semana" | "mes" | "30dias" | "total";
+export type PeriodKey = "semana" | "mes" | "30dias" | "total" | "custom";
 
 interface PeriodFilterProps {
   value: PeriodKey;
@@ -14,6 +14,7 @@ const PERIODS: { key: PeriodKey; label: string; icon: React.ElementType }[] = [
   { key: "mes", label: "Mês", icon: CalendarDays },
   { key: "30dias", label: "30 dias", icon: CalendarRange },
   { key: "total", label: "Total", icon: Infinity },
+  { key: "custom", label: "Personalizado", icon: SlidersHorizontal },
 ];
 
 export function getDateRangeForPeriod(period: PeriodKey): { from: string | null; to: string } {
@@ -28,6 +29,8 @@ export function getDateRangeForPeriod(period: PeriodKey): { from: string | null;
     case "30dias":
       return { from: format(subDays(today, 30), "yyyy-MM-dd"), to };
     case "total":
+      return { from: null, to };
+    case "custom":
       return { from: null, to };
   }
 }
