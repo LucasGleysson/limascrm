@@ -53,6 +53,11 @@ export const ManagerDashboard = () => {
   const [unidadeFilter, setUnidadeFilter] = useState("todas");
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
+  const [customFrom, setCustomFrom] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [expandedAgente, setExpandedAgente] = useState<string | null>(null);
@@ -63,9 +68,10 @@ export const ManagerDashboard = () => {
   // Range efetivo do período selecionado.
   const periodRangeAll = useMemo(() => {
     if (period === "mes") return getMonthRange(mesRef);
+    if (period === "custom") return { from: customFrom || null, to: customTo || new Date().toISOString().split("T")[0] };
     const r = getDateRangeForPeriod(period);
     return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
-  }, [period, mesRef]);
+  }, [period, mesRef, customFrom, customTo]);
   // Fetch escopado: meses antigos disparam fetch, meses correntes reaproveitam contexto.
   const { rows: leads } = useScopedLeads({
     from: periodRangeAll.from,
@@ -201,8 +207,9 @@ export const ManagerDashboard = () => {
 
   const periodRange = useMemo(() => {
     if (period === "mes") return getMonthRange(mesRef);
+    if (period === "custom") return { from: customFrom || null, to: customTo || new Date().toISOString().split("T")[0] };
     return getDateRangeForPeriod(period);
-  }, [period, mesRef]);
+  }, [period, mesRef, customFrom, customTo]);
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const tomorrowStr = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; }, []);
