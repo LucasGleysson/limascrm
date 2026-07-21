@@ -10,6 +10,7 @@ import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/Per
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Users, CalendarCheck, TrendingUp, LayoutDashboard, MapPin, Percent,
   RefreshCw, Car, XCircle, FileText, Calendar,
@@ -315,6 +316,20 @@ export const ManagerDashboard = () => {
     <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} className="gap-2">
       <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Atualizar
     </Button>
+  );
+
+  const PeriodControls = (
+    <>
+      <PeriodFilter value={period} onChange={setPeriod} />
+      {period === "mes" && <MonthNavigator mesRef={mesRef} onChange={setMesRef} />}
+      {period === "custom" && (
+        <div className="flex items-center gap-2">
+          <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-[150px]" />
+          <span className="text-muted-foreground text-sm">até</span>
+          <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-[150px]" />
+        </div>
+      )}
+    </>
   );
 
   const UnidadeFilterSelect = (
