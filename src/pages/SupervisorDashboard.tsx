@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Users, CalendarCheck, XCircle, TrendingUp, ChevronRight, LayoutDashboard, MapPin,
   RefreshCw, Target, Car, CheckCircle2, FileText, Calendar, ClipboardList, Eye, Skull, AlertTriangle, LogIn,
@@ -47,6 +48,11 @@ export const SupervisorDashboard = () => {
   const [selectedUnidade, setSelectedUnidade] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [mesRef, setMesRef] = useState(() => getMonthRef(new Date()));
+  const [customFrom, setCustomFrom] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => { setRefreshing(true); await refreshAll(); setRefreshing(false); };
@@ -61,9 +67,12 @@ export const SupervisorDashboard = () => {
     if (period === "mes") {
       return getMonthRange(mesRef);
     }
+    if (period === "custom") {
+      return { from: customFrom || null, to: customTo || new Date().toISOString().split("T")[0] };
+    }
     const r = getDateRangeForPeriod(period);
     return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
-  }, [period, mesRef]);
+  }, [period, mesRef, customFrom, customTo]);
   const { rows: leads } = useScopedLeads({
     from: periodRange.from,
     to: periodRange.to,
