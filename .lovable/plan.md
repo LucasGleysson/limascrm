@@ -1,49 +1,40 @@
-## Objetivo
-Corrigir duas regras de transição de status que estão inconsistentes com a realidade do funil:
+# Novos encerramentos: "Sem retorno" e "Não convertido"
 
-1. Lead **desqualificado_agendado** que é reagendado deve voltar para **agendado** (e não "reagendado"), pois ele nunca esteve na loja.
-2. Lead **reagendado** que completa/encerra o processo de follow-up deve ir para **analise_supervisor** (e não "desqualificado_agendado"), pois o status reagendado indica que o cliente já passou pela loja antes.
+## Análise: status ou tag?
 
-## Diagnóstico atual
+As duas informações descrevem **como a ficha terminou**, e não *por que* — diferente de "Outra Cidade", que é uma tag de motivo aplicada junto de uma desqualificação.
 
-**`src/components/ScheduleModal.tsx` (linha 65-66)** — ao reagendar, hoje considera qualquer etapa em `["dispensado", "perdido", "desqualificado_agendado", "reagendado"]` como reagendamento e marca como `reagendado`. Isso está errado para `desqualificado_agendado`, que nunca foi à loja.
+- **Sem retorno** (nunca respondeu no follow-up) e **Não convertido** (registrado, mas nunca agendou nem foi à loja) são estados finais, mutuamente exclusivos entre si e com Agendado/Na Loja.
+- Uma ficha só pode estar em um deles por vez, e você quer contá-los em relatório para entender por que o registro não virou agendamento.
 
-**`supabase/functions/generate-followups/index.ts`** — já está correto: quando follow-up de `reagendado` esgota, vai para `analise_supervisor`. Não precisa mudar.
+Por isso a recomendação é **criar os dois como status (etapas)**, no mesmo grupo de evasão antes da loja onde hoje ficam os Desqualificados e o Trabalhado. As tags de motivo continuam existindo por cima (ex.: "Outra Cidade", "Em Breve"), permitindo detalhar o porquê dentro de cada status.
 
-**`src/components/FollowUpTrackingPanel.tsx` (linhas 78-81)** — no encerramento manual do follow-up, hoje:
-- `na_loja / dispensado / confirmado` → `analise_supervisor`
-- `agendado / reagendado` → `desqualificado_agendado`
+Observação: "Trabalhado" hoje significa quase o mesmo que "Sem retorno" (lead que percorreu o FUP sem agendar). Mantemos "Trabalhado" como está e "Sem retorno" passa a ser o encerramento definitivo de quem nunca respondeu; se preferir, depois podemos aposentar "Trabalhado".
 
-Isso joga lead `reagendado` para `desqualificado_agendado` ao encerrar, contradizendo a regra do usuário.
+## O que será feito
 
-## Mudanças
+1. **Dois novos status no funil**
+   - `sem_retorno` — "Sem retorno"
+   - `nao_convertido` — "Não convertido"
+   - Cor neutra/destrutiva suave, com badge próprio, aparecendo em toda a interface onde os status já aparecem (fichas, busca, detalhe da ficha, filtros).
 
-### 1. ScheduleModal — reagendar desqualificado vira `agendado`
-- Tratar `desqualificado_agendado` (e `desqualificado_novo`) como primeiro agendamento: status final = `agendado`.
-- Manter `reagendado` apenas para quem realmente já passou da loja: `dispensado`, `perdido`, `reagendado` (re-reagendamento).
+2. **Somente Supervisor e Gestor movem para esses status**
+   - Na ficha, a ação "Alterar status" ganha as duas opções a partir de **qualquer etapa**, visível apenas para supervisor/gestor.
+   - Ao mover, é registrado no histórico de notas quem alterou e a data, e é possível selecionar tags de motivo (mesma lista já usada hoje).
+   - Também é possível sair desses status de volta para Novo / Agendado / Trabalhado.
 
-```text
-etapaAtual                       → novoStatus
-desqualificado_novo              → agendado
-desqualificado_agendado          → agendado   (mudança)
-novo                             → agendado
-dispensado / perdido / reagendado → reagendado
-```
+3. **Contagem nos relatórios**
+   - Ambos entram como **evasão antes da loja**, junto com os desqualificados — não contam como carro, meta ou comissão (nenhum deles teve check-in).
+   - Nos painéis de Gestor e Supervisor (Visão geral, Por Agente, Por Loja) e no relatório diário, entram como dois indicadores próprios, para mostrar o motivo de o registro não ter virado agendamento.
+   - Filtro por status nas Fichas e na busca inclui as duas novas opções.
 
-### 2. FollowUpTrackingPanel — encerrar follow-up de reagendado
-- Mudar a regra para que `reagendado` caia em `analise_supervisor` ao encerrar:
-  - `na_loja / dispensado / confirmado / reagendado` → `analise_supervisor`
-  - `agendado` → `desqualificado_agendado` (mantém)
+4. **Follow-up**
+   - Fichas nesses status saem do ciclo de follow-up (os pendentes são encerrados), já que representam encerramento.
 
-Também ajustar o helper de classificação `getCategoria` (linha 70) se necessário para refletir a nova semântica de exibição, mantendo `reagendado` agrupado como pós-loja para fins de encerramento, sem alterar a contagem do funil de captação.
+## Detalhes técnicos
 
-### 3. Sem mudanças em banco
-Nenhuma migração, gatilho ou política. O trigger `leads_reset_fup_on_reagendamento` continua válido (ele só atua quando `data_agendamento` muda e a etapa atual é `novo` ou `dispensado` — não afeta `desqualificado_agendado`, então não conflita com a nova regra do front).
-
-## Arquivos afetados
-- `src/components/ScheduleModal.tsx`
-- `src/components/FollowUpTrackingPanel.tsx`
-
-## Fora de escopo
-- Geração automática de follow-ups (já correta).
-- Métricas, RLS, schema, contagem do painel diário/TV.
+- Não há mudança de schema obrigatória: `leads.etapa` é texto livre. Os novos valores entram em `ETAPAS_FUNIL` (`src/data/mockData.ts`), em `getStatusBadgeClass` e nos grupos de `src/lib/leadUtils.ts` (`ETAPAS_EVASAO_ANTES`, `isPerdidoAntesLoja`).
+- `ACTIVE_FUNNEL_ETAPAS` **não** inclui os novos status (encerrados não precisam ficar carregados fora da janela de 90 dias).
+- `STATUS_TRANSITIONS` em `LeadDetailSheet.tsx` ganha as duas opções via caminho supervisor/gestor (não por etapa de origem).
+- Painéis atualizados: `DashboardOverviewPanel`, `ManagerDashboard`, `SupervisorDashboard`, `DailyReportPanel`, `FichasPanel`, `LeadSearchPanel`, `FollowUpTrackingPanel`, `ManagerIntelligencePanel`.
+- A função de geração de follow-ups passa a ignorar leads nesses status.
