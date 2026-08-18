@@ -244,10 +244,12 @@ export const SupervisorDashboard = () => {
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
+    const semRetorno = filteredLeads.filter((l) => l.etapa === "sem_retorno").length;
+    const naoConvertidos = filteredLeads.filter((l) => l.etapa === "nao_convertido").length;
     const txConversao = naLoja > 0 ? Math.round((concluidos / naLoja) * 100) : 0;
     return {
       totalLeads: filteredLeads.length, naLoja, concluidos, totalAgendamentos,
-      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, trabalhados, txConversao,
+      novos, dispensados, perdidos, desqNovos, desqOutraCidade, desqAgendados, trabalhados, semRetorno, naoConvertidos, txConversao,
     };
   }, [filteredLeads, naLojaPeriodLeads]);
 
