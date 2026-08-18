@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPhone, maskPhoneInput } from "@/lib/phoneUtils";
 import { appendNota } from "@/lib/notasUtils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   lead: Lead | null;
@@ -286,6 +287,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
       updates.numero_os = null;
       updates.checkin = null;
       updates.checkout = null;
+    }
+    // Encerramentos: saem do ciclo de follow-up
+    if (["sem_retorno", "nao_convertido"].includes(newStatus)) {
+      await supabase.from("eventos").delete().eq("id_lead", lead.id).eq("tipo", "followup").eq("concluido", false);
+      (updates as any).fup_concluido = true;
+      (updates as any).fup_concluido_em = new Date().toISOString();
+      (updates as any).fup_motivo_conclusao = newLabel;
     }
     await updateLead(lead.id, updates);
     setStatusChangeOpen(false);
