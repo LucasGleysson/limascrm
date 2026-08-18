@@ -58,6 +58,8 @@ export const DailyReportPanel = () => {
     const desqOutraCidade = createdToday.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = createdToday.filter((l) => l.etapa === "desqualificado_agendado").length;
     const trabalhados = createdToday.filter((l) => l.etapa === "trabalhado").length;
+    const semRetorno = createdToday.filter((l) => l.etapa === "sem_retorno").length;
+    const naoConvertidos = createdToday.filter((l) => l.etapa === "nao_convertido").length;
     return {
       totalRegistros: createdToday.length,
       novos: createdToday.filter((l) => l.etapa === "novo").length,
@@ -70,6 +72,8 @@ export const DailyReportPanel = () => {
       desqOutraCidade,
       desqAgendados,
       trabalhados,
+      semRetorno,
+      naoConvertidos,
     };
   }, [createdToday, passaramNaLojaNoDia, concluidosNoDia, dispensadosNoDia]);
 
@@ -174,6 +178,10 @@ export const DailyReportPanel = () => {
         <StatsCard title="Outra Cidade" value={globalStats.desqOutraCidade} icon={MapPin} variant="warning" />
         <StatsCard title="Desq. Agendado" value={globalStats.desqAgendados} icon={XCircle} variant="destructive" />
         <StatsCard title="Trabalhados" value={globalStats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard title="Sem retorno" value={globalStats.semRetorno} icon={ClipboardList} variant="warning" subtitle="Nunca respondeu no FUP" />
+        <StatsCard title="Não convertido" value={globalStats.naoConvertidos} icon={XCircle} variant="destructive" subtitle="Sem agendamento/loja" />
       </div>
 
       {/* Origin breakdown pie chart */}
