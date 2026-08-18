@@ -12,6 +12,8 @@ export const ETAPAS_FUNIL = [
   { id: "dispensado", label: "Dispensado", color: "destructive" },
   { id: "analise_supervisor", label: "Análise Supervisor", color: "warning" },
   { id: "trabalhado", label: "Trabalhado", color: "muted" },
+  { id: "sem_retorno", label: "Sem retorno", color: "muted" },
+  { id: "nao_convertido", label: "Não convertido", color: "destructive" },
   { id: "desqualificado_novo", label: "Desqualificado (Novo)", color: "destructive" },
   { id: "desqualificado_agendado", label: "Desqualificado (Agendado)", color: "destructive" },
   { id: "perdido", label: "Perdido", color: "destructive" },
@@ -20,7 +22,7 @@ export const ETAPAS_FUNIL = [
 // Helper sets for metric grouping
 export const ETAPAS_ANTES_LOJA = ["novo", "agendado", "reagendado"] as const;
 export const ETAPAS_NA_LOJA = ["confirmado", "na_loja", "concluido"] as const;
-export const ETAPAS_EVASAO_ANTES = ["desqualificado_novo", "desqualificado_agendado"] as const;
+export const ETAPAS_EVASAO_ANTES = ["desqualificado_novo", "desqualificado_agendado", "sem_retorno", "nao_convertido"] as const;
 export const ETAPAS_EVASAO_DEPOIS = ["dispensado", "perdido"] as const;
 export const ETAPAS_CARRO_AGENTE = ["confirmado", "na_loja", "concluido", "dispensado", "perdido"] as const;
 
