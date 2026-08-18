@@ -40,6 +40,8 @@ export const getStatusBadgeClass = (etapa: string): string => {
     desqualificado_agendado: "bg-destructive/15 text-destructive border-destructive/30",
     perdido: "bg-destructive/15 text-destructive border-destructive/30",
     trabalhado: "bg-muted text-foreground border-border",
+    sem_retorno: "bg-muted text-muted-foreground border-border",
+    nao_convertido: "bg-destructive/10 text-destructive border-destructive/25",
     // Legacy support
     desqualificado: "bg-muted text-muted-foreground border-muted",
   };
@@ -73,7 +75,7 @@ export const isCarroParaMeta = (etapa: string): boolean =>
 
 /** Check if a lead was lost before going to the store */
 export const isPerdidoAntesLoja = (etapa: string): boolean =>
-  ["desqualificado_novo", "desqualificado_agendado"].includes(etapa);
+  ["desqualificado_novo", "desqualificado_agendado", "sem_retorno", "nao_convertido"].includes(etapa);
 
 /** Check if a lead was lost after going to the store */
 export const isPerdidoDepoisLoja = (etapa: string): boolean =>

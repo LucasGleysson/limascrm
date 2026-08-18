@@ -64,8 +64,10 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
     const desqOutraCidade = filteredLeads.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
     const desqAgendados = filteredLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
     const trabalhados = filteredLeads.filter((l) => l.etapa === "trabalhado").length;
+    const semRetorno = filteredLeads.filter((l) => l.etapa === "sem_retorno").length;
+    const naoConvertidos = filteredLeads.filter((l) => l.etapa === "nao_convertido").length;
     const taxaConversao = carrosNaLoja > 0 ? Math.round((concluidos / carrosNaLoja) * 100) : 0;
-    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise, naLojaOutros };
+    return { totalLeads: filteredLeads.length, carrosNaLoja, concluidos, totalAgendamentos, novos, dispensados, perdidos, reagendados, desqNovos, desqOutraCidade, desqAgendados, trabalhados, semRetorno, naoConvertidos, taxaConversao, naLojaConfirmado, naLojaEmLoja, naLojaAnalise, naLojaOutros };
   }, [filteredLeads, naLojaPeriodLeads]);
 
   const porOrigem = useMemo(() => {
@@ -189,11 +191,15 @@ export const DashboardOverviewPanel: React.FC<Props> = ({
         </div>
       </div>
       {/* Desqualificados */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard title="Desq. Novo" value={stats.desqNovos} icon={XCircle} variant="destructive" />
         <StatsCard title="Outra Cidade" value={stats.desqOutraCidade} icon={MapPin} variant="warning" />
         <StatsCard title="Desq. Agendado" value={stats.desqAgendados} icon={XCircle} variant="destructive" />
         <StatsCard title="Trabalhados" value={stats.trabalhados} icon={ClipboardList} variant="info" subtitle="FUP encerrado sem agendar" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatsCard title="Sem retorno" value={stats.semRetorno} icon={ClipboardList} variant="warning" subtitle="Nunca respondeu no FUP" />
+        <StatsCard title="Não convertido" value={stats.naoConvertidos} icon={XCircle} variant="destructive" subtitle="Registrado sem agendar/ir à loja" />
         <StatsCard title="Conversão (Loja→Concl.)" value={`${stats.taxaConversao}%`} icon={TrendingUp} variant="primary" />
       </div>
 
