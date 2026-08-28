@@ -17,7 +17,7 @@ import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { foiNaLoja } from "@/lib/leadUtils";
+import { foiNaLoja, formatDataSegura } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 const META_AGENTE = 75;
@@ -563,7 +563,7 @@ export const AgentDayPanel = () => {
                     key={evento.id}
                     lead={lead}
                     accent="primary"
-                    hint={`FUP #${evento.numero} vencido em ${format(new Date(evento.data_prevista + "T12:00:00"), "dd/MM")}`}
+                    hint={`FUP #${evento.numero} vencido em ${formatDataSegura(evento.data_prevista, "dd/MM")}`}
                   />
                 ))}
               </div>

@@ -8,6 +8,7 @@ import { MotivoTagSelector } from "@/components/MotivoTagSelector";
 import { StatsCard } from "@/components/StatsCard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -285,6 +286,7 @@ export const ReceptionistDashboard = () => {
       <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        <ErrorBoundary resetKey={activeTab}>
         {activeTab === "agendamentos" && (
           <>
             <div className="flex items-center justify-between">
@@ -521,6 +523,7 @@ export const ReceptionistDashboard = () => {
             </div>
           </>
         )}
+      </ErrorBoundary>
       </main>
 
       <NewLeadModal open={newLeadOpen} onOpenChange={setNewLeadOpen} isReceptionist unidadeId={unidadeId} />

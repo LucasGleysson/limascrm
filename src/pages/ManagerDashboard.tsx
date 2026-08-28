@@ -5,6 +5,7 @@ import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { ORIGENS, Lead } from "@/data/mockData";
 import { foiNaLoja, foiNaLojaNoPeriodo, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja, getLeadWindowCutoff } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -349,6 +350,7 @@ export const ManagerDashboard = () => {
       {!sidebarHidden && <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />}
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        <ErrorBoundary resetKey={activeTab}>
         {/* Sidebar toggle button */}
         <Button
           variant="ghost"
@@ -793,6 +795,7 @@ export const ManagerDashboard = () => {
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
         {activeTab === "recepcao" && <ReceptionistReportPanel />}
         {activeTab === "usuarios" && <UserManagement />}
+      </ErrorBoundary>
       </main>
     </div>
   );

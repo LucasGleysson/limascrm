@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronLeft, ChevronRight, CalendarDays, AlertTriangle } from "lucide-react";
 import { format, addDays, subDays, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDataSegura } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 export const AgentSchedulePanel = () => {
@@ -93,7 +94,7 @@ export const AgentSchedulePanel = () => {
         <p className="font-medium text-sm truncate">{lead.nome}</p>
         <p className="text-xs text-muted-foreground">
           {showDate && lead.data_agendamento
-            ? format(new Date(lead.data_agendamento + "T12:00:00"), "dd/MM/yyyy")
+            ? formatDataSegura(lead.data_agendamento, "dd/MM/yyyy")
             : getUnidadeNome(lead.id_unidade)}
           {lead.numero_os && ` · OS: ${lead.numero_os}`}
         </p>

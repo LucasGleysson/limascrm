@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLeads } from "@/contexts/LeadContext";
 import { CalendarCheck } from "lucide-react";
 import { appendNota } from "@/lib/notasUtils";
+import { isDataPlausivel, formatDataSegura, MAX_DATA_ANOS_FUTURO } from "@/lib/leadUtils";
+import { toast } from "sonner";
 import { SERVICOS_TAGS } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 
@@ -58,9 +60,14 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
+  const maxDataStr = `${new Date().getFullYear() + MAX_DATA_ANOS_FUTURO}-12-31`;
 
   const handleSubmit = async () => {
     if (!unidade || !data || !os || submittingRef.current) return;
+    if (!isDataPlausivel(data)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     submittingRef.current = true;
     try {
       const unidadeNome = unidades.find((u) => u.id === unidade)?.nome || "Unidade";
@@ -70,7 +77,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
       const novoStatus = isReagendamento ? "reagendado" : "agendado";
       const notaLabel = isReagendamento ? "Reagendado" : "Agendado";
       const horaTxt = hora ? ` às ${hora}` : "";
-      const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")}${horaTxt} • OS: ${os}`;
+      const notaTexto = `${unidadeNome} • ${formatDataSegura(data, "dd/MM/yyyy")}${horaTxt} • OS: ${os}`;
       const notas = appendNota(leadAtual?.notas, notaLabel, notaTexto);
 
       await updateLead(leadId, {
@@ -117,7 +124,10 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
           </div>
           <div>
             <Label>Data do Agendamento</Label>
-            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} className="mt-1" />
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
+            {data && !isDataPlausivel(data) && (
+              <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+            )}
           </div>
           <div>
             <Label>Horário de Atendimento</Label>

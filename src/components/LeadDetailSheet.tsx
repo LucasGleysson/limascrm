@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { formatDateBR } from "@/lib/leadUtils";
+import { formatDateBR, isDataPlausivel, MAX_DATA_ANOS_FUTURO } from "@/lib/leadUtils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   const unidade = unidades.find((u) => u.id === lead.id_unidade);
   const agente = profiles.find((u) => u.id === lead.id_agente);
   const todayStr = new Date().toISOString().split("T")[0];
+  const maxDataStr = `${new Date().getFullYear() + MAX_DATA_ANOS_FUTURO}-12-31`;
 
   const startEdit = () => {
     setEditNome(lead.nome);
@@ -160,6 +162,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   const cancelEdit = () => setEditing(false);
 
   const saveEdit = async () => {
+    if (editDataAgendamento && !isDataPlausivel(editDataAgendamento)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     const updates: Partial<Lead> = {};
     if (editNome !== lead.nome) updates.nome = editNome;
     if (editTelefone !== lead.telefone) updates.telefone = formatPhone(editTelefone);
@@ -198,6 +204,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   };
 
   const saveScheduleEdit = async () => {
+    if (editSchedDataAgendamento && !isDataPlausivel(editSchedDataAgendamento)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     const updates: Partial<Lead> = {};
     if (editSchedDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editSchedDataAgendamento;
     if (editSchedNumeroOs !== (lead.numero_os || "")) updates.numero_os = editSchedNumeroOs;
@@ -335,6 +345,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
 
   const handleCreateEvent = async () => {
     if (!eventDate || !eventDescricao.trim() || creatingEventRef.current) return;
+    if (!isDataPlausivel(eventDate)) {
+      toast.error("Data do evento inválida. Confira o ano digitado.");
+      return;
+    }
     creatingEventRef.current = true;
     try {
       const notas = appendNota(lead.notas, "Evento Criado", eventDescricao.trim());
@@ -488,7 +502,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} className="mt-1" />
+                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} max={maxDataStr} className="mt-1" />
+                  {editDataAgendamento && !isDataPlausivel(editDataAgendamento) && (
+                    <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Tags de Serviço</Label>
@@ -522,7 +539,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input type="date" value={editSchedDataAgendamento} onChange={(e) => setEditSchedDataAgendamento(e.target.value)} min={todayStr} className="mt-1" />
+                  <Input type="date" value={editSchedDataAgendamento} onChange={(e) => setEditSchedDataAgendamento(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
+                  {editSchedDataAgendamento && !isDataPlausivel(editSchedDataAgendamento) && (
+                    <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Número da OS</Label>
@@ -697,7 +717,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                     <p className="text-sm font-semibold flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /> Novo Evento</p>
                     <div>
                       <Label>Data prevista</Label>
-                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={todayStr} className="mt-1" />
+                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
                     </div>
                     <div>
                       <Label>Descrição</Label>
