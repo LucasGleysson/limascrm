@@ -17,7 +17,7 @@ import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { foiNaLoja } from "@/lib/leadUtils";
+import { foiNaLoja, formatDataSegura } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 const META_AGENTE = 75;
