@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLeads } from "@/contexts/LeadContext";
 import { CalendarCheck } from "lucide-react";
 import { appendNota } from "@/lib/notasUtils";
+import { isDataPlausivel, formatDataSegura, MAX_DATA_ANOS_FUTURO } from "@/lib/leadUtils";
+import { toast } from "sonner";
 import { SERVICOS_TAGS } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 
