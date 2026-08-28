@@ -145,6 +145,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   const unidade = unidades.find((u) => u.id === lead.id_unidade);
   const agente = profiles.find((u) => u.id === lead.id_agente);
   const todayStr = new Date().toISOString().split("T")[0];
+  const maxDataStr = `${new Date().getFullYear() + MAX_DATA_ANOS_FUTURO}-12-31`;
 
   const startEdit = () => {
     setEditNome(lead.nome);
