@@ -122,9 +122,51 @@ export function getLeadMetaDate(lead: { checkin?: string | null; data_agendament
 
 export const formatDateBR = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
-  try {
-    return new Date(dateStr + (dateStr.length === 10 ? "T12:00:00" : "")).toLocaleDateString("pt-BR");
-  } catch {
-    return dateStr;
-  }
+  const d = parseDataLocal(dateStr);
+  if (!d) return "—";
+  return d.toLocaleDateString("pt-BR");
 };
+
+/** Ano mínimo aceito em datas digitadas/armazenadas. */
+export const MIN_DATA_ANO = 2020;
+/** Quantos anos à frente uma data ainda é considerada plausível. */
+export const MAX_DATA_ANOS_FUTURO = 2;
+
+/**
+ * Converte 'YYYY-MM-DD' (ou ISO completo) em Date local ao meio-dia.
+ * Retorna null se a string for inválida (ex: ano digitado errado como '82026-08-25').
+ */
+export function parseDataLocal(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  const base = dateStr.length === 10 ? `${dateStr}T12:00:00` : dateStr;
+  const d = new Date(base);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+/** True quando a data existe e está em uma faixa de anos razoável. */
+export function isDataPlausivel(dateStr: string | null | undefined): boolean {
+  const d = parseDataLocal(dateStr);
+  if (!d) return false;
+  const ano = d.getFullYear();
+  return ano >= MIN_DATA_ANO && ano <= new Date().getFullYear() + MAX_DATA_ANOS_FUTURO;
+}
+
+/**
+ * Formata com date-fns sem nunca lançar "Invalid time value".
+ * Datas inválidas retornam o fallback.
+ */
+export function formatDataSegura(
+  dateStr: string | null | undefined,
+  pattern: string,
+  fallback = "—"
+): string {
+  const d = parseDataLocal(dateStr);
+  if (!d) return fallback;
+  try {
+    return formatDateFns(d, pattern);
+  } catch {
+    return fallback;
+  }
+}
+
