@@ -563,7 +563,7 @@ export const AgentDayPanel = () => {
                     key={evento.id}
                     lead={lead}
                     accent="primary"
-                    hint={`FUP #${evento.numero} vencido em ${format(new Date(evento.data_prevista + "T12:00:00"), "dd/MM")}`}
+                    hint={`FUP #${evento.numero} vencido em ${formatDataSegura(evento.data_prevista, "dd/MM")}`}
                   />
                 ))}
               </div>
