@@ -124,7 +124,10 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
           </div>
           <div>
             <Label>Data do Agendamento</Label>
-            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} className="mt-1" />
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
+            {data && !isDataPlausivel(data) && (
+              <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+            )}
           </div>
           <div>
             <Label>Horário de Atendimento</Label>
