@@ -162,6 +162,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   const cancelEdit = () => setEditing(false);
 
   const saveEdit = async () => {
+    if (editDataAgendamento && !isDataPlausivel(editDataAgendamento)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     const updates: Partial<Lead> = {};
     if (editNome !== lead.nome) updates.nome = editNome;
     if (editTelefone !== lead.telefone) updates.telefone = formatPhone(editTelefone);
