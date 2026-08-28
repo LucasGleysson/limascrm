@@ -502,7 +502,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} className="mt-1" />
+                  <Input type="date" value={editDataAgendamento} onChange={(e) => setEditDataAgendamento(e.target.value)} max={maxDataStr} className="mt-1" />
+                  {editDataAgendamento && !isDataPlausivel(editDataAgendamento) && (
+                    <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Tags de Serviço</Label>
@@ -536,7 +539,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                 </div>
                 <div>
                   <Label>Data do Agendamento</Label>
-                  <Input type="date" value={editSchedDataAgendamento} onChange={(e) => setEditSchedDataAgendamento(e.target.value)} min={todayStr} className="mt-1" />
+                  <Input type="date" value={editSchedDataAgendamento} onChange={(e) => setEditSchedDataAgendamento(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
+                  {editSchedDataAgendamento && !isDataPlausivel(editSchedDataAgendamento) && (
+                    <p className="text-xs text-destructive mt-1">Data inválida — confira o ano digitado.</p>
+                  )}
                 </div>
                 <div>
                   <Label>Número da OS</Label>
@@ -711,7 +717,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
                     <p className="text-sm font-semibold flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /> Novo Evento</p>
                     <div>
                       <Label>Data prevista</Label>
-                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={todayStr} className="mt-1" />
+                      <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} min={todayStr} max={maxDataStr} className="mt-1" />
                     </div>
                     <div>
                       <Label>Descrição</Label>
