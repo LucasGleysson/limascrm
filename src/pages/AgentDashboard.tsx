@@ -7,6 +7,7 @@ import { NewLeadModal } from "@/components/NewLeadModal";
 import { ScheduleModal } from "@/components/ScheduleModal";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { EventoPanel } from "@/components/EventoPanel";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -315,6 +316,7 @@ export const AgentDashboard = () => {
       <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
 
       <main className="flex-1 overflow-auto">
+        <ErrorBoundary resetKey={activeTab}>
         {activeTab === "leads" && (
           <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -463,6 +465,7 @@ export const AgentDashboard = () => {
           <ScheduleModal open={scheduleOpen} onOpenChange={setScheduleOpen} leadId={scheduleLead.id} leadNome={scheduleLead.nome} />
         )}
         <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
+      </ErrorBoundary>
       </main>
     </div>
   );

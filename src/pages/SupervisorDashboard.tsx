@@ -5,6 +5,7 @@ import { getLeadWindowCutoff } from "@/lib/leadUtils";
 import { ETAPAS_FUNIL } from "@/data/mockData";
 import { foiNaLoja, foiNaLojaNoPeriodo, isCarroDoAgente, isCarroParaMeta, isPerdidoAntesLoja, isPerdidoDepoisLoja } from "@/lib/leadUtils";
 import { StatsCard } from "@/components/StatsCard";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
 import { Badge } from "@/components/ui/badge";
@@ -275,6 +276,7 @@ export const SupervisorDashboard = () => {
       <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} tabs={SIDEBAR_TABS} />
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        <ErrorBoundary resetKey={activeTab}>
         {activeTab === "visao_geral" && (
           <>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -335,6 +337,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "dispensa_relatorio" && <DispensaReportPanel />}
         {activeTab === "recepcao" && <ReceptionistReportPanel />}
         {activeTab === "metas" && <MetasUnidadesPanel profiles={profiles} />}
+      </ErrorBoundary>
       </main>
     </div>
   );
