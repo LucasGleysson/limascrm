@@ -1,4 +1,5 @@
 // Shared utility functions for lead management
+import { format as formatDateFns } from "date-fns";
 import type { Lead } from "@/data/mockData";
 
 /**
