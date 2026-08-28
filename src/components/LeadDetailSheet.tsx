@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { formatDateBR } from "@/lib/leadUtils";
+import { formatDateBR, isDataPlausivel, MAX_DATA_ANOS_FUTURO } from "@/lib/leadUtils";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
