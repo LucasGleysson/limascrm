@@ -60,9 +60,14 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
+  const maxDataStr = `${new Date().getFullYear() + MAX_DATA_ANOS_FUTURO}-12-31`;
 
   const handleSubmit = async () => {
     if (!unidade || !data || !os || submittingRef.current) return;
+    if (!isDataPlausivel(data)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     submittingRef.current = true;
     try {
       const unidadeNome = unidades.find((u) => u.id === unidade)?.nome || "Unidade";
@@ -72,7 +77,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
       const novoStatus = isReagendamento ? "reagendado" : "agendado";
       const notaLabel = isReagendamento ? "Reagendado" : "Agendado";
       const horaTxt = hora ? ` às ${hora}` : "";
-      const notaTexto = `${unidadeNome} • ${new Date(data + "T12:00:00").toLocaleDateString("pt-BR")}${horaTxt} • OS: ${os}`;
+      const notaTexto = `${unidadeNome} • ${formatDataSegura(data, "dd/MM/yyyy")}${horaTxt} • OS: ${os}`;
       const notas = appendNota(leadAtual?.notas, notaLabel, notaTexto);
 
       await updateLead(leadId, {
