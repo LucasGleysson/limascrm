@@ -204,6 +204,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   };
 
   const saveScheduleEdit = async () => {
+    if (editSchedDataAgendamento && !isDataPlausivel(editSchedDataAgendamento)) {
+      toast.error("Data de agendamento inválida. Confira o ano digitado.");
+      return;
+    }
     const updates: Partial<Lead> = {};
     if (editSchedDataAgendamento !== (lead.data_agendamento || "")) updates.data_agendamento = editSchedDataAgendamento;
     if (editSchedNumeroOs !== (lead.numero_os || "")) updates.numero_os = editSchedNumeroOs;
@@ -341,6 +345,10 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
 
   const handleCreateEvent = async () => {
     if (!eventDate || !eventDescricao.trim() || creatingEventRef.current) return;
+    if (!isDataPlausivel(eventDate)) {
+      toast.error("Data do evento inválida. Confira o ano digitado.");
+      return;
+    }
     creatingEventRef.current = true;
     try {
       const notas = appendNota(lead.notas, "Evento Criado", eventDescricao.trim());
