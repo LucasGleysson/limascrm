@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronLeft, ChevronRight, CalendarDays, AlertTriangle } from "lucide-react";
 import { format, addDays, subDays, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatDataSegura } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
 export const AgentSchedulePanel = () => {
