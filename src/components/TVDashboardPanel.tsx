@@ -151,10 +151,12 @@ export const TVDashboardPanel: React.FC = () => {
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
-      {/* Unit cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 xl:gap-5">
+      {/* Unit cards grid — always a single responsive line */}
+      <div className="flex flex-nowrap gap-3 xl:gap-5 w-full overflow-hidden">
         {unitStats.map((us) => (
-          <UnitCard key={us.unidade.id} data={us} />
+          <div key={us.unidade.id} className="flex-1 min-w-0">
+            <UnitCard data={us} />
+          </div>
         ))}
       </div>
     </div>
@@ -225,7 +227,7 @@ function UnitCard({ data }: {
       <h2 className="text-xl xl:text-3xl font-bold tracking-wide mb-2 xl:mb-3 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
-      <div className="relative w-28 h-28 xl:w-40 xl:h-40">
+      <div className="relative w-full max-w-28 xl:max-w-40 aspect-square mx-auto">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
