@@ -227,7 +227,7 @@ function UnitCard({ data }: {
       <h2 className="text-xl xl:text-3xl font-bold tracking-wide mb-2 xl:mb-3 text-center">{unidade.nome}</h2>
 
       {/* Donut chart */}
-      <div className="relative w-28 h-28 xl:w-40 xl:h-40">
+      <div className="relative w-full max-w-28 xl:max-w-40 aspect-square mx-auto">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
