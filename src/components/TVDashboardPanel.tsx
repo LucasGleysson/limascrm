@@ -151,10 +151,12 @@ export const TVDashboardPanel: React.FC = () => {
         <SummaryCard icon={Flame} label="Faltam p/ Meta" value={globalStats.totalFaltam} variant={globalStats.totalFaltam === 0 ? "success" : "destructive"} />
       </div>
 
-      {/* Unit cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 xl:gap-5">
+      {/* Unit cards grid — always a single responsive line */}
+      <div className="flex flex-nowrap gap-3 xl:gap-5 w-full overflow-hidden">
         {unitStats.map((us) => (
-          <UnitCard key={us.unidade.id} data={us} />
+          <div key={us.unidade.id} className="flex-1 min-w-0">
+            <UnitCard data={us} />
+          </div>
         ))}
       </div>
     </div>
