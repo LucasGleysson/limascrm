@@ -112,17 +112,17 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
       const passouMeta = progresso > META_COMISSAO;
       const rate = passouMeta ? 10 : 8;
-      // "Na Loja" para comissão: registros que efetivamente foram na loja
-      // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
-      // entram em ganhoMeta).
-      const nEmLojaCom = a.leads.filter(
-        (l: any) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
-      ).length;
-      const nAgendadosCom = a.leads.filter((l: any) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+      const RATE_POT = 10;
+      // Potenciais: agendamentos feitos, carros que passaram na loja e leads produtivos.
+      const nEmLojaCom = a.passaramNaLoja;
+      const nAgendadosCom = a.totalAgendamentos;
+      const nProdutivos = Math.max(a.total - (a.desqNovos || 0), 0);
       const ganhoMeta = progresso * rate;
-      const ganhoLoja = nEmLojaCom * rate;
-      const ganhoAgendados = nAgendadosCom * rate;
-      const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+      const ganhoLoja = nEmLojaCom * RATE_POT;
+      const ganhoAgendados = nAgendadosCom * RATE_POT;
+      const ganhoProdutivos = nProdutivos * RATE_POT;
+      const aproveitamentoSafra = nProdutivos > 0 ? Math.round((a.passaramNaLoja / nProdutivos) * 100) : 0;
+
 
       let badge: { label: string; icon: any; cls: string };
       if (progresso >= meta) {
