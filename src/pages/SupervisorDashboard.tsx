@@ -162,7 +162,9 @@ export const SupervisorDashboard = () => {
       const naoAgendados = aLeads.filter((l) => l.etapa === "novo").length;
       const emAtendimento = aNaLoja.filter((l) => ["confirmado", "na_loja"].includes(l.etapa)).length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-      const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      const produtivos = Math.max(aLeads.length - desqNovos, 0);
+      // Conversão de produtivos em agendados: agendamentos feitos ÷ leads produtivos.
+      const txConversao = produtivos > 0 ? Math.round((totalAgendamentos / produtivos) * 100) : 0;
       const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
 
       // FUP pendentes: same logic as agent view — only data_prevista <= today and lead eligible

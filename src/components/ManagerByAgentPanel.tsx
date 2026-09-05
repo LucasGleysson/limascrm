@@ -210,7 +210,7 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                 </div>
                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/50">
                   <span className="text-muted-foreground">Média/dia: <strong className="text-foreground">{a.mediaAtual.toFixed(1)}</strong></span>
-                  <span className="text-muted-foreground">Conv: <strong className="text-foreground">{a.txConversao}%</strong></span>
+                  <span className="text-muted-foreground" title="Agendamentos ÷ leads produtivos">Conv. agend.: <strong className="text-foreground">{a.txConversao}%</strong></span>
                   <span className="text-muted-foreground" title="Carros na loja ÷ leads produtivos">
                     Safra: <strong className="text-info">{a.aproveitamentoSafra}%</strong>
                     <span className="text-muted-foreground"> ({a.passaramNaLoja}/{a.nProdutivos})</span>
