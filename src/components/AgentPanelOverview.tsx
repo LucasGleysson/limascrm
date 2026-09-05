@@ -384,7 +384,7 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
                 </div>
                 <p className="text-2xl font-extrabold text-purple">{brl(ganhoAgendados)}</p>
-                <p className="text-[11px] text-muted-foreground">{nAgendados} × R$ {rate} — só falta trazer</p>
+                <p className="text-[11px] text-muted-foreground">{nAgendados} × R$ {RATE_POT} — se todos forem na loja</p>
               </div>
               <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -392,7 +392,7 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
                 </div>
                 <p className="text-2xl font-extrabold text-warning">{brl(ganhoLoja)}</p>
-                <p className="text-[11px] text-muted-foreground">{nEmLoja} × R$ {rate} — em processo</p>
+                <p className="text-[11px] text-muted-foreground">{nEmLoja} × R$ {RATE_POT} — se todos virarem meta</p>
               </div>
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -400,7 +400,8 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
                 </div>
                 <p className="text-2xl font-extrabold text-primary">{brl(ganhoProdutivos)}</p>
-                <p className="text-[11px] text-muted-foreground">Potencial total do mês</p>
+                <p className="text-[11px] text-muted-foreground">{nProdutivos} × R$ {RATE_POT} — potencial total</p>
+
               </div>
             </div>
           </div>
