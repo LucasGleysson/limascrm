@@ -421,7 +421,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
                 </div>
                 <p className="text-xl font-extrabold text-purple">{brl(comissaoDia.ganhoAgendados)}</p>
-                <p className="text-[11px] text-muted-foreground">{comissaoDia.agendadosHoje} × R$ {comissaoDia.rate}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.agendadosHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
               <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -429,7 +429,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
                 </div>
                 <p className="text-xl font-extrabold text-warning">{brl(comissaoDia.ganhoLoja)}</p>
-                <p className="text-[11px] text-muted-foreground">{comissaoDia.naLojaHoje} × R$ {comissaoDia.rate}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.naLojaHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -437,7 +437,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
                 </div>
                 <p className="text-xl font-extrabold text-primary">{brl(comissaoDia.ganhoProdutivos)}</p>
-                <p className="text-[11px] text-muted-foreground">Potencial do dia</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.produtivosHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
             </div>
           </div>
