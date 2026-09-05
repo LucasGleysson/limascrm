@@ -231,7 +231,9 @@ export const ManagerDashboard = () => {
       const desqNovos = aLeads.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqAgendados = aLeads.filter((l) => l.etapa === "desqualificado_agendado").length;
       const perdidosAntes = aLeads.filter((l) => isPerdidoAntesLoja(l.etapa)).length;
-      const txConversao = passaramNaLoja > 0 ? Math.round((concluidos / passaramNaLoja) * 100) : 0;
+      const produtivos = Math.max(aLeads.length - desqNovos, 0);
+      // Conversão de produtivos em agendados: agendamentos feitos ÷ leads produtivos.
+      const txConversao = produtivos > 0 ? Math.round((totalAgendamentos / produtivos) * 100) : 0;
       const txAgendamento = aLeads.length > 0 ? Math.round((totalAgendamentos / aLeads.length) * 100) : 0;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeadIds.has(e.id_lead));
       const agLembretes = eventos.filter((e) => e.tipo === "lembrete" && aLeadIds.has(e.id_lead));
