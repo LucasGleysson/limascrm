@@ -332,17 +332,22 @@ export const AgentPanelOverview = () => {
         const rate = passouMeta ? 10 : 8;
         const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-        // "Na Loja" para comissão: registros que efetivamente foram na loja
-        // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
-        // entram em ganhoMeta). Independe do status atual.
-        const nEmLoja = myMonthLeads.filter(
-          (l) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
+        // Potenciais sempre calculados na melhor faixa (R$ 10/carro).
+        const RATE_POT = 10;
+        // "Na Loja": todo carro que efetivamente passou na loja no período
+        // (check-in registrado), independente do status atual.
+        const nEmLoja = myMonthLeads.filter((l) => !!l.checkin).length;
+        // Agendados: todos os agendamentos feitos no período.
+        const nAgendados = myMonthLeads.filter((l) =>
+          ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)
         ).length;
-        const nAgendados = myMonthLeads.filter((l) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+        // Produtivos: leads que não foram desqualificados como novo.
+        const nProdutivos = myMonthLeads.filter((l) => l.etapa !== "desqualificado_novo").length;
         const ganhoMeta = progresso * rate;
-        const ganhoLoja = nEmLoja * rate;
-        const ganhoAgendados = nAgendados * rate;
-        const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+        const ganhoLoja = nEmLoja * RATE_POT;
+        const ganhoAgendados = nAgendados * RATE_POT;
+        const ganhoProdutivos = nProdutivos * RATE_POT;
+
 
         const proxTier = !passouMeta ? META_AGENTE + 1 - progresso : null;
 
@@ -379,7 +384,7 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
                 </div>
                 <p className="text-2xl font-extrabold text-purple">{brl(ganhoAgendados)}</p>
-                <p className="text-[11px] text-muted-foreground">{nAgendados} × R$ {rate} — só falta trazer</p>
+                <p className="text-[11px] text-muted-foreground">{nAgendados} × R$ {RATE_POT} — se todos forem na loja</p>
               </div>
               <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -387,7 +392,7 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
                 </div>
                 <p className="text-2xl font-extrabold text-warning">{brl(ganhoLoja)}</p>
-                <p className="text-[11px] text-muted-foreground">{nEmLoja} × R$ {rate} — em processo</p>
+                <p className="text-[11px] text-muted-foreground">{nEmLoja} × R$ {RATE_POT} — se todos virarem meta</p>
               </div>
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -395,7 +400,8 @@ export const AgentPanelOverview = () => {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
                 </div>
                 <p className="text-2xl font-extrabold text-primary">{brl(ganhoProdutivos)}</p>
-                <p className="text-[11px] text-muted-foreground">Potencial total do mês</p>
+                <p className="text-[11px] text-muted-foreground">{nProdutivos} × R$ {RATE_POT} — potencial total</p>
+
               </div>
             </div>
           </div>

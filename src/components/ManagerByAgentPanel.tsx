@@ -112,17 +112,17 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
       const passouMeta = progresso > META_COMISSAO;
       const rate = passouMeta ? 10 : 8;
-      // "Na Loja" para comissão: registros que efetivamente foram na loja
-      // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
-      // entram em ganhoMeta).
-      const nEmLojaCom = a.leads.filter(
-        (l: any) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
-      ).length;
-      const nAgendadosCom = a.leads.filter((l: any) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+      const RATE_POT = 10;
+      // Potenciais: agendamentos feitos, carros que passaram na loja e leads produtivos.
+      const nEmLojaCom = a.passaramNaLoja;
+      const nAgendadosCom = a.totalAgendamentos;
+      const nProdutivos = Math.max(a.total - (a.desqNovos || 0), 0);
       const ganhoMeta = progresso * rate;
-      const ganhoLoja = nEmLojaCom * rate;
-      const ganhoAgendados = nAgendadosCom * rate;
-      const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+      const ganhoLoja = nEmLojaCom * RATE_POT;
+      const ganhoAgendados = nAgendadosCom * RATE_POT;
+      const ganhoProdutivos = nProdutivos * RATE_POT;
+      const aproveitamentoSafra = nProdutivos > 0 ? Math.round((a.passaramNaLoja / nProdutivos) * 100) : 0;
+
 
       let badge: { label: string; icon: any; cls: string };
       if (progresso >= meta) {
@@ -134,7 +134,7 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       }
       return {
         ...a, meta, progresso, pct, restante, mediaAtual, confirmados, reagendados, emAnalise, badge,
-        rate, passouMeta, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, nEmLojaCom, nAgendadosCom,
+        rate, passouMeta, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, nEmLojaCom, nAgendadosCom, nProdutivos, aproveitamentoSafra,
       };
     }).sort((a, b) => b.pct - a.pct);
   }, [agenteStats, metasMap, bizDays]);
@@ -211,6 +211,10 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                 <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border/50">
                   <span className="text-muted-foreground">Média/dia: <strong className="text-foreground">{a.mediaAtual.toFixed(1)}</strong></span>
                   <span className="text-muted-foreground">Conv: <strong className="text-foreground">{a.txConversao}%</strong></span>
+                  <span className="text-muted-foreground" title="Carros na loja ÷ leads produtivos">
+                    Safra: <strong className="text-info">{a.aproveitamentoSafra}%</strong>
+                    <span className="text-muted-foreground"> ({a.passaramNaLoja}/{a.nProdutivos})</span>
+                  </span>
                 </div>
               </div>
 
@@ -294,9 +298,9 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <ComTile icon={CalendarCheck} label="Agendados" value={brl(a.ganhoAgendados)} sub={`${a.nAgendadosCom} × R$ ${a.rate}`} color="text-purple-500" />
-                  <ComTile icon={Car} label="Na loja" value={brl(a.ganhoLoja)} sub={`${a.nEmLojaCom} × R$ ${a.rate}`} color="text-warning" />
-                  <ComTile icon={Rocket} label="Produtivos" value={brl(a.ganhoProdutivos)} sub="Potencial" color="text-primary" />
+                  <ComTile icon={CalendarCheck} label="Agendados" value={brl(a.ganhoAgendados)} sub={`${a.nAgendadosCom} × R$ 10`} color="text-purple-500" />
+                  <ComTile icon={Car} label="Na loja" value={brl(a.ganhoLoja)} sub={`${a.nEmLojaCom} × R$ 10`} color="text-warning" />
+                  <ComTile icon={Rocket} label="Produtivos" value={brl(a.ganhoProdutivos)} sub={`${a.nProdutivos} × R$ 10`} color="text-primary" />
                 </div>
               </div>
             </div>

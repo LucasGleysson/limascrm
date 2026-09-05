@@ -129,24 +129,24 @@ export const AgentDayPanel = () => {
     }).length;
     const rate = progressoMes > META_AGENTE ? 10 : 8;
 
-    // "Na Loja" para comissão do dia: registros que foram na loja nesse dia
-    // (têm check-in no dia) e ainda não foram finalizados — Concluído/Perdido
-    // já são contados em ganhoMeta via resultadosDoDia.total.
-    const naLojaHoje = myLeads.filter((l) =>
-      !!l.checkin && l.checkin.slice(0, 10) === dayStr &&
-      !["concluido", "perdido"].includes(l.etapa)
+    const RATE_POT = 10;
+    // "Na Loja" do dia: todo carro com check-in nesse dia, qualquer status.
+    const naLojaHoje = myLeads.filter(
+      (l) => !!l.checkin && l.checkin.slice(0, 10) === dayStr
     ).length;
+    // Agendados do dia: todos os agendamentos marcados para esse dia.
     const agendadosHoje = myLeads.filter((l) =>
-      ["agendado", "reagendado", "confirmado"].includes(l.etapa) &&
+      ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa) &&
       l.data_agendamento === dayStr
     ).length;
+    const produtivosHoje = safraDoDia.produtivos;
 
     const ganhoMeta = resultadosDoDia.total * rate;
-    const ganhoLoja = naLojaHoje * rate;
-    const ganhoAgendados = agendadosHoje * rate;
-    const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
-    return { rate, progressoMes, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, naLojaHoje, agendadosHoje };
-  }, [myLeads, dayStr, resultadosDoDia.total, now]);
+    const ganhoLoja = naLojaHoje * RATE_POT;
+    const ganhoAgendados = agendadosHoje * RATE_POT;
+    const ganhoProdutivos = produtivosHoje * RATE_POT;
+    return { rate, RATE_POT, progressoMes, ganhoMeta, ganhoLoja, ganhoAgendados, ganhoProdutivos, naLojaHoje, agendadosHoje, produtivosHoje };
+  }, [myLeads, dayStr, resultadosDoDia.total, safraDoDia.produtivos, now]);
 
   const metaBadge = (() => {
     if (resultadosDoDia.naLoja >= Math.ceil(metaDia)) {
@@ -421,7 +421,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Agendados</p>
                 </div>
                 <p className="text-xl font-extrabold text-purple">{brl(comissaoDia.ganhoAgendados)}</p>
-                <p className="text-[11px] text-muted-foreground">{comissaoDia.agendadosHoje} × R$ {comissaoDia.rate}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.agendadosHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
               <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -429,7 +429,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Na loja</p>
                 </div>
                 <p className="text-xl font-extrabold text-warning">{brl(comissaoDia.ganhoLoja)}</p>
-                <p className="text-[11px] text-muted-foreground">{comissaoDia.naLojaHoje} × R$ {comissaoDia.rate}</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.naLojaHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -437,7 +437,7 @@ export const AgentDayPanel = () => {
                   <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-semibold">Produtivos</p>
                 </div>
                 <p className="text-xl font-extrabold text-primary">{brl(comissaoDia.ganhoProdutivos)}</p>
-                <p className="text-[11px] text-muted-foreground">Potencial do dia</p>
+                <p className="text-[11px] text-muted-foreground">{comissaoDia.produtivosHoje} × R$ {comissaoDia.RATE_POT}</p>
               </div>
             </div>
           </div>
