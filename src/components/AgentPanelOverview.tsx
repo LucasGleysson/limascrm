@@ -332,17 +332,22 @@ export const AgentPanelOverview = () => {
         const rate = passouMeta ? 10 : 8;
         const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-        // "Na Loja" para comissão: registros que efetivamente foram na loja
-        // (têm check-in) e ainda não foram finalizados (Concluído/Perdido já
-        // entram em ganhoMeta). Independe do status atual.
-        const nEmLoja = myMonthLeads.filter(
-          (l) => !!l.checkin && !["concluido", "perdido"].includes(l.etapa)
+        // Potenciais sempre calculados na melhor faixa (R$ 10/carro).
+        const RATE_POT = 10;
+        // "Na Loja": todo carro que efetivamente passou na loja no período
+        // (check-in registrado), independente do status atual.
+        const nEmLoja = myMonthLeads.filter((l) => !!l.checkin).length;
+        // Agendados: todos os agendamentos feitos no período.
+        const nAgendados = myMonthLeads.filter((l) =>
+          ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)
         ).length;
-        const nAgendados = myMonthLeads.filter((l) => ["agendado", "reagendado", "confirmado"].includes(l.etapa)).length;
+        // Produtivos: leads que não foram desqualificados como novo.
+        const nProdutivos = myMonthLeads.filter((l) => l.etapa !== "desqualificado_novo").length;
         const ganhoMeta = progresso * rate;
-        const ganhoLoja = nEmLoja * rate;
-        const ganhoAgendados = nAgendados * rate;
-        const ganhoProdutivos = ganhoMeta + ganhoLoja + ganhoAgendados;
+        const ganhoLoja = nEmLoja * RATE_POT;
+        const ganhoAgendados = nAgendados * RATE_POT;
+        const ganhoProdutivos = nProdutivos * RATE_POT;
+
 
         const proxTier = !passouMeta ? META_AGENTE + 1 - progresso : null;
 
