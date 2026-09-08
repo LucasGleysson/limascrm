@@ -799,7 +799,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
 
       {/* Disqualify modal */}
       <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim() && disqualifyTags.length === 0)}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, disqualifyTags.length === 0)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
@@ -810,16 +810,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
             <div>
-              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <Label className="text-xs font-semibold">Tags de Motivo <span className="text-destructive">*</span></Label>
               <div className="mt-1.5">
                 <MotivoTagSelector
-                  tags={["novo", "trabalhado"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  tags={TAGS_MOTIVO_DESQUALIFICACAO}
                   selected={disqualifyTags}
                   onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
                 />
               </div>
+              {disqualifyTags.length === 0 && (
+                <p className="text-xs text-destructive mt-1.5">Selecione ao menos um motivo.</p>
+              )}
             </div>
-            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo adicional (opcional se tag selecionada)..." rows={3} />
+            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Observação adicional (opcional)..." rows={3} />
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="outra-cidade"
