@@ -328,12 +328,12 @@ export const AgentPanelOverview = () => {
 
       {/* COMISSÃO — destaque gamificado */}
       {(() => {
-        const passouMeta = progresso > META_AGENTE;
-        const rate = passouMeta ? 10 : 8;
+        const rate = comissaoRate(progresso);
+        const passouMeta = progresso >= META_AGENTE;
         const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
         // Potenciais sempre calculados na melhor faixa (R$ 10/carro).
-        const RATE_POT = 10;
+        const RATE_POT = COMISSAO_RATE_MAX;
         // "Na Loja": todo carro que efetivamente passou na loja no período
         // (check-in registrado), independente do status atual.
         const nEmLoja = myMonthLeads.filter((l) => !!l.checkin).length;
@@ -349,7 +349,7 @@ export const AgentPanelOverview = () => {
         const ganhoProdutivos = nProdutivos * RATE_POT;
 
 
-        const proxTier = !passouMeta ? META_AGENTE + 1 - progresso : null;
+        const prox = proximaFaixaComissao(progresso);
 
         return (
           <div className="rounded-2xl border-2 border-success/40 bg-gradient-to-br from-success/20 via-success/10 to-card p-6 space-y-4 shadow-lg">

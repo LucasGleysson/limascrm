@@ -108,10 +108,10 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       const reagendados = a.naLojaReagendado ?? a.leads.filter((l: any) => l.etapa === "reagendado").length;
       const emAnalise = a.naLojaAnalise ?? a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
 
-      // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
-      const passouMeta = progresso > META_COMISSAO;
-      const rate = passouMeta ? 10 : 8;
-      const RATE_POT = 10;
+      // Bonificação por faixa: 0-50 sem bônus, 51-60 R$5, 61-70 R$6, 71-80 R$7, 81-90 R$8, 91+ R$10
+      const rate = comissaoRate(progresso);
+      const passouMeta = progresso >= meta;
+      const RATE_POT = COMISSAO_RATE_MAX;
       // Potenciais: agendamentos feitos, carros que passaram na loja e leads produtivos.
       const nEmLojaCom = a.passaramNaLoja;
       const nAgendadosCom = a.totalAgendamentos;
