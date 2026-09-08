@@ -837,7 +837,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim() && disqualifyTags.length === 0}>Confirmar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={disqualifyTags.length === 0}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -992,7 +992,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </DialogHeader>
           <div className="space-y-3">
             <MotivoTagSelector
-              tags={["desqualificado_novo"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+              tags={["desqualificado_novo", "desqualificado_agendado"].includes(lead.etapa) ? TAGS_MOTIVO_DESQUALIFICACAO : lead.etapa === "trabalhado" ? TAGS_MOTIVO_TRABALHADO : TAGS_MOTIVO_OS}
               selected={editMotivoTags}
               onToggle={(tag) => setEditMotivoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
             />
