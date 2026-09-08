@@ -226,6 +226,8 @@ export const EventoPanel = () => {
 
   const handleConcludeProcess = async () => {
     if (!concludeProcessLead || !concludeProcessMotivo.trim() || concludingProcessRef.current) return;
+    const statusPrevisto = getEncerrarStatus(concludeProcessLead);
+    if (statusPrevisto === "trabalhado" && concludeProcessTags.length === 0) return;
     concludingProcessRef.current = true;
     try {
       const lead = concludeProcessLead;
@@ -233,7 +235,8 @@ export const EventoPanel = () => {
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
       const newStatus = getEncerrarStatus(lead);
       const statusLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
-      const notas = appendNota(lead.notas, "Processo FUP Concluído", `${concludeProcessMotivo.trim()} → Status: ${statusLabel}`);
+      const tagsText = concludeProcessTags.length > 0 ? `[${concludeProcessTags.join(", ")}] ` : "";
+      const notas = appendNota(lead.notas, "Processo FUP Concluído", `${tagsText}${concludeProcessMotivo.trim()} → Status: ${statusLabel}`);
       await updateLead(lead.id, {
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
@@ -241,9 +244,11 @@ export const EventoPanel = () => {
         fup_motivo_conclusao: concludeProcessMotivo.trim(),
         etapa: newStatus,
         notas,
-      });
+        ...(concludeProcessTags.length > 0 ? { tags_motivo: concludeProcessTags } : {}),
+      } as any);
       setConcludeProcessOpen(false);
       setConcludeProcessMotivo("");
+      setConcludeProcessTags([]);
       setConcludeProcessLead(null);
     } finally {
       concludingProcessRef.current = false;
