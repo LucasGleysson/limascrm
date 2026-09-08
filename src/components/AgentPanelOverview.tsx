@@ -362,8 +362,8 @@ export const AgentPanelOverview = () => {
                   <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Comissão</p>
                   <h2 className="text-2xl font-bold flex items-center gap-2">
                     Ganho do mês
-                    <Badge variant="outline" className={passouMeta ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}>
-                      R$ {rate}/carro {passouMeta && "🔥"}
+                    <Badge variant="outline" className={rate >= 8 ? "bg-success/20 text-success border-success/40" : rate > 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border"}>
+                      {rate > 0 ? `R$ ${rate}/carro` : "Sem bonificação"} {passouMeta && "🔥"}
                     </Badge>
                   </h2>
                 </div>
@@ -372,7 +372,7 @@ export const AgentPanelOverview = () => {
                 <p className="text-5xl font-extrabold text-success leading-none">{brl(ganhoMeta)}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {progresso} carro{progresso !== 1 ? "s" : ""} × R$ {rate}
-                  {proxTier && ` · +${proxTier} p/ virar R$ 10/carro`}
+                  {prox && ` · +${prox.faltam} p/ virar R$ ${prox.valor}/carro`}
                 </p>
               </div>
             </div>
