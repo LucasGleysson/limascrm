@@ -7,11 +7,10 @@ import {
   Wallet, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isPerdidoAntesLoja } from "@/lib/leadUtils";
+import { isPerdidoAntesLoja, comissaoRate, COMISSAO_RATE_MAX, META_AGENTE_PADRAO } from "@/lib/leadUtils";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 
-const DEFAULT_META = 75;
-const META_COMISSAO = 75;
+const DEFAULT_META = META_AGENTE_PADRAO;
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 function countBusinessDays(from: Date, to: Date): number {

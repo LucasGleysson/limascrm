@@ -17,10 +17,10 @@ import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { foiNaLoja, formatDataSegura } from "@/lib/leadUtils";
+import { foiNaLoja, formatDataSegura, comissaoRate, COMISSAO_RATE_MAX, META_AGENTE_PADRAO } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
-const META_AGENTE = 75;
+const META_AGENTE = META_AGENTE_PADRAO;
 const META_MIN_POR_UNIDADE = 2;
 const META_ALVO_POR_UNIDADE = 4;
 

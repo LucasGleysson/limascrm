@@ -13,9 +13,9 @@ import {
   startOfWeek, endOfWeek, addDays, format, isToday, startOfMonth, endOfMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { getLeadMetaDate } from "@/lib/leadUtils";
+import { getLeadMetaDate, comissaoRate, proximaFaixaComissao, COMISSAO_RATE_MAX, META_AGENTE_PADRAO } from "@/lib/leadUtils";
 
-const META_AGENTE = 75;
+const META_AGENTE = META_AGENTE_PADRAO;
 
 const STATUS_CARDS: {
   key: string;
