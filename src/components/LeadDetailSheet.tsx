@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO } from "@/data/mockData";
+import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO, TAGS_MOTIVO_DESQUALIFICACAO, TAGS_MOTIVO_TRABALHADO } from "@/data/mockData";
 import { MotivoTagSelector } from "./MotivoTagSelector";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -36,8 +36,8 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
   novo: { label: "Novo Lead", targets: [{ id: "trabalhado", label: "Trabalhado" }] },
   agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
-  desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
-  desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_novo: { label: "Desqualificado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_agendado: { label: "Agendados Trabalhados", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
   trabalhado: { label: "Trabalhado", targets: [{ id: "novo", label: "Novo Lead" }] },
   dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
   perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
