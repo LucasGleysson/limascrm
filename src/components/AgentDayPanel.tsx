@@ -122,9 +122,12 @@ export const AgentDayPanel = () => {
   const comissaoDia = useMemo(() => {
     const mStart = format(startOfMonth(now), "yyyy-MM-dd");
     const mEnd = format(endOfMonth(now), "yyyy-MM-dd");
+    // Só conta carro que realmente passou na loja (check-in registrado),
+    // mesma regra do painel do supervisor.
     const progressoMes = myLeads.filter((l) => {
       if (!["concluido", "perdido"].includes(l.etapa)) return false;
-      const ref = l.checkin ? l.checkin.slice(0, 10) : (l.data_agendamento || "");
+      if (!l.checkin) return false;
+      const ref = l.checkin.slice(0, 10);
       return ref >= mStart && ref <= mEnd;
     }).length;
     const rate = comissaoRate(progressoMes);

@@ -256,7 +256,7 @@ export const EventoPanel = () => {
   };
 
   const handleMarkLoss = async () => {
-    if (!lossLead || (!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current) return;
+    if (!lossLead || lossTags.length === 0 || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
       const tagsText = lossTags.length > 0 ? `[${lossTags.join(", ")}]` : "";
@@ -674,7 +674,12 @@ export const EventoPanel = () => {
               O lead será enviado para análise do supervisor, que decidirá se é perda ou desqualificação.
             </p>
             <div>
-              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <Label className="text-xs font-semibold">
+                Tags de Motivo <span className="text-destructive">*</span>
+              </Label>
+              {lossTags.length === 0 && (
+                <p className="text-xs text-destructive mt-1">Selecione ao menos um motivo</p>
+              )}
               <div className="mt-1.5">
                 <MotivoTagSelector
                   tags={TAGS_MOTIVO_OS}
@@ -692,14 +697,14 @@ export const EventoPanel = () => {
                 className="mt-1"
                 rows={3}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && (lossMotivo.trim() || lossTags.length > 0)) { e.preventDefault(); handleMarkLoss(); }
+                  if (e.key === "Enter" && !e.shiftKey && lossTags.length > 0) { e.preventDefault(); handleMarkLoss(); }
                 }}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setLossMotivo(""); setLossTags([]); setLossOpen(false); }}>Cancelar</Button>
-            <Button onClick={handleMarkLoss} disabled={(!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
+            <Button onClick={handleMarkLoss} disabled={lossTags.length === 0 || markingLossRef.current} className="gap-2 bg-warning text-warning-foreground hover:bg-warning/90">
               <AlertCircle className="h-4 w-4" /> Enviar para Análise
             </Button>
           </DialogFooter>
