@@ -1017,7 +1017,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
             <p className="text-sm text-muted-foreground">Mover para:</p>
             <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
               {statusTargets.map((target) => (
-                <Button key={target.id} variant="outline" className="justify-start gap-2" onClick={() => handleStatusChange(target.id)}>
+                <Button
+                  key={target.id}
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={() => {
+                    if (target.id === "trabalhado") {
+                      setTrabalhadoTags([]);
+                      setStatusChangeOpen(false);
+                      setTrabalhadoOpen(true);
+                      return;
+                    }
+                    handleStatusChange(target.id);
+                  }}
+                >
                   {target.label}
                 </Button>
               ))}
@@ -1025,6 +1038,36 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trabalhado — motivo obrigatório */}
+      <Dialog open={trabalhadoOpen} onOpenChange={(v) => { if (!v) setTrabalhadoTags([]); setTrabalhadoOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-primary" /> Marcar como Trabalhado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Selecione o motivo de <strong>{lead?.nome}</strong> ficar como Trabalhado.
+            </p>
+            <MotivoTagSelector
+              tags={TAGS_MOTIVO_TRABALHADO}
+              variant="default"
+              selected={trabalhadoTags}
+              onToggle={(tag) => setTrabalhadoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+            />
+            {trabalhadoTags.length === 0 && (
+              <p className="text-xs text-destructive">Selecione ao menos um motivo.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTrabalhadoTags([]); setTrabalhadoOpen(false); }}>Cancelar</Button>
+            <Button onClick={handleConfirmTrabalhado} disabled={trabalhadoTags.length === 0}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+
   );
 };
