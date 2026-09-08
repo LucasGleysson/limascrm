@@ -13,7 +13,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { usePagination } from "@/hooks/usePagination";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag, Skull, XCircle, Search } from "lucide-react";
-import { Evento, Lead, ETAPAS_FUNIL, TAGS_MOTIVO_OS } from "@/data/mockData";
+import { Evento, Lead, ETAPAS_FUNIL, TAGS_MOTIVO_OS, TAGS_MOTIVO_TRABALHADO } from "@/data/mockData";
 import { MotivoTagSelector } from "./MotivoTagSelector";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
@@ -40,6 +40,7 @@ export const EventoPanel = () => {
   const [concludeProcessOpen, setConcludeProcessOpen] = useState(false);
   const [concludeProcessLead, setConcludeProcessLead] = useState<Lead | null>(null);
   const [concludeProcessMotivo, setConcludeProcessMotivo] = useState("");
+  const [concludeProcessTags, setConcludeProcessTags] = useState<string[]>([]);
 
   const [lossOpen, setLossOpen] = useState(false);
   const [lossLead, setLossLead] = useState<Lead | null>(null);
