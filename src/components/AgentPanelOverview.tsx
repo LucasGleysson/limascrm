@@ -143,8 +143,8 @@ export const AgentPanelOverview = () => {
 
   const lojaCards = myUnidades.map((u) => {
     const subset = myMonthLeads.filter((l) => l.id_unidade === u.id);
-    const c = subset.filter((l) => l.etapa === "concluido").length;
-    const p = subset.filter((l) => l.etapa === "perdido").length;
+    const c = subset.filter((l) => l.etapa === "concluido" && comCheckinNoMes(l)).length;
+    const p = subset.filter((l) => l.etapa === "perdido" && comCheckinNoMes(l)).length;
     const ag = subset.filter((l) => l.etapa === "agendado").length;
     const conf = subset.filter((l) => l.etapa === "confirmado").length;
     const rea = subset.filter((l) => l.etapa === "reagendado").length;

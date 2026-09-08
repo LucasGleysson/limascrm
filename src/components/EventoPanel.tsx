@@ -256,7 +256,7 @@ export const EventoPanel = () => {
   };
 
   const handleMarkLoss = async () => {
-    if (!lossLead || (!lossMotivo.trim() && lossTags.length === 0) || markingLossRef.current) return;
+    if (!lossLead || lossTags.length === 0 || markingLossRef.current) return;
     markingLossRef.current = true;
     try {
       const tagsText = lossTags.length > 0 ? `[${lossTags.join(", ")}]` : "";
