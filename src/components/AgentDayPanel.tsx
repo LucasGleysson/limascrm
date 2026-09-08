@@ -127,9 +127,9 @@ export const AgentDayPanel = () => {
       const ref = l.checkin ? l.checkin.slice(0, 10) : (l.data_agendamento || "");
       return ref >= mStart && ref <= mEnd;
     }).length;
-    const rate = progressoMes > META_AGENTE ? 10 : 8;
+    const rate = comissaoRate(progressoMes);
 
-    const RATE_POT = 10;
+    const RATE_POT = COMISSAO_RATE_MAX;
     // "Na Loja" do dia: todo carro com check-in nesse dia, qualquer status.
     const naLojaHoje = myLeads.filter(
       (l) => !!l.checkin && l.checkin.slice(0, 10) === dayStr
