@@ -179,7 +179,7 @@ export const ReceptionistDashboard = () => {
   };
 
   const handleDispensarSubmit = async () => {
-    if (!dispensarLead || (!dispensarMotivo.trim() && dispensarTags.length === 0) || loadingAction) return;
+    if (!dispensarLead || dispensarTags.length === 0 || loadingAction) return;
     setLoadingAction("dispensar");
     try {
       const tagsText = dispensarTags.length > 0 ? `[${dispensarTags.join(", ")}]` : "";
@@ -530,7 +530,7 @@ export const ReceptionistDashboard = () => {
       <LeadDetailSheet lead={detailLead} open={detailOpen} onOpenChange={setDetailOpen} />
 
       <Dialog open={dispensarOpen} onOpenChange={setDispensarOpen}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, (!dispensarMotivo.trim() && dispensarTags.length === 0) || loadingAction === "dispensar")}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDispensarSubmit, dispensarTags.length === 0 || loadingAction === "dispensar")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-destructive" />
@@ -555,7 +555,7 @@ export const ReceptionistDashboard = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDispensarOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={(!dispensarMotivo.trim() && dispensarTags.length === 0) || loadingAction === "dispensar"}>
+            <Button variant="destructive" onClick={handleDispensarSubmit} disabled={dispensarTags.length === 0 || loadingAction === "dispensar"}>
               {loadingAction === "dispensar" ? "Aguarde..." : "Confirmar"}
             </Button>
           </DialogFooter>

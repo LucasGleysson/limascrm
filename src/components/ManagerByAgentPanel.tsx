@@ -7,11 +7,10 @@ import {
   Wallet, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isPerdidoAntesLoja } from "@/lib/leadUtils";
+import { isPerdidoAntesLoja, comissaoRate, COMISSAO_RATE_MAX, META_AGENTE_PADRAO } from "@/lib/leadUtils";
 import { AgentDailyChart } from "@/components/AgentDailyChart";
 
-const DEFAULT_META = 75;
-const META_COMISSAO = 75;
+const DEFAULT_META = META_AGENTE_PADRAO;
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 function countBusinessDays(from: Date, to: Date): number {
@@ -109,10 +108,10 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
       const reagendados = a.naLojaReagendado ?? a.leads.filter((l: any) => l.etapa === "reagendado").length;
       const emAnalise = a.naLojaAnalise ?? a.leads.filter((l: any) => l.etapa === "analise_supervisor").length;
 
-      // Comissão: R$ 8/carro, R$ 10/carro se passar de 75
-      const passouMeta = progresso > META_COMISSAO;
-      const rate = passouMeta ? 10 : 8;
-      const RATE_POT = 10;
+      // Bonificação por faixa: 0-50 sem bônus, 51-60 R$5, 61-70 R$6, 71-80 R$7, 81-90 R$8, 91+ R$10
+      const rate = comissaoRate(progresso);
+      const passouMeta = progresso >= meta;
+      const RATE_POT = COMISSAO_RATE_MAX;
       // Potenciais: agendamentos feitos, carros que passaram na loja e leads produtivos.
       const nEmLojaCom = a.passaramNaLoja;
       const nAgendadosCom = a.totalAgendamentos;
@@ -289,8 +288,8 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                   <div className="flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-success" />
                     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comissão</span>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${a.passouMeta ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}`}>
-                      R$ {a.rate}/carro {a.passouMeta && "🔥"}
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${a.rate >= 8 ? "bg-success/20 text-success border-success/40" : a.rate > 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border"}`}>
+                      {a.rate > 0 ? `R$ ${a.rate}/carro` : "Sem bonificação"} {a.passouMeta && "🔥"}
                     </Badge>
                   </div>
                   <div className="text-right">

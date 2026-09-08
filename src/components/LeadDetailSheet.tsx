@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO } from "@/data/mockData";
+import { Lead, ETAPAS_FUNIL, ORIGENS, SERVICOS_TAGS, TAGS_MOTIVO_OS, TAGS_MOTIVO_NOVO, TAGS_MOTIVO_DESQUALIFICACAO, TAGS_MOTIVO_TRABALHADO } from "@/data/mockData";
 import { MotivoTagSelector } from "./MotivoTagSelector";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -36,8 +36,8 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
   novo: { label: "Novo Lead", targets: [{ id: "trabalhado", label: "Trabalhado" }] },
   agendado: { label: "Agendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
   reagendado: { label: "Reagendado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
-  desqualificado_novo: { label: "Desqualificado (Novo)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
-  desqualificado_agendado: { label: "Desqualificado (Agendado)", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_novo: { label: "Desqualificado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "trabalhado", label: "Trabalhado" }] },
+  desqualificado_agendado: { label: "Agendados Trabalhados", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
   trabalhado: { label: "Trabalhado", targets: [{ id: "novo", label: "Novo Lead" }] },
   dispensado: { label: "Dispensado", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
   perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
@@ -54,6 +54,8 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   const [disqualifyTags, setDisqualifyTags] = useState<string[]>([]);
   const [disqualifyOutraCidade, setDisqualifyOutraCidade] = useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = useState(false);
+  const [trabalhadoOpen, setTrabalhadoOpen] = useState(false);
+  const [trabalhadoTags, setTrabalhadoTags] = useState<string[]>([]);
   const [lossOpen, setLossOpen] = useState(false);
   const [lossMotivo, setLossMotivo] = useState("");
   const [lossTags, setLossTags] = useState<string[]>([]);
@@ -272,26 +274,30 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   };
 
   const handleDisqualify = async () => {
-    if (!disqualifyMotivo.trim() && disqualifyTags.length === 0) return;
+    if (disqualifyTags.length === 0) return;
     const status = getDisqualifyStatus();
-    const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
+    const label = status === "desqualificado_novo" ? "Desqualificado" : "Agendados Trabalhados";
     let motivo = disqualifyMotivo.trim();
     if (disqualifyOutraCidade) motivo = `[Outra Cidade] ${motivo}`;
     const tagsText = disqualifyTags.length > 0 ? `[${disqualifyTags.join(", ")}]` : "";
     const fullMotivo = [tagsText, motivo].filter(Boolean).join(" ");
     const notas = appendNota(lead.notas, label, fullMotivo);
-    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags.length > 0 ? disqualifyTags : null } as any);
+    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags } as any);
     setDisqualifyMotivo("");
     setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setDisqualifyOpen(false);
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string, motivoTags?: string[]) => {
     const oldLabel = etapa?.label || lead.etapa;
     const newLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
-    const notas = appendNota(lead.notas, "Mudança de Status", `${oldLabel} → ${newLabel}`);
+    const detalhe = motivoTags && motivoTags.length > 0
+      ? `${oldLabel} → ${newLabel} [${motivoTags.join(", ")}]`
+      : `${oldLabel} → ${newLabel}`;
+    const notas = appendNota(lead.notas, "Mudança de Status", detalhe);
     const updates: Partial<Lead> = { etapa: newStatus, notas };
+    if (motivoTags && motivoTags.length > 0) (updates as any).tags_motivo = motivoTags;
     if (newStatus === "novo") {
       updates.data_agendamento = null;
       updates.numero_os = null;
@@ -307,6 +313,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
     }
     await updateLead(lead.id, updates);
     setStatusChangeOpen(false);
+  };
+
+  const handleConfirmTrabalhado = async () => {
+    if (trabalhadoTags.length === 0) return;
+    await handleStatusChange("trabalhado", trabalhadoTags);
+    setTrabalhadoTags([]);
+    setTrabalhadoOpen(false);
   };
 
   const handleMarkLoss = async () => {
@@ -786,7 +799,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
 
       {/* Disqualify modal */}
       <Dialog open={disqualifyOpen} onOpenChange={(v) => { if (!v) { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); } setDisqualifyOpen(v); }}>
-        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, !disqualifyMotivo.trim() && disqualifyTags.length === 0)}>
+        <DialogContent className="sm:max-w-md" onKeyDown={(e) => handleKeyDown(e, handleDisqualify, disqualifyTags.length === 0)}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-destructive" /> Desqualificar Lead
@@ -797,16 +810,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
               Informe o motivo da desqualificação de <strong>{lead?.nome}</strong>.
             </p>
             <div>
-              <Label className="text-xs font-semibold">Tags de Motivo</Label>
+              <Label className="text-xs font-semibold">Tags de Motivo <span className="text-destructive">*</span></Label>
               <div className="mt-1.5">
                 <MotivoTagSelector
-                  tags={["novo", "trabalhado"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+                  tags={TAGS_MOTIVO_DESQUALIFICACAO}
                   selected={disqualifyTags}
                   onToggle={(tag) => setDisqualifyTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
                 />
               </div>
+              {disqualifyTags.length === 0 && (
+                <p className="text-xs text-destructive mt-1.5">Selecione ao menos um motivo.</p>
+              )}
             </div>
-            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Motivo adicional (opcional se tag selecionada)..." rows={3} />
+            <Textarea value={disqualifyMotivo} onChange={(e) => setDisqualifyMotivo(e.target.value)} placeholder="Observação adicional (opcional)..." rows={3} />
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="outra-cidade"
@@ -820,7 +837,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDisqualifyMotivo(""); setDisqualifyTags([]); setDisqualifyOutraCidade(false); setDisqualifyOpen(false); }}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDisqualify} disabled={!disqualifyMotivo.trim() && disqualifyTags.length === 0}>Confirmar</Button>
+            <Button variant="destructive" onClick={handleDisqualify} disabled={disqualifyTags.length === 0}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -975,7 +992,7 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </DialogHeader>
           <div className="space-y-3">
             <MotivoTagSelector
-              tags={["desqualificado_novo"].includes(lead.etapa) ? TAGS_MOTIVO_NOVO : TAGS_MOTIVO_OS}
+              tags={["desqualificado_novo", "desqualificado_agendado"].includes(lead.etapa) ? TAGS_MOTIVO_DESQUALIFICACAO : lead.etapa === "trabalhado" ? TAGS_MOTIVO_TRABALHADO : TAGS_MOTIVO_OS}
               selected={editMotivoTags}
               onToggle={(tag) => setEditMotivoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
             />
@@ -1004,7 +1021,20 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
             <p className="text-sm text-muted-foreground">Mover para:</p>
             <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
               {statusTargets.map((target) => (
-                <Button key={target.id} variant="outline" className="justify-start gap-2" onClick={() => handleStatusChange(target.id)}>
+                <Button
+                  key={target.id}
+                  variant="outline"
+                  className="justify-start gap-2"
+                  onClick={() => {
+                    if (target.id === "trabalhado") {
+                      setTrabalhadoTags([]);
+                      setStatusChangeOpen(false);
+                      setTrabalhadoOpen(true);
+                      return;
+                    }
+                    handleStatusChange(target.id);
+                  }}
+                >
                   {target.label}
                 </Button>
               ))}
@@ -1012,6 +1042,36 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Trabalhado — motivo obrigatório */}
+      <Dialog open={trabalhadoOpen} onOpenChange={(v) => { if (!v) setTrabalhadoTags([]); setTrabalhadoOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-primary" /> Marcar como Trabalhado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Selecione o motivo de <strong>{lead?.nome}</strong> ficar como Trabalhado.
+            </p>
+            <MotivoTagSelector
+              tags={TAGS_MOTIVO_TRABALHADO}
+              variant="default"
+              selected={trabalhadoTags}
+              onToggle={(tag) => setTrabalhadoTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+            />
+            {trabalhadoTags.length === 0 && (
+              <p className="text-xs text-destructive">Selecione ao menos um motivo.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTrabalhadoTags([]); setTrabalhadoOpen(false); }}>Cancelar</Button>
+            <Button onClick={handleConfirmTrabalhado} disabled={trabalhadoTags.length === 0}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+
   );
 };

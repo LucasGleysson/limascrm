@@ -13,7 +13,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { usePagination } from "@/hooks/usePagination";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Clock, AlertCircle, Plus, CalendarPlus, StickyNote, Phone as PhoneIcon, CalendarCheck, UserX, Flag, Skull, XCircle, Search } from "lucide-react";
-import { Evento, Lead, ETAPAS_FUNIL, TAGS_MOTIVO_OS } from "@/data/mockData";
+import { Evento, Lead, ETAPAS_FUNIL, TAGS_MOTIVO_OS, TAGS_MOTIVO_TRABALHADO } from "@/data/mockData";
 import { MotivoTagSelector } from "./MotivoTagSelector";
 import { formatDateBR, getStatusBadgeClass } from "@/lib/leadUtils";
 import { appendNota } from "@/lib/notasUtils";
@@ -40,6 +40,7 @@ export const EventoPanel = () => {
   const [concludeProcessOpen, setConcludeProcessOpen] = useState(false);
   const [concludeProcessLead, setConcludeProcessLead] = useState<Lead | null>(null);
   const [concludeProcessMotivo, setConcludeProcessMotivo] = useState("");
+  const [concludeProcessTags, setConcludeProcessTags] = useState<string[]>([]);
 
   const [lossOpen, setLossOpen] = useState(false);
   const [lossLead, setLossLead] = useState<Lead | null>(null);
@@ -225,6 +226,8 @@ export const EventoPanel = () => {
 
   const handleConcludeProcess = async () => {
     if (!concludeProcessLead || !concludeProcessMotivo.trim() || concludingProcessRef.current) return;
+    const statusPrevisto = getEncerrarStatus(concludeProcessLead);
+    if (statusPrevisto === "trabalhado" && concludeProcessTags.length === 0) return;
     concludingProcessRef.current = true;
     try {
       const lead = concludeProcessLead;
@@ -232,7 +235,8 @@ export const EventoPanel = () => {
       const maxFup = fups.length > 0 ? Math.max(...fups.map((e) => e.numero)) : 0;
       const newStatus = getEncerrarStatus(lead);
       const statusLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
-      const notas = appendNota(lead.notas, "Processo FUP Concluído", `${concludeProcessMotivo.trim()} → Status: ${statusLabel}`);
+      const tagsText = concludeProcessTags.length > 0 ? `[${concludeProcessTags.join(", ")}] ` : "";
+      const notas = appendNota(lead.notas, "Processo FUP Concluído", `${tagsText}${concludeProcessMotivo.trim()} → Status: ${statusLabel}`);
       await updateLead(lead.id, {
         fup_concluido: true,
         fup_concluido_em: new Date().toISOString(),
@@ -240,9 +244,11 @@ export const EventoPanel = () => {
         fup_motivo_conclusao: concludeProcessMotivo.trim(),
         etapa: newStatus,
         notas,
-      });
+        ...(concludeProcessTags.length > 0 ? { tags_motivo: concludeProcessTags } : {}),
+      } as any);
       setConcludeProcessOpen(false);
       setConcludeProcessMotivo("");
+      setConcludeProcessTags([]);
       setConcludeProcessLead(null);
     } finally {
       concludingProcessRef.current = false;
@@ -589,7 +595,7 @@ export const EventoPanel = () => {
       </Dialog>
 
       {/* Conclude FUP Process modal */}
-      <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) setConcludeProcessMotivo(""); setConcludeProcessOpen(v); }}>
+      <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) { setConcludeProcessMotivo(""); setConcludeProcessTags([]); } setConcludeProcessOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -597,33 +603,57 @@ export const EventoPanel = () => {
               Encerrar Follow-up
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Cliente: <strong>{concludeProcessLead?.nome}</strong>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Ao encerrar, nenhum novo follow-up será gerado para este cliente.
-            </p>
-            <div>
-              <Label>Motivo do encerramento</Label>
-              <Textarea
-                value={concludeProcessMotivo}
-                onChange={(e) => setConcludeProcessMotivo(e.target.value)}
-                placeholder="Ex: Cliente fez serviço em outro lugar, não tem mais interesse..."
-                className="mt-1"
-                rows={3}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && concludeProcessMotivo.trim()) { e.preventDefault(); handleConcludeProcess(); }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setConcludeProcessMotivo(""); setConcludeProcessOpen(false); }}>Cancelar</Button>
-            <Button onClick={handleConcludeProcess} disabled={!concludeProcessMotivo.trim() || concludingProcessRef.current} className="gap-2">
-              <XCircle className="h-4 w-4" /> Encerrar
-            </Button>
-          </DialogFooter>
+          {(() => {
+            const statusPrevisto = concludeProcessLead ? getEncerrarStatus(concludeProcessLead) : "";
+            const exigeTags = statusPrevisto === "trabalhado";
+            return (
+              <>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Cliente: <strong>{concludeProcessLead?.nome}</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Ao encerrar, nenhum novo follow-up será gerado para este cliente.
+                  </p>
+                  {exigeTags && (
+                    <div>
+                      <Label className="text-xs font-semibold">Motivo (Trabalhado) <span className="text-destructive">*</span></Label>
+                      <div className="mt-1.5">
+                        <MotivoTagSelector
+                          tags={TAGS_MOTIVO_TRABALHADO}
+                          variant="default"
+                          selected={concludeProcessTags}
+                          onToggle={(tag) => setConcludeProcessTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                        />
+                      </div>
+                      {concludeProcessTags.length === 0 && (
+                        <p className="text-xs text-destructive mt-1.5">Selecione ao menos um motivo.</p>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <Label>Motivo do encerramento</Label>
+                    <Textarea
+                      value={concludeProcessMotivo}
+                      onChange={(e) => setConcludeProcessMotivo(e.target.value)}
+                      placeholder="Ex: Cliente fez serviço em outro lugar, não tem mais interesse..."
+                      className="mt-1"
+                      rows={3}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && concludeProcessMotivo.trim() && (!exigeTags || concludeProcessTags.length > 0)) { e.preventDefault(); handleConcludeProcess(); }
+                      }}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setConcludeProcessMotivo(""); setConcludeProcessTags([]); setConcludeProcessOpen(false); }}>Cancelar</Button>
+                  <Button onClick={handleConcludeProcess} disabled={!concludeProcessMotivo.trim() || (exigeTags && concludeProcessTags.length === 0) || concludingProcessRef.current} className="gap-2">
+                    <XCircle className="h-4 w-4" /> Encerrar
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

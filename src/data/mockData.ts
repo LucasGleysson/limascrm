@@ -14,8 +14,8 @@ export const ETAPAS_FUNIL = [
   { id: "trabalhado", label: "Trabalhado", color: "muted" },
   { id: "sem_retorno", label: "Sem retorno", color: "muted" },
   { id: "nao_convertido", label: "Não convertido", color: "destructive" },
-  { id: "desqualificado_novo", label: "Desqualificado (Novo)", color: "destructive" },
-  { id: "desqualificado_agendado", label: "Desqualificado (Agendado)", color: "destructive" },
+  { id: "desqualificado_novo", label: "Desqualificado", color: "destructive" },
+  { id: "desqualificado_agendado", label: "Agendados Trabalhados", color: "destructive" },
   { id: "perdido", label: "Perdido", color: "destructive" },
 ] as const;
 
@@ -26,17 +26,32 @@ export const ETAPAS_EVASAO_ANTES = ["desqualificado_novo", "desqualificado_agend
 export const ETAPAS_EVASAO_DEPOIS = ["dispensado", "perdido"] as const;
 export const ETAPAS_CARRO_AGENTE = ["confirmado", "na_loja", "concluido", "dispensado", "perdido"] as const;
 
+/** Serviços obrigatórios no agendamento */
 export const SERVICOS_TAGS = [
-  "Amortecedor", "Freio", "Óleo", "Alinhamento", "Balanceamento", "Cambagem", "Homocinética"
+  "Alinhamento", "Balanceamento", "Óleo e Filtro", "Suspensão", "Freios",
+  "Avaliação", "Revisão/Checkup", "Cambagem", "Correia Dentada",
 ];
 
-export const TAGS_MOTIVO_OS = [
-  "Loja Cheia", "Aguardando Orçamento", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peça"
+/** Motivos obrigatórios de dispensa (cliente esteve na loja) */
+export const TAGS_MOTIVO_DISPENSA = [
+  "Loja Cheia", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peças",
+];
+// alias legado
+export const TAGS_MOTIVO_OS = TAGS_MOTIVO_DISPENSA;
+
+/** Motivos obrigatórios de desqualificação */
+export const TAGS_MOTIVO_DESQUALIFICACAO = [
+  "Não tem Carro", "Outra Cidade", "Clicou sem querer",
+];
+// alias legado
+export const TAGS_MOTIVO_NOVO = TAGS_MOTIVO_DESQUALIFICACAO;
+
+/** Motivos obrigatórios ao marcar como Trabalhado */
+export const TAGS_MOTIVO_TRABALHADO = [
+  "Sem interação", "Não fazemos serviço", "Em breve", "Retirada de peça",
+  "Sem retorno pós orçamento", "Clicou sem querer", "Garantia",
 ];
 
-export const TAGS_MOTIVO_NOVO = [
-  "Não Fazemos Serviço", "Retirada de Peças", "Delicado", "Outra Cidade", "Em Breve"
-];
 
 export type UserRole = "agente" | "recepcionista" | "supervisor" | "gestor";
 

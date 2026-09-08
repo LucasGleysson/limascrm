@@ -17,10 +17,10 @@ import {
   format, isToday, addDays, subDays, startOfMonth, endOfMonth, isSameDay,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { foiNaLoja, formatDataSegura } from "@/lib/leadUtils";
+import { foiNaLoja, formatDataSegura, comissaoRate, COMISSAO_RATE_MAX, META_AGENTE_PADRAO } from "@/lib/leadUtils";
 import type { Lead } from "@/data/mockData";
 
-const META_AGENTE = 75;
+const META_AGENTE = META_AGENTE_PADRAO;
 const META_MIN_POR_UNIDADE = 2;
 const META_ALVO_POR_UNIDADE = 4;
 
@@ -127,9 +127,9 @@ export const AgentDayPanel = () => {
       const ref = l.checkin ? l.checkin.slice(0, 10) : (l.data_agendamento || "");
       return ref >= mStart && ref <= mEnd;
     }).length;
-    const rate = progressoMes > META_AGENTE ? 10 : 8;
+    const rate = comissaoRate(progressoMes);
 
-    const RATE_POT = 10;
+    const RATE_POT = COMISSAO_RATE_MAX;
     // "Na Loja" do dia: todo carro com check-in nesse dia, qualquer status.
     const naLojaHoje = myLeads.filter(
       (l) => !!l.checkin && l.checkin.slice(0, 10) === dayStr
@@ -401,8 +401,8 @@ export const AgentDayPanel = () => {
                   <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Comissão do dia</p>
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     Ganho de {dayLabel.toLowerCase()}
-                    <Badge variant="outline" className={comissaoDia.rate === 10 ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}>
-                      R$ {comissaoDia.rate}/carro
+                    <Badge variant="outline" className={comissaoDia.rate >= 8 ? "bg-success/20 text-success border-success/40" : comissaoDia.rate > 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border"}>
+                      {comissaoDia.rate > 0 ? `R$ ${comissaoDia.rate}/carro` : "Sem bonificação"}
                     </Badge>
                   </h2>
                 </div>
