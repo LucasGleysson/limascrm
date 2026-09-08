@@ -63,7 +63,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
   const maxDataStr = `${new Date().getFullYear() + MAX_DATA_ANOS_FUTURO}-12-31`;
 
   const handleSubmit = async () => {
-    if (!unidade || !data || !os || submittingRef.current) return;
+    if (!unidade || !data || !os || tags.length === 0 || submittingRef.current) return;
     if (!isDataPlausivel(data)) {
       toast.error("Data de agendamento inválida. Confira o ano digitado.");
       return;
