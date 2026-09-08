@@ -97,7 +97,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && unidade && data && os) { e.preventDefault(); handleSubmit(); } }}>
+      <DialogContent className="sm:max-w-md" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && unidade && data && os && tags.length > 0) { e.preventDefault(); handleSubmit(); } }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarCheck className="h-5 w-5 text-primary" />
@@ -139,7 +139,7 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
             <Input value={os} onChange={(e) => setOs(e.target.value)} placeholder="OS-2024-XXX" className="mt-1" />
           </div>
           <div>
-            <Label>Serviços</Label>
+            <Label>Serviços <span className="text-destructive">*</span></Label>
             <div className="flex flex-wrap gap-2 mt-1">
               {SERVICOS_TAGS.map((tag) => (
                 <Badge
@@ -152,11 +152,14 @@ export const ScheduleModal = ({ open, onOpenChange, leadId, leadNome }: Props) =
                 </Badge>
               ))}
             </div>
+            {tags.length === 0 && (
+              <p className="text-xs text-destructive mt-1">Selecione ao menos um serviço.</p>
+            )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!unidade || !data || !os || submittingRef.current}>Confirmar Agendamento</Button>
+          <Button onClick={handleSubmit} disabled={!unidade || !data || !os || tags.length === 0 || submittingRef.current}>Confirmar Agendamento</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
