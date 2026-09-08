@@ -595,7 +595,7 @@ export const EventoPanel = () => {
       </Dialog>
 
       {/* Conclude FUP Process modal */}
-      <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) setConcludeProcessMotivo(""); setConcludeProcessOpen(v); }}>
+      <Dialog open={concludeProcessOpen} onOpenChange={(v) => { if (!v) { setConcludeProcessMotivo(""); setConcludeProcessTags([]); } setConcludeProcessOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -603,33 +603,57 @@ export const EventoPanel = () => {
               Encerrar Follow-up
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Cliente: <strong>{concludeProcessLead?.nome}</strong>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Ao encerrar, nenhum novo follow-up será gerado para este cliente.
-            </p>
-            <div>
-              <Label>Motivo do encerramento</Label>
-              <Textarea
-                value={concludeProcessMotivo}
-                onChange={(e) => setConcludeProcessMotivo(e.target.value)}
-                placeholder="Ex: Cliente fez serviço em outro lugar, não tem mais interesse..."
-                className="mt-1"
-                rows={3}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && concludeProcessMotivo.trim()) { e.preventDefault(); handleConcludeProcess(); }
-                }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setConcludeProcessMotivo(""); setConcludeProcessOpen(false); }}>Cancelar</Button>
-            <Button onClick={handleConcludeProcess} disabled={!concludeProcessMotivo.trim() || concludingProcessRef.current} className="gap-2">
-              <XCircle className="h-4 w-4" /> Encerrar
-            </Button>
-          </DialogFooter>
+          {(() => {
+            const statusPrevisto = concludeProcessLead ? getEncerrarStatus(concludeProcessLead) : "";
+            const exigeTags = statusPrevisto === "trabalhado";
+            return (
+              <>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Cliente: <strong>{concludeProcessLead?.nome}</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Ao encerrar, nenhum novo follow-up será gerado para este cliente.
+                  </p>
+                  {exigeTags && (
+                    <div>
+                      <Label className="text-xs font-semibold">Motivo (Trabalhado) <span className="text-destructive">*</span></Label>
+                      <div className="mt-1.5">
+                        <MotivoTagSelector
+                          tags={TAGS_MOTIVO_TRABALHADO}
+                          variant="default"
+                          selected={concludeProcessTags}
+                          onToggle={(tag) => setConcludeProcessTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])}
+                        />
+                      </div>
+                      {concludeProcessTags.length === 0 && (
+                        <p className="text-xs text-destructive mt-1.5">Selecione ao menos um motivo.</p>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <Label>Motivo do encerramento</Label>
+                    <Textarea
+                      value={concludeProcessMotivo}
+                      onChange={(e) => setConcludeProcessMotivo(e.target.value)}
+                      placeholder="Ex: Cliente fez serviço em outro lugar, não tem mais interesse..."
+                      className="mt-1"
+                      rows={3}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey && concludeProcessMotivo.trim() && (!exigeTags || concludeProcessTags.length > 0)) { e.preventDefault(); handleConcludeProcess(); }
+                      }}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setConcludeProcessMotivo(""); setConcludeProcessTags([]); setConcludeProcessOpen(false); }}>Cancelar</Button>
+                  <Button onClick={handleConcludeProcess} disabled={!concludeProcessMotivo.trim() || (exigeTags && concludeProcessTags.length === 0) || concludingProcessRef.current} className="gap-2">
+                    <XCircle className="h-4 w-4" /> Encerrar
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
