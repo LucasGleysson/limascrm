@@ -272,26 +272,30 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
   };
 
   const handleDisqualify = async () => {
-    if (!disqualifyMotivo.trim() && disqualifyTags.length === 0) return;
+    if (disqualifyTags.length === 0) return;
     const status = getDisqualifyStatus();
-    const label = status === "desqualificado_novo" ? "Desqualificado (Novo)" : "Desqualificado (Agendado)";
+    const label = status === "desqualificado_novo" ? "Desqualificado" : "Agendados Trabalhados";
     let motivo = disqualifyMotivo.trim();
     if (disqualifyOutraCidade) motivo = `[Outra Cidade] ${motivo}`;
     const tagsText = disqualifyTags.length > 0 ? `[${disqualifyTags.join(", ")}]` : "";
     const fullMotivo = [tagsText, motivo].filter(Boolean).join(" ");
     const notas = appendNota(lead.notas, label, fullMotivo);
-    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags.length > 0 ? disqualifyTags : null } as any);
+    await updateLead(lead.id, { etapa: status, notas, tags_motivo: disqualifyTags } as any);
     setDisqualifyMotivo("");
     setDisqualifyTags([]);
     setDisqualifyOutraCidade(false);
     setDisqualifyOpen(false);
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string, motivoTags?: string[]) => {
     const oldLabel = etapa?.label || lead.etapa;
     const newLabel = ETAPAS_FUNIL.find((e) => e.id === newStatus)?.label || newStatus;
-    const notas = appendNota(lead.notas, "Mudança de Status", `${oldLabel} → ${newLabel}`);
+    const detalhe = motivoTags && motivoTags.length > 0
+      ? `${oldLabel} → ${newLabel} [${motivoTags.join(", ")}]`
+      : `${oldLabel} → ${newLabel}`;
+    const notas = appendNota(lead.notas, "Mudança de Status", detalhe);
     const updates: Partial<Lead> = { etapa: newStatus, notas };
+    if (motivoTags && motivoTags.length > 0) (updates as any).tags_motivo = motivoTags;
     if (newStatus === "novo") {
       updates.data_agendamento = null;
       updates.numero_os = null;
@@ -307,6 +311,13 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
     }
     await updateLead(lead.id, updates);
     setStatusChangeOpen(false);
+  };
+
+  const handleConfirmTrabalhado = async () => {
+    if (trabalhadoTags.length === 0) return;
+    await handleStatusChange("trabalhado", trabalhadoTags);
+    setTrabalhadoTags([]);
+    setTrabalhadoOpen(false);
   };
 
   const handleMarkLoss = async () => {
