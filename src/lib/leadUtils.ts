@@ -9,6 +9,37 @@ import type { Lead } from "@/data/mockData";
  */
 export const LEAD_WINDOW_DAYS = 90;
 
+/** Meta padrão de carros por agente no mês */
+export const META_AGENTE_PADRAO = 90;
+
+/** Melhor faixa de bonificação — usada nos cálculos de potencial */
+export const COMISSAO_RATE_MAX = 10;
+
+/** Faixas de bonificação (comissão) por carros que viraram meta no mês */
+export const COMISSAO_FAIXAS = [
+  { min: 0, max: 50, valor: 0 },
+  { min: 51, max: 60, valor: 5 },
+  { min: 61, max: 70, valor: 6 },
+  { min: 71, max: 80, valor: 7 },
+  { min: 81, max: 90, valor: 8 },
+  { min: 91, max: Infinity, valor: 10 },
+];
+
+/** Valor por carro conforme a quantidade de carros que viraram meta */
+export function comissaoRate(carros: number): number {
+  const faixa = COMISSAO_FAIXAS.find((f) => carros >= f.min && carros <= f.max);
+  return faixa ? faixa.valor : 0;
+}
+
+/** Quantos carros faltam para subir de faixa (null se já está na faixa máxima) */
+export function proximaFaixaComissao(carros: number): { faltam: number; valor: number } | null {
+  const idx = COMISSAO_FAIXAS.findIndex((f) => carros >= f.min && carros <= f.max);
+  const prox = COMISSAO_FAIXAS[idx + 1];
+  if (!prox) return null;
+  return { faltam: prox.min - carros, valor: prox.valor };
+}
+
+
 /** Etapas consideradas "ativas" — leads aqui são SEMPRE carregados, independentemente da idade. */
 export const ACTIVE_FUNNEL_ETAPAS = [
   "novo",
