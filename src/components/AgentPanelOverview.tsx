@@ -67,9 +67,12 @@ export const AgentPanelOverview = () => {
     });
   }, [leads, currentUser.id, monthFrom, monthTo]);
 
-  // META: Concluídos + Perdidos
-  const concluidos = myMonthLeads.filter((l) => l.etapa === "concluido").length;
-  const perdidos = myMonthLeads.filter((l) => l.etapa === "perdido").length;
+  // META: Concluídos + Perdidos — só carros com check-in registrado no mês
+  // (mesma regra do painel do supervisor, ancorada na presença real na loja).
+  const comCheckinNoMes = (l: { checkin?: string | null }) =>
+    !!l.checkin && l.checkin.slice(0, 10) >= monthFrom && l.checkin.slice(0, 10) <= monthTo;
+  const concluidos = myMonthLeads.filter((l) => l.etapa === "concluido" && comCheckinNoMes(l)).length;
+  const perdidos = myMonthLeads.filter((l) => l.etapa === "perdido" && comCheckinNoMes(l)).length;
   const progresso = concluidos + perdidos;
   const pct = Math.min(Math.round((progresso / META_AGENTE) * 100), 100);
   const restante = Math.max(META_AGENTE - progresso, 0);
