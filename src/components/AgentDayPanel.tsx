@@ -401,8 +401,8 @@ export const AgentDayPanel = () => {
                   <p className="text-sm text-muted-foreground font-medium uppercase tracking-wide">Comissão do dia</p>
                   <h2 className="text-xl font-bold flex items-center gap-2">
                     Ganho de {dayLabel.toLowerCase()}
-                    <Badge variant="outline" className={comissaoDia.rate === 10 ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}>
-                      R$ {comissaoDia.rate}/carro
+                    <Badge variant="outline" className={comissaoDia.rate >= 8 ? "bg-success/20 text-success border-success/40" : comissaoDia.rate > 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border"}>
+                      {comissaoDia.rate > 0 ? `R$ ${comissaoDia.rate}/carro` : "Sem bonificação"}
                     </Badge>
                   </h2>
                 </div>

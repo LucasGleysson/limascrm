@@ -288,8 +288,8 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                   <div className="flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-success" />
                     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comissão</span>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${a.passouMeta ? "bg-success/20 text-success border-success/40" : "bg-primary/15 text-primary border-primary/30"}`}>
-                      R$ {a.rate}/carro {a.passouMeta && "🔥"}
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${a.rate >= 8 ? "bg-success/20 text-success border-success/40" : a.rate > 0 ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border"}`}>
+                      {a.rate > 0 ? `R$ ${a.rate}/carro` : "Sem bonificação"} {a.passouMeta && "🔥"}
                     </Badge>
                   </div>
                   <div className="text-right">
