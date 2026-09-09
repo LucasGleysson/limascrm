@@ -35,6 +35,7 @@ export const SERVICOS_TAGS = [
 /** Motivos obrigatórios de dispensa (cliente esteve na loja) */
 export const TAGS_MOTIVO_DISPENSA = [
   "Loja Cheia", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peças",
+  "Não fazemos serviço", "Carro Rebaixado",
 ];
 // alias legado
 export const TAGS_MOTIVO_OS = TAGS_MOTIVO_DISPENSA;
