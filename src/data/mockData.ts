@@ -42,7 +42,7 @@ export const TAGS_MOTIVO_OS = TAGS_MOTIVO_DISPENSA;
 
 /** Motivos obrigatórios de desqualificação */
 export const TAGS_MOTIVO_DESQUALIFICACAO = [
-  "Não tem Carro", "Outra Cidade", "Clicou sem querer",
+  "Não tem Carro", "Outra Cidade", "Clicou sem querer", "Não fazemos Serviço", "Carro Rebaixado",
 ];
 // alias legado
 export const TAGS_MOTIVO_NOVO = TAGS_MOTIVO_DESQUALIFICACAO;
