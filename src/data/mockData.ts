@@ -35,7 +35,7 @@ export const SERVICOS_TAGS = [
 /** Motivos obrigatórios de dispensa (cliente esteve na loja) */
 export const TAGS_MOTIVO_DISPENSA = [
   "Loja Cheia", "Orçamento Alto", "Mal Atendimento", "Reagendado pelo Gerente", "Falta de Peças",
-  "Não fazemos Serviço", "Carro Rebaixado",
+  "Não fazemos Serviço", "Carro Rebaixado", "Fez o serviço em outro lugar",
 ];
 // alias legado
 export const TAGS_MOTIVO_OS = TAGS_MOTIVO_DISPENSA;
@@ -50,7 +50,7 @@ export const TAGS_MOTIVO_NOVO = TAGS_MOTIVO_DESQUALIFICACAO;
 /** Motivos obrigatórios ao marcar como Trabalhado */
 export const TAGS_MOTIVO_TRABALHADO = [
   "Sem interação", "Não fazemos serviço", "Em breve", "Retirada de peça",
-  "Sem retorno pós orçamento", "Clicou sem querer", "Garantia",
+  "Sem retorno pós orçamento", "Clicou sem querer", "Garantia", "Fez o serviço em outro lugar",
 ];
 
 
