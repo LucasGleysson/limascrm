@@ -23,7 +23,8 @@ interface Props {
 }
 
 export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isReceptionist, allowAgentSelection }: Props) => {
-  const { addLead, profiles } = useLeads() as any;
+  const { addLead, profiles, unidadesAtivas, agentUnidades } = useLeads() as any;
+  const [unidadeEscolhida, setUnidadeEscolhida] = useState<string>("");
   const { currentUser } = useRole();
   const { toast } = useToast();
   const [nome, setNome] = useState("");
@@ -47,6 +48,7 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     setNumeroOs("");
     setEtapa(isPorta ? "na_loja" : "novo");
     setAgenteId("");
+    setUnidadeEscolhida("");
     setConfirmEntryOpen(false);
     setDuplicates([]);
     setDupOpen(false);
@@ -63,8 +65,8 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
     const today = now.split("T")[0];
     const isWalkIn = isReceptionist ? darEntradaAgora : isPorta || false;
     const finalEtapa = isReceptionist ? (darEntradaAgora ? "confirmado" : "novo") : (isPorta ? "na_loja" : "novo");
-    // Unidade só vem do contexto da tela (porta/recepcionista). Agente registra sem unidade.
-    const finalUnidade = unidadeId || (isReceptionist ? (currentUser?.unidade_padrao || null) : null);
+    // Unidade vem do contexto da tela (porta/recepcionista) ou da escolha opcional do agente.
+    const finalUnidade = unidadeId || (isReceptionist ? (currentUser?.unidade_padrao || null) : (unidadeEscolhida || null));
     const finalAgente = allowAgentSelection
       ? (agenteId || null)
       : (isReceptionist ? null : currentUser.id);
@@ -170,10 +172,24 @@ export const NewLeadModal = ({ open, onOpenChange, isPorta, unidadeId, isRecepti
               </Select>
             </div>
           )}
-          {!isReceptionist && !isPorta && (
-            <p className="text-xs text-muted-foreground">
-              A unidade será definida na hora do agendamento.
-            </p>
+          {!isReceptionist && !isPorta && !unidadeId && (
+            <div>
+              <Label>Unidade <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+              <Select value={unidadeEscolhida || "none"} onValueChange={(v) => setUnidadeEscolhida(v === "none" ? "" : v)}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Sem unidade" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem unidade (definir no agendamento)</SelectItem>
+                  {(unidadesAtivas || [])
+                    .filter((u: any) =>
+                      currentUser?.cargo !== "agente" ||
+                      (agentUnidades || []).some((au: any) => au.id_agente === currentUser.id && au.id_unidade === u.id)
+                    )
+                    .map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
         <DialogFooter>
