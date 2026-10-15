@@ -98,11 +98,13 @@ export const SupervisorDashboard = () => {
     const r = getDateRangeForPeriod(period);
     return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
   }, [period, mesRef, customFrom, customTo]);
-  const { rows: leads } = useScopedLeads({
+  const { rows: scopedLeadsRaw } = useScopedLeads({
     from: periodRange.from,
     to: periodRange.to,
     anchor: "any",
   });
+  // Leads de "Campanha Whatsapp" (repasse) não entram no dashboard.
+  const leads = useMemo(() => scopedLeadsRaw.filter((l) => l.origem !== "Campanha Whatsapp"), [scopedLeadsRaw]);
   const filteredLeads = useMemo(() => {
     if (!periodRange.from) return leads;
     const from = periodRange.from!;

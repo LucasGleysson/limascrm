@@ -75,12 +75,14 @@ export const ManagerDashboard = () => {
     return { from: r.from ?? getLeadWindowCutoff(), to: r.to };
   }, [period, mesRef, customFrom, customTo]);
   // Fetch escopado: meses antigos disparam fetch, meses correntes reaproveitam contexto.
-  const { rows: leads } = useScopedLeads({
+  const { rows: scopedLeadsRaw } = useScopedLeads({
     from: periodRangeAll.from,
     to: periodRangeAll.to,
     anchor: "any",
     idUnidade: unidadeFilter !== "todas" ? unidadeFilter : null,
   });
+  // Leads de "Campanha Whatsapp" (repasse) não entram no dashboard.
+  const leads = useMemo(() => scopedLeadsRaw.filter((l) => l.origem !== "Campanha Whatsapp"), [scopedLeadsRaw]);
 
   const filteredLeads = useMemo(() => {
     let result = leads;
