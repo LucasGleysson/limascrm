@@ -26,7 +26,8 @@ interface LeadContextType {
   refreshAll: () => Promise<void>;
 }
 
-const LeadContext = createContext<LeadContextType | undefined>(undefined);
+const gLeadContext = globalThis as unknown as { __LeadContext?: React.Context<LeadContextType | undefined> };
+const LeadContext = gLeadContext.__LeadContext ?? (gLeadContext.__LeadContext = createContext<LeadContextType | undefined>(undefined));
 
 /** Fetch all rows from a query using .range() pagination to bypass the 1000-row PostgREST limit */
 async function fetchAllRows<T>(queryBuilder: any, maxRows = 10000): Promise<T[]> {

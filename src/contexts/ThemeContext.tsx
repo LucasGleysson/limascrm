@@ -4,7 +4,8 @@ export type Theme = "light" | "dark" | "dracula";
 const STORAGE_KEY = "autocrm.theme";
 
 interface Ctx { theme: Theme; setTheme: (t: Theme) => void; cycle: () => void; }
-const ThemeContext = createContext<Ctx | undefined>(undefined);
+const gThemeContext = globalThis as unknown as { __ThemeContext?: React.Context<Ctx | undefined> };
+const ThemeContext = gThemeContext.__ThemeContext ?? (gThemeContext.__ThemeContext = createContext<Ctx | undefined>(undefined));
 
 const apply = (t: Theme) => {
   const root = document.documentElement;
