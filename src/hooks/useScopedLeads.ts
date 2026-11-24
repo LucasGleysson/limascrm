@@ -73,6 +73,21 @@ export function useScopedLeads({ from, to, anchor = "any", idUnidade }: Options)
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const onUpd = (e: Event) => {
+      const { id, updates } = (e as CustomEvent).detail || {};
+      if (!id) return;
+      setExtra((prev) => prev.some((l) => l.id === id) ? prev.map((l) => (l.id === id ? { ...l, ...updates } : l)) : prev);
+    };
+    window.addEventListener("lead-updated", onUpd);
+    return () => window.removeEventListener("lead-updated", onUpd);
+  }, []);
+  useEffect(() => {
+    const clear = () => cache.clear();
+    window.addEventListener("lead-updated", clear);
+    return () => window.removeEventListener("lead-updated", clear);
+  }, []);
+
+  useEffect(() => {
     if (fullyInWindow) {
       setExtra([]);
       return;

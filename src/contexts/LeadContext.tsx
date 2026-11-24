@@ -317,6 +317,8 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
       fetchAll(true);
       return false;
     }
+    // Avisa listas fora do contexto (busca global, períodos antigos) para refletirem a alteração.
+    window.dispatchEvent(new CustomEvent("lead-updated", { detail: { id, updates } }));
     return true;
   };
 

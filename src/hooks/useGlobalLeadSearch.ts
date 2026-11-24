@@ -11,6 +11,16 @@ import type { Lead } from "@/data/mockData";
 export function useGlobalLeadSearch(query: string, agentId?: string | null) {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const onUpd = (e: Event) => {
+      const { id, updates } = (e as CustomEvent).detail || {};
+      if (!id) return;
+      setRows((prev) => prev.some((l) => l.id === id) ? prev.map((l) => (l.id === id ? { ...l, ...updates } : l)) : prev);
+    };
+    window.addEventListener("lead-updated", onUpd);
+    return () => window.removeEventListener("lead-updated", onUpd);
+  }, []);
   const q = query.trim();
   const active = q.length >= 3;
 
