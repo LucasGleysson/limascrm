@@ -1,0 +1,4 @@
+- [x] Ocultar agentes inativos e Patrocínio apenas na apresentação dos painéis, preservando totais.
+- [x] Manter nomes históricos somente nos períodos com registros.
+- [x] Conferir métricas, testar regras e verificar painéis com sessão autenticada do gestor.
+- [x] Confirmar qual conta pertence ao Junior: Julio Cesar.

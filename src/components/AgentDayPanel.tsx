@@ -1,3 +1,5 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
+import { isUnitVisible } from "@/lib/panelVisibility";
 import { useMemo, useState } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -48,6 +50,8 @@ export const AgentDayPanel = () => {
   const dayStr = format(selectedDate, "yyyy-MM-dd");
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const isViewingToday = dayStr === todayStr;
+
+  const visibilityRows = usePanelVisibilityRows(leads, { from: dayStr, to: dayStr });
 
   const myUnitIds = useMemo(() => {
     const ids = new Set<string>(
@@ -181,6 +185,8 @@ export const AgentDayPanel = () => {
       return { id: uid, nome: u?.nome || "—", count, faltaMin, faltaAlvo, status };
     }).sort((a, b) => a.nome.localeCompare(b.nome));
   }, [myLeads, dayStr, myUnitIds, unidades]);
+
+  const visibleMetaPorUnidade = metaPorUnidade.filter((u) => isUnitVisible(u, visibilityRows, { from: dayStr, to: dayStr }));
 
   // ===== Tentar Resgatar (apenas faz sentido para hoje)
   const resgatar = useMemo(() => {
@@ -349,7 +355,7 @@ export const AgentDayPanel = () => {
       </div>
 
       {/* META POR UNIDADE — cada loja tem mínimo de 2 e alvo de 4 carros */}
-      {metaPorUnidade.length > 0 && (
+      {visibleMetaPorUnidade.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -361,7 +367,7 @@ export const AgentDayPanel = () => {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {metaPorUnidade.map((u) => {
+            {visibleMetaPorUnidade.map((u) => {
               const pct = Math.min(Math.round((u.count / META_ALVO_POR_UNIDADE) * 100), 100);
               const tone =
                 u.status === "alvo"

@@ -1,3 +1,5 @@
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
+import type { PanelActivity } from "@/lib/panelVisibility";
 import React, { useEffect, useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -42,13 +44,14 @@ interface UnidadeStat {
 }
 
 interface Props {
+  visibilityRows: readonly PanelActivity[];
   porUnidade: UnidadeStat[];
   mesRef: string;
   periodRange: { from: string; to: string };
   headerActions: React.ReactNode;
 }
 
-export const ManagerByStorePanel: React.FC<Props> = ({ porUnidade, mesRef, periodRange, headerActions }) => {
+export const ManagerByStorePanel: React.FC<Props> = ({ porUnidade, mesRef, periodRange, headerActions, visibilityRows }) => {
   const [metasMap, setMetasMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -105,6 +108,8 @@ export const ManagerByStorePanel: React.FC<Props> = ({ porUnidade, mesRef, perio
     return { meta, prog, naLoja, pct: meta > 0 ? Math.round((prog / meta) * 100) : 0 };
   }, [enriched]);
 
+  const visibleRows = enriched.filter((u) => isUnitVisible(u, visibilityRows, periodRange));
+
   return (
     <>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -125,7 +130,7 @@ export const ManagerByStorePanel: React.FC<Props> = ({ porUnidade, mesRef, perio
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {enriched.map((u) => {
+        {visibleRows.map((u) => {
           const BIcon = u.badge.icon;
           return (
             <div key={u.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3 hover:border-primary/40 transition-colors">

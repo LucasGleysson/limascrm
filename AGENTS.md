@@ -1,3 +1,5 @@
 - Typed lead search (3+ chars) queries the whole leads table via useGlobalLeadSearch, bypassing date windows; why: must match the duplicate-phone lock.
 - App contexts (Role, Lead, Theme) are cached on globalThis; why: hot reloads created duplicate contexts and blanked the app.
 - Saved lead edits broadcast a "lead-updated" window event; the detail sheet, useScopedLeads and useGlobalLeadSearch patch their rows from it. Why: leads outside LeadContext looked unsaved.
+- Panel visibility is centralized in panelVisibility and applied after aggregation, never to metric source rows; why: hidden names must not change totals or historical counts.
+- Historical panel presence uses a cached, paginated projection independent of lead context and KPIs; why: old entries with later appointments can fall outside the context window but must restore historical names.

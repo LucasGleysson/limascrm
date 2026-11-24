@@ -1,4 +1,6 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
 import { useMemo, useState } from "react";
+import { isUnitVisible } from "@/lib/panelVisibility";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -24,6 +26,8 @@ export const ReceptionistReportPanel = () => {
     anchor: "data_entrada",
     idUnidade: unidadeFilter !== "todas" ? unidadeFilter : null,
   });
+
+  const visibilityRows = usePanelVisibilityRows(scopedLeads, periodRange);
 
   const recepcionistas = useMemo(
     () => profiles.filter((p) => p.cargo === "recepcionista"),
@@ -85,7 +89,7 @@ export const ReceptionistReportPanel = () => {
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as Unidades</SelectItem>
-              {unidadesAtivas.map((u) => (
+              {unidadesAtivas.filter((u) => isUnitVisible(u, visibilityRows, periodRange)).map((u) => (
                 <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
               ))}
             </SelectContent>

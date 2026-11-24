@@ -1,3 +1,5 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
@@ -21,6 +23,8 @@ export const DailyReportPanel = () => {
   // Para dias dentro da janela do contexto: zero requests (filtra cache).
   // Para dias antigos: fetch direcionado e cacheado.
   const { rows: leads } = useScopedLeads({ from: dateStr, to: dateStr, anchor: "any" });
+
+  const visibilityRows = usePanelVisibilityRows(leads, { from: dateStr, to: dateStr });
 
   const agentes = useMemo(() => profiles.filter((p) => p.cargo === "agente"), [profiles]);
 
@@ -105,7 +109,7 @@ export const DailyReportPanel = () => {
       const aConcluidos = concluidosNoDia.filter((l) => l.id_agente === a.id);
       const passaramNaLoja = aPassaram.length;
       const agUnitIds = agentUnitMap[a.id] || (a.unidade_padrao ? [a.unidade_padrao] : []);
-      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id && isUnitVisible(u, visibilityRows, { from: dateStr, to: dateStr }))?.nome).filter(Boolean).join(" / ") || "—";
       const totalAgendamentos = aCreated.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado"].includes(l.etapa)).length;
       const desqNovos = aCreated.filter((l) => l.etapa === "desqualificado_novo").length;
       const desqOutraCidade = aCreated.filter((l) => l.etapa === "desqualificado_novo" && (l.notas || "").includes("[Outra Cidade]")).length;
@@ -134,7 +138,11 @@ export const DailyReportPanel = () => {
         origemData,
       };
     }).filter((a) => a.totalRegistros > 0 || a.totalAgendamentos > 0);
-  }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia, agentUnitMap]);
+  }, [createdToday, agendadosNoDia, agentes, unidades, passaramNaLojaNoDia, concluidosNoDia, agentUnitMap, leads, dateStr, visibilityRows]);
+
+  const visibilityRange = { from: dateStr, to: dateStr };
+  const visibleUnits = unitStats.filter((u) => isUnitVisible(u, visibilityRows, visibilityRange));
+  const visibleAgents = agentStats.filter((a) => isAgentVisible(a.id, visibilityRows, visibilityRange));
 
   const prevDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d); };
   const nextDay = () => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d); };
@@ -226,7 +234,7 @@ export const DailyReportPanel = () => {
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <MapPin className="h-5 w-5 text-muted-foreground" /> Por Cidade
         </h2>
-        {unitStats.length === 0 ? (
+        {visibleUnits.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade registrada nesta data.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -242,7 +250,7 @@ export const DailyReportPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {unitStats.map((u) => (
+                {visibleUnits.map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="py-3 font-medium">{u.nome}</td>
                     <td className="py-3 text-center text-primary">{u.agendados}</td>
@@ -263,7 +271,7 @@ export const DailyReportPanel = () => {
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Users className="h-5 w-5 text-muted-foreground" /> Por Agente
         </h2>
-        {agentStats.length === 0 ? (
+        {visibleAgents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atividade de agentes nesta data.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -283,7 +291,7 @@ export const DailyReportPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {agentStats.map((a) => (
+                {visibleAgents.map((a) => (
                   <>
                     <tr
                       key={a.id}

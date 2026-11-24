@@ -1,3 +1,5 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLeads } from "@/contexts/LeadContext";
@@ -114,6 +116,8 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   useEffect(() => { fetchMonthLeads(); }, [fetchMonthLeads]);
 
   const monthRange = useMemo(() => getMonthRange(mesRef), [mesRef]);
+  const visibilityRows = usePanelVisibilityRows(metaLeads, monthRange);
+
   const totalBizDays = useMemo(() => businessDaysInMonth(mesRef), [mesRef]);
   const elapsedBizDays = useMemo(() => businessDaysElapsed(mesRef), [mesRef]);
   const isCurrentMonth = now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear();
@@ -149,7 +153,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       const agentBreakdown = unitAgents.map((ag) => {
         const agLeads = monthLeads.filter((l) => l.id_agente === ag.id);
         return {
-          nome: ag.nome,
+          id: ag.id, nome: ag.nome,
           total: agLeads.length,
           carrosNaLoja: agLeads.filter((l) => isCarroDoAgente(l.etapa)).length,
           carrosParaMeta: agLeads.filter((l) => isCarroParaMeta(l.etapa)).length,
@@ -184,6 +188,8 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
     return { totalMeta, totalCarros, totalNaLoja, totalPct, achieved, behind };
   }, [unitData]);
 
+  const visibleUnitData = unitData.filter((u) => isUnitVisible(u, visibilityRows, monthRange));
+
   const handleSave = async () => {
     setSaving(true);
     for (const u of unidadesAtivas) {
@@ -211,12 +217,12 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
   };
 
   const barData = useMemo(() => {
-    return unitData.map((u) => ({
+    return visibleUnitData.map((u) => ({
       name: u.nome,
       carros: u.carrosParaMeta,
       meta: u.metaVal,
     }));
-  }, [unitData]);
+  }, [visibleUnitData]);
 
   const sel = selectedUnit ? unitData.find((u) => u.id === selectedUnit) : null;
 
@@ -300,7 +306,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
           </Button>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {unidadesAtivas.map((u) => (
+          {unidadesAtivas.filter((u) => isUnitVisible(u, visibilityRows, monthRange)).map((u) => (
             <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
               <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
@@ -322,7 +328,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
       {/* Unit Performance Cards */}
       <div className="space-y-3">
         <h3 className="font-semibold text-lg">Progresso por Loja</h3>
-        {unitData.filter((u) => u.metaVal > 0).map((u) => {
+        {visibleUnitData.filter((u) => u.metaVal > 0).map((u) => {
           const sc = statusConfig[u.status];
           const StatusIcon = sc.icon;
           const isSelected = selectedUnit === u.id;
@@ -394,7 +400,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
                     <div>
                       <h5 className="text-sm font-medium text-muted-foreground mb-2">Contribuição dos Agentes</h5>
                       <div className="space-y-1">
-                        {sel.agentBreakdown.map((ag) => (
+                        {sel.agentBreakdown.filter((ag) => isAgentVisible(ag.id, visibilityRows, monthRange)).map((ag) => (
                           <div key={ag.nome} className="flex items-center gap-3 text-sm p-2 rounded bg-muted/30">
                             <span className="font-medium flex-1">{ag.nome}</span>
                             <span>{ag.total} leads</span>
@@ -425,7 +431,7 @@ export const MetasUnidadesPanel = ({ profiles }: Props) => {
             </div>
           );
         })}
-        {unitData.filter((u) => u.metaVal > 0).length === 0 && (
+        {visibleUnitData.filter((u) => u.metaVal > 0).length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
             Nenhuma meta definida para este mês. Use o formulário acima para definir as metas.
           </p>

@@ -1,3 +1,5 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
+import { isUnitVisible } from "@/lib/panelVisibility";
 import React, { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
@@ -127,7 +129,9 @@ export const SupervisorDashboard = () => {
     [leads, periodRange],
   );
 
+  const visibilityRows = usePanelVisibilityRows(leads, periodRange);
   const agentes = profiles.filter((u) => u.cargo === "agente");
+  const visibleUnits = unidades.filter((u) => isUnitVisible(u, visibilityRows, periodRange));
 
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
   const tomorrowStr = useMemo(() => {
@@ -192,7 +196,7 @@ export const SupervisorDashboard = () => {
 
       const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
       const unidadeNome = agUnitIds
-        .map((id) => unidades.find((u) => u.id === id)?.nome)
+        .map((id) => visibleUnits.find((u) => u.id === id)?.nome)
         .filter(Boolean)
         .join(" / ") || "—";
 
@@ -203,7 +207,7 @@ export const SupervisorDashboard = () => {
         txConversao, txAgendamento, fupConcluidos, fupPendentes, leads: aLeads,
       };
     });
-  }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
+  }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap, visibleUnits]);
 
   const unidadeStats = useMemo(() => {
     return unidadesAtivas.map((u) => {
@@ -295,6 +299,7 @@ export const SupervisorDashboard = () => {
             </div>
 
             <DashboardOverviewPanel
+              visibilityRows={visibilityRows}
               filteredLeads={filteredLeads}
               naLojaPeriodLeads={naLojaPeriodLeads}
               unidades={unidadesAtivas}
@@ -309,6 +314,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "por_loja" && (
           <ManagerByStorePanel
             porUnidade={unidadeStats as any}
+            visibilityRows={visibilityRows}
             mesRef={mesRef}
             periodRange={periodRange as any}
             headerActions={
@@ -323,6 +329,7 @@ export const SupervisorDashboard = () => {
         {activeTab === "por_agente" && (
           <ManagerByAgentPanel
             agenteStats={agenteStats as any}
+            visibilityRows={visibilityRows}
             period={period}
             mesRef={mesRef}
             periodRange={periodRange as any}

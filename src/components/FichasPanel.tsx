@@ -1,4 +1,6 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
 import { useState, useMemo } from "react";
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { useGlobalLeadSearch } from "@/hooks/useGlobalLeadSearch";
@@ -89,6 +91,8 @@ export const FichasPanel = () => {
     to: effectiveRange.to,
     anchor: "any",
   });
+
+  const visibilityRows = usePanelVisibilityRows(scopedLeads, effectiveRange);
 
   const globalSearch = useGlobalLeadSearch(search);
 
@@ -212,14 +216,14 @@ export const FichasPanel = () => {
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todas">Todas Lojas</SelectItem>
-            {unidadesAtivas.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+            {unidadesAtivas.filter((u) => isUnitVisible(u, visibilityRows, effectiveRange)).map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={agenteFilter} onValueChange={setAgenteFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos Agentes</SelectItem>
-            {agentes.map((a) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+            {agentes.filter((a) => isAgentVisible(a.id, visibilityRows, effectiveRange)).map((a) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={etapaFilter} onValueChange={setEtapaFilter}>

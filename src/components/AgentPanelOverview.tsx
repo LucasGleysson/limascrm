@@ -1,3 +1,4 @@
+import { isUnitVisible } from "@/lib/panelVisibility";
 import { useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
@@ -167,6 +168,8 @@ export const AgentPanelOverview = () => {
       pct: Math.min(Math.round((prog / metaPorLoja) * 100), 100),
     };
   });
+
+  const visibleLojaCards = lojaCards.filter((u) => isUnitVisible(u, leads, { from: monthFrom, to: monthTo }));
 
   const BadgeIcon = ritmoBadge.icon;
 
@@ -412,17 +415,17 @@ export const AgentPanelOverview = () => {
       })()}
 
       {/* Desempenho por loja */}
-      {lojaCards.length > 0 && (
+      {visibleLojaCards.length > 0 && (
         <div>
           <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground flex items-center gap-2">
             <MapPin className="h-4 w-4" /> Desempenho por loja
           </h3>
           <div className={`grid gap-4 ${
-            lojaCards.length === 1 ? "grid-cols-1" :
-            lojaCards.length === 2 ? "grid-cols-1 md:grid-cols-2" :
+            visibleLojaCards.length === 1 ? "grid-cols-1" :
+            visibleLojaCards.length === 2 ? "grid-cols-1 md:grid-cols-2" :
             "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
           }`}>
-            {lojaCards.map((l) => (
+            {visibleLojaCards.map((l) => (
               <div key={l.id} className="rounded-xl border border-border bg-card p-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>

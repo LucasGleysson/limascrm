@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useState, useCallback } from "react";
+import { isAgentVisible } from "@/lib/panelVisibility";
 import { useLeads } from "@/contexts/LeadContext";
 import { useRole } from "@/contexts/RoleContext";
 import { Badge } from "@/components/ui/badge";
@@ -505,7 +506,7 @@ export const FollowUpTrackingPanel = () => {
               </tr>
             </thead>
             <tbody>
-              {agentFupBreakdown.map((a) => (
+              {agentFupBreakdown.filter((a) => isAgentVisible(a.id, leads, { from: today, to: today })).map((a) => (
                 <Fragment key={a.id}>
                   <tr className="border-b border-border/50 hover:bg-muted/30 cursor-pointer" onClick={() => setExpandedAgent(expandedAgent === a.id ? null : a.id)}>
                     <td className="py-3">
@@ -590,7 +591,7 @@ export const FollowUpTrackingPanel = () => {
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos Agentes</SelectItem>
-              {agentes.map((a) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+              {agentes.filter((a) => isAgentVisible(a.id, leads, { from: today, to: today })).map((a) => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">{pendingLeadsList.length} fichas</span>

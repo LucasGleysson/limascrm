@@ -1,3 +1,5 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
 import React, { useMemo, useState } from "react";
 import { UserManagement } from "@/components/UserManagement";
 import { useLeads } from "@/contexts/LeadContext";
@@ -175,7 +177,10 @@ export const ManagerDashboard = () => {
   // Lead unit comes ONLY from leads.id_unidade now (after backfill + autofill trigger)
   const getLeadUnidade = (l: { id_unidade?: string | null }) => l.id_unidade || null;
 
+  const visibilityRows = usePanelVisibilityRows(leads, periodRangeAll);
   const agentes = profiles.filter((u) => u.cargo === "agente");
+  const visibleUnits = unidades.filter((u) => isUnitVisible(u, visibilityRows, periodRangeAll));
+  const visibleAgentIds = new Set(agentes.filter((a) => isAgentVisible(a.id, visibilityRows, periodRangeAll)).map((a) => a.id));
 
   const porUnidade = useMemo(() => {
     return unidadesAtivas.map((u) => {
@@ -250,7 +255,7 @@ export const ManagerDashboard = () => {
         return false;
       }).length + agLembretes.filter((e) => !e.concluido && e.data_prevista <= todayStr).length;
       const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
-      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+      const unidadeNome = agUnitIds.map((id) => visibleUnits.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       // Split por loja: cada linha reflete apenas os leads daquela unidade.
       const unidadeIdsEnvolvidas = new Set<string>();
       aLeads.forEach((l) => { if (l.id_unidade) unidadeIdsEnvolvidas.add(l.id_unidade); });
@@ -285,7 +290,7 @@ export const ManagerDashboard = () => {
         porUnidade,
       };
     });
-  }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap]);
+  }, [filteredLeads, naLojaPeriodLeads, eventos, agentes, unidades, todayStr, tomorrowStr, agentUnitMap, visibleUnits]);
 
   const selectedAgent = selectedAgente ? agenteStats.find((a) => a.id === selectedAgente) : null;
 
@@ -295,12 +300,12 @@ export const ManagerDashboard = () => {
       const aLeads = filteredLeads.filter((l) => l.id_agente === agente.id);
       const aNaLoja = naLojaPeriodLeads.filter((l) => l.id_agente === agente.id);
       const agUnitIds = agentUnitMap[agente.id] || (agente.unidade_padrao ? [agente.unidade_padrao] : []);
-      const unidadeNome = agUnitIds.map((id) => unidades.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
+      const unidadeNome = agUnitIds.map((id) => visibleUnits.find((u) => u.id === id)?.nome).filter(Boolean).join(" / ") || "—";
       const carrosNaLoja = aNaLoja.length;
       const agFollowUps = eventos.filter((e) => e.tipo === "followup" && aLeads.some((l) => l.id === e.id_lead));
       const totalAgendamentos = aLeads.filter((l) => ["agendado", "reagendado", "confirmado", "na_loja", "concluido", "dispensado", "perdido", "desqualificado_agendado", "analise_supervisor"].includes(l.etapa)).length;
       return {
-        nome: agente.nome, unidade: unidadeNome,
+        nome: agente.nome, unidade: unidadeNome, agenteId: agente.id,
         novo: aLeads.filter((l) => l.etapa === "novo").length,
         agendado: totalAgendamentos,
         carrosNaLoja,
@@ -313,7 +318,10 @@ export const ManagerDashboard = () => {
         fupPending: agFollowUps.filter((e) => !e.concluido).length,
       };
     });
-  }, [filteredLeads, naLojaPeriodLeads, agentes, unidades, eventos, agentUnitMap]);
+  }, [filteredLeads, naLojaPeriodLeads, agentes, unidades, eventos, agentUnitMap, visibleUnits]);
+
+  const visibleUnitStats = porUnidade.filter((u) => isUnitVisible(u, visibilityRows, periodRangeAll));
+  const visibleAgentTable = agenteTable.filter((a) => visibleAgentIds.has(a.agenteId));
 
   const origemPieData = useMemo(() => {
     return porOrigem.map((o, i) => ({ name: o.origem, value: o.total, fill: PIE_COLORS[i % PIE_COLORS.length] }));
@@ -344,7 +352,7 @@ export const ManagerDashboard = () => {
       <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value="todas">Todas as Unidades</SelectItem>
-        {unidadesAtivas.map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
+        {unidadesAtivas.filter((u) => isUnitVisible(u, visibilityRows, periodRangeAll)).map((u) => <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>)}
       </SelectContent>
     </Select>
   );
@@ -457,7 +465,7 @@ export const ManagerDashboard = () => {
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Desempenho por Loja</h2>
                 <div className="space-y-3">
-                  {porUnidade.map((u) => (
+                  {visibleUnitStats.map((u) => (
                     <div key={u.id} className="flex items-center gap-3">
                       <div className="flex items-center gap-2 w-28 shrink-0">
                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
@@ -477,7 +485,7 @@ export const ManagerDashboard = () => {
               <div className="rounded-xl border border-border bg-card p-5">
                 <h2 className="text-lg font-semibold mb-4">Top Agentes</h2>
                 <div className="space-y-3">
-                  {[...agenteTable].sort((a, b) => b.carrosNaLoja - a.carrosNaLoja).map((a) => (
+                  {[...visibleAgentTable].sort((a, b) => b.carrosNaLoja - a.carrosNaLoja).map((a) => (
                     <div key={a.nome} className="flex items-center gap-3">
                       <span className="text-sm font-medium w-32 shrink-0">{a.nome}</span>
                       <div className="flex gap-3 text-sm flex-1 justify-end">
@@ -512,7 +520,7 @@ export const ManagerDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {agenteTable.map((a) => (
+                    {visibleAgentTable.map((a) => (
                       <tr key={a.nome} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="py-3 font-medium">{a.nome}</td>
                         <td className="py-3 text-muted-foreground">{a.unidade}</td>
@@ -612,7 +620,7 @@ export const ManagerDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {porUnidade.map((u) => {
+                    {visibleUnitStats.map((u) => {
                       const soma = u.naLojaConfirmado + u.naLojaEmLoja + u.naLojaAnalise + u.reagendados + u.concluidos + u.dispensados + u.perdidos + u.naLojaOutros;
                       return (
                         <tr key={u.id} className="border-b border-border/50 hover:bg-muted/30">
@@ -665,7 +673,7 @@ export const ManagerDashboard = () => {
                         if (dow !== 0 && dow !== 6) bizDays++;
                       }
                       const elapsed = Math.max(bizDays, 1);
-                      return agenteTable.map((a) => {
+                      return visibleAgentTable.map((a) => {
                         const agenteProfile = agentes.find((ag) => ag.nome === a.nome);
                         const agenteId = agenteProfile?.id || a.nome;
                         const aLeads = filteredLeads.filter((l) => l.id_agente === agenteProfile?.id);
@@ -766,6 +774,7 @@ export const ManagerDashboard = () => {
         {activeTab === "por_loja" && (
           <ManagerByStorePanel
             porUnidade={porUnidade}
+            visibilityRows={visibilityRows}
             mesRef={mesRef}
             periodRange={periodRange}
             headerActions={
@@ -780,6 +789,7 @@ export const ManagerDashboard = () => {
         {activeTab === "por_agente" && (
           <ManagerByAgentPanel
             agenteStats={agenteStats}
+            visibilityRows={visibilityRows}
             period={period}
             mesRef={mesRef}
             periodRange={periodRange}

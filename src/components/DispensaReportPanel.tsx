@@ -1,4 +1,6 @@
+import { usePanelVisibilityRows } from "@/hooks/usePanelVisibilityRows";
 import { useMemo, useState } from "react";
+import { isAgentVisible } from "@/lib/panelVisibility";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
 import { PeriodFilter, PeriodKey, getDateRangeForPeriod } from "@/components/PeriodFilter";
@@ -43,6 +45,8 @@ export const DispensaReportPanel = () => {
     to: range.to,
     anchor: "any",
   });
+
+  const visibilityRows = usePanelVisibilityRows(scopedLeads, range);
 
   // All leads that should appear in Análise: dispensado, perdido, desq_agendado, desq_novo, analise_supervisor
   const allAnaliseLeads = useMemo(
@@ -200,7 +204,7 @@ export const DispensaReportPanel = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos os agentes</SelectItem>
-            {agentes.map((ag) => (
+            {agentes.filter((ag) => isAgentVisible(ag.id, visibilityRows, range)).map((ag) => (
               <SelectItem key={ag.id} value={ag.id}>{ag.nome}</SelectItem>
             ))}
           </SelectContent>

@@ -1,3 +1,5 @@
+import { isAgentVisible, isUnitVisible } from "@/lib/panelVisibility";
+import type { PanelActivity } from "@/lib/panelVisibility";
 import React, { useEffect, useMemo, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +59,7 @@ interface AgenteStat {
 }
 
 interface Props {
+  visibilityRows: readonly PanelActivity[];
   agenteStats: AgenteStat[];
   period: string;
   mesRef: string;
@@ -65,7 +68,7 @@ interface Props {
 }
 
 export const ManagerByAgentPanel: React.FC<Props> = ({
-  agenteStats, period, mesRef, periodRange, headerActions,
+  agenteStats, period, mesRef, periodRange, headerActions, visibilityRows,
 }) => {
   const [metasMap, setMetasMap] = useState<Record<string, number>>({});
 
@@ -148,6 +151,8 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
     return { meta, prog, naLoja, concl, pct: meta > 0 ? Math.round((prog / meta) * 100) : 0, comissao, comissaoPot };
   }, [enriched]);
 
+  const visibleRows = enriched.filter((a) => isAgentVisible(a.id, visibilityRows, periodRange));
+
   return (
     <>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -171,7 +176,7 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {enriched.map((a) => {
+        {visibleRows.map((a) => {
           const BIcon = a.badge.icon;
           return (
             <div key={a.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3 hover:border-primary/40 transition-colors">
@@ -266,7 +271,7 @@ export const ManagerByAgentPanel: React.FC<Props> = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {a.porUnidade.map((u) => (
+                        {a.porUnidade.filter((u) => isUnitVisible(u, visibilityRows, periodRange)).map((u) => (
                           <tr key={u.id} className="border-t border-border/60">
                             <td className="px-2 py-1 font-medium truncate">{u.nome}</td>
                             <td className="text-center px-1 py-1">{u.agendamentos}</td>
