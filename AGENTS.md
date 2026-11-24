@@ -1,0 +1,1 @@
+- Typed lead search (3+ chars) queries the whole leads table via useGlobalLeadSearch, bypassing date windows; why: must match the duplicate-phone lock.

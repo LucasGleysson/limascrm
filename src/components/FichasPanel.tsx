@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { useScopedLeads } from "@/hooks/useScopedLeads";
+import { useGlobalLeadSearch } from "@/hooks/useGlobalLeadSearch";
 import { ETAPAS_FUNIL, Lead } from "@/data/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,16 @@ export const FichasPanel = () => {
     anchor: "any",
   });
 
+  const globalSearch = useGlobalLeadSearch(search);
+
   const filtered = useMemo(() => {
+    // Busca digitada (3+ caracteres) → todo o histórico, ignora período e datas.
+    if (globalSearch.active) {
+      let r = globalSearch.rows;
+      if (agenteFilter !== "todos") r = r.filter((l) => l.id_agente === agenteFilter);
+      if (etapaFilter !== "todos") r = r.filter((l) => l.etapa === etapaFilter);
+      return r;
+    }
     let result = scopedLeads;
     if (unidadeFilter !== "todas") {
       const agentesDaUnidade = agentesPorUnidade[unidadeFilter] ?? new Set<string>();
@@ -126,7 +136,7 @@ export const FichasPanel = () => {
     }
 
     return result;
-  }, [scopedLeads, unidadeFilter, agenteFilter, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd, agentesPorUnidade]);
+  }, [scopedLeads, globalSearch.active, globalSearch.rows, unidadeFilter, agenteFilter, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd, agentesPorUnidade]);
 
   const pagination = usePagination(filtered, { pageSize: 20 });
 

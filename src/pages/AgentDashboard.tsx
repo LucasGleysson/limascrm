@@ -1,3 +1,4 @@
+import { useGlobalLeadSearch } from "@/hooks/useGlobalLeadSearch";
 import { useState, useMemo } from "react";
 import { useLeads } from "@/contexts/LeadContext";
 import { usePagination } from "@/hooks/usePagination";
@@ -70,7 +71,12 @@ export const AgentDashboard = () => {
     );
   }, [leads, currentUser.id, currentUser.unidade_padrao, agentUnidades]);
 
+  const globalSearch = useGlobalLeadSearch(search, currentUser.id);
+
   const myLeads = useMemo(() => {
+    if (globalSearch.active) {
+      return globalSearch.rows.filter((l) => etapaFilter === "todos" || l.etapa === etapaFilter);
+    }
     return allMyLeads
       .filter((l) => etapaFilter === "todos" || l.etapa === etapaFilter)
       .filter((l) => !search || l.nome.toLowerCase().includes(search.toLowerCase()) || l.telefone.includes(search))
@@ -94,7 +100,7 @@ export const AgentDashboard = () => {
         const e = format(agendEnd, "yyyy-MM-dd");
         return !!l.data_agendamento && l.data_agendamento <= e;
       });
-  }, [allMyLeads, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd]);
+  }, [allMyLeads, globalSearch.active, globalSearch.rows, etapaFilter, search, entradaStart, entradaEnd, agendStart, agendEnd]);
 
   const hasDateFilter = !!(entradaStart || entradaEnd || agendStart || agendEnd);
   const clearDateFilters = () => {
@@ -352,7 +358,7 @@ export const AgentDashboard = () => {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar por nome ou telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+                <Input placeholder="Buscar nome, telefone ou OS (todo o histórico)..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
             </div>
 

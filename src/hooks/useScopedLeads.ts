@@ -13,7 +13,7 @@ interface Options {
   idUnidade?: string | null;
 }
 
-function mapLead(row: any): Lead {
+export function mapLead(row: any): Lead {
   return {
     id: row.id,
     nome: row.nome,
