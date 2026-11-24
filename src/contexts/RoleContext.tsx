@@ -20,7 +20,9 @@ interface RoleContextType {
   logout: () => Promise<void>;
 }
 
-const RoleContext = createContext<RoleContextType | undefined>(undefined);
+// Reuse one context instance across hot reloads so providers and consumers always match.
+const g = globalThis as unknown as { __roleContext?: React.Context<RoleContextType | undefined> };
+const RoleContext = g.__roleContext ?? (g.__roleContext = createContext<RoleContextType | undefined>(undefined));
 
 export const RoleProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);

@@ -1,1 +1,2 @@
 - Typed lead search (3+ chars) queries the whole leads table via useGlobalLeadSearch, bypassing date windows; why: must match the duplicate-phone lock.
+- RoleContext is cached on globalThis; why: hot reloads created duplicate contexts and blanked the app.
