@@ -19,7 +19,7 @@ interface LeadContextType {
   agentUnidades: AgentUnidade[];
   loading: boolean;
   addLead: (lead: Omit<Lead, "id">) => Promise<string | null>;
-  updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  updateLead: (id: string, updates: Partial<Lead>) => Promise<boolean>;
   deleteLead: (id: string) => Promise<void>;
   addEvento: (evento: Omit<Evento, "id">) => Promise<void>;
   concluirEvento: (eventoId: string, descricao: string, userId: string) => Promise<void>;
@@ -315,7 +315,9 @@ export const LeadProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       console.error("updateLead error:", error);
       fetchAll(true);
+      return false;
     }
+    return true;
   };
 
   const deleteLead = async (id: string) => {

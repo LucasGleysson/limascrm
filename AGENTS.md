@@ -1,2 +1,3 @@
 - Typed lead search (3+ chars) queries the whole leads table via useGlobalLeadSearch, bypassing date windows; why: must match the duplicate-phone lock.
 - App contexts (Role, Lead, Theme) are cached on globalThis; why: hot reloads created duplicate contexts and blanked the app.
+- LeadDetailSheet overlays saved updates on the lead it was given; why: leads from search/period lists aren't in LeadContext, so saves looked lost.

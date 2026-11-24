@@ -43,9 +43,23 @@ const STATUS_TRANSITIONS: Record<string, { label: string; targets: { id: string;
   perdido: { label: "Perdido", targets: [{ id: "novo", label: "Novo Lead" }, { id: "agendado", label: "Agendado" }, { id: "trabalhado", label: "Trabalhado" }] },
 };
 
-export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navPosition }: Props) => {
-  const { updateLead, addEvento, unidades, unidadesAtivas, profiles, eventos, agentUnidades } = useLeads();
+export const LeadDetailSheet = ({ lead: leadProp, open, onOpenChange, onPrev, onNext, navPosition }: Props) => {
+  const { updateLead: ctxUpdateLead, leads: ctxLeads, addEvento, unidades, unidadesAtivas, profiles, eventos, agentUnidades } = useLeads();
   const { currentUser } = useRole();
+  // Fichas abertas pela busca/período podem não estar no contexto: guardamos as alterações salvas aqui
+  // para a tela refletir o que foi gravado.
+  const [patch, setPatch] = useState<{ id: string; data: Partial<Lead> } | null>(null);
+  const baseLead = leadProp ? (ctxLeads.find((l) => l.id === leadProp.id) ?? leadProp) : null;
+  const lead = baseLead ? { ...baseLead, ...(patch?.id === baseLead.id ? patch.data : {}) } : null;
+  const updateLead = async (id: string, updates: Partial<Lead>) => {
+    const ok = await ctxUpdateLead(id, updates);
+    if (ok) {
+      setPatch((prev) => ({ id, data: { ...(prev?.id === id ? prev.data : {}), ...updates } }));
+    } else {
+      toast.error("Não foi possível salvar a alteração. Tente novamente.");
+    }
+    return ok;
+  };
   const [editing, setEditing] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -922,7 +936,14 @@ export const LeadDetailSheet = ({ lead, open, onOpenChange, onPrev, onNext, navP
             <Button
               onClick={async () => {
                 const n = Math.max(0, Math.floor(Number(editVisitasValue) || 0));
-                await updateLead(lead.id, { visitas_loja: n } as any);
+                if (n === 0 && lead.checkin) {
+                  // Zerar visitas = desfazer o check-in (métricas contam pelo check-in).
+                  const novaEtapa = lead.data_agendamento ? (lead.etapa === "na_loja" ? "reagendado" : "agendado") : "novo";
+                  const notas = appendNota(lead.notas, "Check-in desfeito", `Visitas zeradas; check-in anterior (${lead.checkin}) removido.`);
+                  await updateLead(lead.id, { visitas_loja: 0, checkin: null, checkout: null, etapa: novaEtapa, notas } as any);
+                } else {
+                  await updateLead(lead.id, { visitas_loja: n } as any);
+                }
                 setEditVisitasOpen(false);
               }}
               className="gap-2"
